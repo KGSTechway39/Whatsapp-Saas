@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap");
+
+@layer base {
+  :root {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 69% 49%;
+    --primary-foreground: 144 100% 5%;
+    --secondary: 222 47% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 47% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 222 47% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 47% 18%;
+    --input: 222 47% 16%;
+    --ring: 142 69% 49%;
+    --radius: 0.75rem;
+  }
+
+  .light {
+    --background: 0 0% 97%;
+    --foreground: 222 47% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 8%;
+    --primary: 142 69% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 47% 8%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 9% 45%;
+    --accent: 220 14% 91%;
+    --accent-foreground: 222 47% 8%;
+    --destructive: 0 63% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 92%;
+    --ring: 142 69% 38%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .wa-gradient {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  }
+
+  .wa-gradient-text {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass-card {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(26, 31, 46, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .glass-card-light {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+    text-muted-foreground hover:text-foreground hover:bg-accent
+    transition-all duration-200 cursor-pointer;
+  }
+
+  .sidebar-item-active {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .stat-card {
+    @apply rounded-2xl p-6 bg-card border border-border/50 hover:border-border
+    transition-all duration-300 hover:shadow-lg hover:shadow-black/20;
+  }
+
+  .page-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
+  .grid-bg {
+    background-image: linear-gradient(
+        rgba(37, 211, 102, 0.03) 1px,
+        transparent 1px
+      ),
+      linear-gradient(90deg, rgba(37, 211, 102, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}

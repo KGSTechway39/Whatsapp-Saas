@@ -1,0 +1,21 @@
+User-agent: *
+# Disallow all dashboard/app routes — this is an authenticated app
+Disallow: /dashboard
+Disallow: /contacts
+Disallow: /campaigns
+Disallow: /automation
+Disallow: /templates
+Disallow: /analytics
+Disallow: /billing
+Disallow: /settings
+Disallow: /inbox
+Disallow: /numbers
+Disallow: /crm
+Disallow: /appointments
+Disallow: /api/
+
+# Allow public-facing pages
+Allow: /login
+Allow: /register
+
+Sitemap: https://wasend.app/sitemap.xml
