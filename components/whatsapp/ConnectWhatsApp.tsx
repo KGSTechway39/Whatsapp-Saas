@@ -15,31 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-declare global {
-  interface Window {
-    FB: {
-      init: (config: {
-        appId: string;
-        autoLogAppEvents: boolean;
-        xfbml: boolean;
-        version: string;
-      }) => void;
-      login: (
-        callback: (response: {
-          authResponse?: { code?: string; waba_id?: string; phone_number_id?: string };
-          status: string;
-        }) => void,
-        options: {
-          config_id: string;
-          response_type: string;
-          override_default_response_type: boolean;
-          extras: { sessionInfoVersion: number };
-        }
-      ) => void;
-    };
-    fbAsyncInit?: () => void;
-  }
-}
+// FB SDK types live in `types/facebook-sdk.d.ts` (single source of truth).
 
 export interface ConnectedAccount {
   id: string;
@@ -70,7 +46,7 @@ export function ConnectWhatsApp({ onConnected, compact = false }: Props) {
     if (!APP_ID || !configured) return;
 
     window.fbAsyncInit = () => {
-      window.FB.init({
+      window.FB?.init({
         appId: APP_ID,
         autoLogAppEvents: true,
         xfbml: true,
@@ -98,7 +74,7 @@ export function ConnectWhatsApp({ onConnected, compact = false }: Props) {
   }, [initFB]);
 
   const launchEmbeddedSignup = () => {
-    if (!sdkReady || !CONFIG_ID) return;
+    if (!sdkReady || !CONFIG_ID || !window.FB) return;
     setError(null);
     setConnecting(true);
 

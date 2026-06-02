@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, WEBHOOK_LIMIT, rateLimitHeaders } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
+import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 const APP_SECRET   = process.env.META_APP_SECRET;
@@ -184,6 +185,31 @@ export async function POST(request: NextRequest) {
 
   if (isDuplicate) {
     return NextResponse.json({ status: "duplicate" });
+  }
+
+  // ── ASYNC HAND-OFF ─────────────────────────────────────────────────────
+  // Push every inbound message + interactive reply to the worker queue so
+  // the flow engine can process them without blocking the webhook response.
+  // The mock implementation (lib/whatsapp/queue.ts) runs in-process; in
+  // production swap it for BullMQ + Redis / Vercel Queues / Inngest.
+  if (meta0?.phone_number_id) {
+    const inbound = (value0.messages as Record<string, unknown>[] | undefined) ?? [];
+    for (const msg of inbound) {
+      const msgType = msg.type as string | undefined;
+      const kind: "message" | "ctwa_referral" =
+        (msg as { referral?: unknown }).referral ? "ctwa_referral" : "message";
+
+      // Only forward text + interactive replies to the engine.
+      if (msgType !== "text" && msgType !== "interactive") continue;
+
+      void enqueueWebhookEvent({
+        phoneNumberId: meta0.phone_number_id,
+        payload: msg,
+        kind,
+        eventId: String(msg.id ?? metaEventId),
+        receivedAt: Number(msg.timestamp ?? Math.floor(Date.now() / 1000)),
+      });
+    }
   }
 
   try {

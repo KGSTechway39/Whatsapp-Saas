@@ -48,3 +48,4 @@ Thumbs.db
 # Supabase local state (only checks in migrations + seed)
 supabase/.branches/
 supabase/.temp/
+.vercel
