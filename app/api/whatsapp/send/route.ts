@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { sendTemplateMessage, sendTextMessage } from "@/lib/meta";
+import { guardedSingleSend, resolveTemplateCategory } from "@/lib/billing/guarded-send";
+import { InsufficientBalanceError } from "@/lib/billing/wallet";
 
 // POST /api/whatsapp/send
 // Body: { numberId, to, type: "template"|"text", templateName?, languageCode?, components?, text? }
@@ -35,28 +37,48 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Number not connected via Meta API" }, { status: 400 });
   }
 
+  // Validate type-specific inputs before any billing happens.
+  if (type === "text" && !text) {
+    return NextResponse.json({ error: "text body required" }, { status: 400 });
+  }
+  if (type !== "text" && !templateName) {
+    return NextResponse.json({ error: "templateName required" }, { status: 400 });
+  }
+
+  // Prepaid billing: SERVICE for text, the template's category otherwise.
+  // No-op for BYO users (guardedSingleSend passes through).
+  const category =
+    type === "text" ? "SERVICE" : await resolveTemplateCategory(user.id, templateName);
+
   try {
-    let result;
-    if (type === "text") {
-      if (!text) return NextResponse.json({ error: "text body required" }, { status: 400 });
-      result = await sendTextMessage(number.phone_number_id, number.access_token, to, text);
-    } else {
-      if (!templateName) return NextResponse.json({ error: "templateName required" }, { status: 400 });
-      result = await sendTemplateMessage({
-        phoneNumberId: number.phone_number_id,
-        accessToken: number.access_token,
-        to,
-        templateName,
-        languageCode: languageCode || "en",
-        components: components || [],
-      });
-    }
+    const result = await guardedSingleSend({
+      userId: user.id,
+      category,
+      referenceId: to,
+      send: () =>
+        type === "text"
+          ? sendTextMessage(number.phone_number_id, number.access_token, to, text)
+          : sendTemplateMessage({
+              phoneNumberId: number.phone_number_id,
+              accessToken: number.access_token,
+              to,
+              templateName,
+              languageCode: languageCode || "en",
+              components: components || [],
+            }),
+    });
 
     // Increment messages_sent counter (fire-and-forget, ignore errors)
     void supabase.rpc("increment_messages_sent", { number_id: numberId });
 
     return NextResponse.json({ messageId: result.messageId });
   } catch (err: unknown) {
+    if (err instanceof InsufficientBalanceError) {
+      return NextResponse.json(
+        { error: "Insufficient wallet balance. Please recharge to send.", code: "INSUFFICIENT_BALANCE" },
+        { status: 402 },
+      );
+    }
     const msg = err instanceof Error ? err.message : "Send failed";
     return NextResponse.json({ error: msg }, { status: 500 });
   }

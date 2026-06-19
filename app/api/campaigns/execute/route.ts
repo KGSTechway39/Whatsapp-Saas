@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sendTemplateMessage } from "@/lib/meta";
+import { getBillingMode } from "@/lib/billing/guarded-send";
+import { quoteSendCostPaise, toBillableCategory } from "@/lib/billing/pricing";
+import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
 
 const BATCH_SIZE = 50;
 const META_COST_MARKETING = 1.50;
@@ -44,6 +47,9 @@ async function processCampaign({
   category,
   supabase,
   userId,
+  billingMode,
+  reservationId,
+  costPaise,
 }: {
   campaignId: string;
   contacts: { id: string; phone: string; name: string }[];
@@ -57,6 +63,9 @@ async function processCampaign({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any;
   userId: string;
+  billingMode: string;
+  reservationId: string | null;
+  costPaise: number;
 }) {
   let totalSent = 0;
   let totalFailed = 0;
@@ -90,6 +99,16 @@ async function processCampaign({
           })
           .eq("campaign_id", campaignId)
           .eq("contact_id", contact.id);
+
+        // Managed: settle one unit of the reservation per success (idempotent).
+        if (reservationId && costPaise > 0) {
+          await settle({
+            reservationId,
+            actualPaise: costPaise,
+            unitIdempotencyKey: `cm:${campaignId}:${contact.id}`,
+            referenceId: campaignId,
+          }).catch((e) => console.error("wallet settle failed:", e));
+        }
 
         batchSent++;
       } catch (err: unknown) {
@@ -148,28 +167,36 @@ async function processCampaign({
     { onConflict: "user_id,date" }
   );
 
-  // Debit wallet
-  const { data: walletRow } = await supabase
-    .from("wallet")
-    .select("balance")
-    .eq("user_id", userId)
-    .single();
-
-  if (walletRow) {
-    const newBalance = Math.max(0, Number(walletRow.balance) - actualCost);
-    await supabase
+  if (billingMode === "managed") {
+    // Prepaid wallet: release the reservation — frees the hold for any
+    // failed/unsent recipients (only settled successes were actually debited).
+    if (reservationId) {
+      await release(reservationId).catch((e) => console.error("wallet release failed:", e));
+    }
+  } else {
+    // Legacy (byo) wallet debit — UNCHANGED behavior.
+    const { data: walletRow } = await supabase
       .from("wallet")
-      .update({ balance: newBalance, updated_at: now })
-      .eq("user_id", userId);
+      .select("balance")
+      .eq("user_id", userId)
+      .single();
 
-    await supabase.from("transactions").insert({
-      user_id: userId,
-      type: "debit",
-      description: `Campaign: ${campaignId} — ${totalSent} messages sent`,
-      amount: actualCost,
-      balance_after: newBalance,
-      payment_method: "wallet",
-    });
+    if (walletRow) {
+      const newBalance = Math.max(0, Number(walletRow.balance) - actualCost);
+      await supabase
+        .from("wallet")
+        .update({ balance: newBalance, updated_at: now })
+        .eq("user_id", userId);
+
+      await supabase.from("transactions").insert({
+        user_id: userId,
+        type: "debit",
+        description: `Campaign: ${campaignId} — ${totalSent} messages sent`,
+        amount: actualCost,
+        balance_after: newBalance,
+        payment_method: "wallet",
+      });
+    }
   }
 }
 
@@ -279,24 +306,32 @@ export async function POST(request: NextRequest) {
   const metaCostPerMsg = (template.category || "").toUpperCase() === "MARKETING" ? META_COST_MARKETING : META_COST_OTHER;
   const totalCost = (metaCostPerMsg + PLATFORM_FEE) * contacts.length;
 
-  // Check wallet balance
-  const { data: walletRow } = await supabase
-    .from("wallet")
-    .select("balance")
-    .eq("user_id", user.id)
-    .single();
+  // Billing track:
+  //  • managed → new prepaid wallet (reserved below, once the campaign row exists)
+  //  • byo     → existing legacy wallet pre-check, UNCHANGED
+  const billingMode = await getBillingMode(user.id);
+  let unitCostPaise = 0;
+  if (billingMode === "managed") {
+    unitCostPaise = await quoteSendCostPaise(user.id, toBillableCategory(template.category));
+  } else {
+    const { data: walletRow } = await supabase
+      .from("wallet")
+      .select("balance")
+      .eq("user_id", user.id)
+      .single();
 
-  const available = walletRow ? Number(walletRow.balance) : 0;
-  if (available < totalCost) {
-    return NextResponse.json(
-      {
-        error: `Insufficient wallet balance. You need ₹${totalCost.toFixed(2)} but have ₹${available.toFixed(2)}.`,
-        code: "INSUFFICIENT_BALANCE",
-        needed: totalCost,
-        available,
-      },
-      { status: 402 }
-    );
+    const available = walletRow ? Number(walletRow.balance) : 0;
+    if (available < totalCost) {
+      return NextResponse.json(
+        {
+          error: `Insufficient wallet balance. You need ₹${totalCost.toFixed(2)} but have ₹${available.toFixed(2)}.`,
+          code: "INSUFFICIENT_BALANCE",
+          needed: totalCost,
+          available,
+        },
+        { status: 402 }
+      );
+    }
   }
 
   // Build scheduledAt
@@ -357,6 +392,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Managed: reserve the whole broadcast now (hard stop). The campaign row already
+  // exists, so on an unaffordable reserve we mark it failed and refuse to send.
+  let reservationId: string | null = null;
+  if (billingMode === "managed" && unitCostPaise > 0) {
+    try {
+      reservationId = await reserve({
+        userId: user.id,
+        amountPaise: unitCostPaise * contacts.length,
+        referenceId: campaign.id,
+        idempotencyKey: `campaign:${campaign.id}`,
+      });
+    } catch (err) {
+      if (err instanceof InsufficientBalanceError) {
+        await supabase.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
+        const needed = ((unitCostPaise * contacts.length) / 100).toFixed(2);
+        return NextResponse.json(
+          { error: `Insufficient balance: need ₹${needed} for ${contacts.length} messages.`, code: "INSUFFICIENT_BALANCE" },
+          { status: 402 }
+        );
+      }
+      throw err;
+    }
+  }
+
   // Fire-and-forget
   processCampaign({
     campaignId: campaign.id,
@@ -370,6 +429,9 @@ export async function POST(request: NextRequest) {
     category: template.category || "UTILITY",
     supabase,
     userId: user.id,
+    billingMode,
+    reservationId,
+    costPaise: unitCostPaise,
   }).catch((err) => console.error("Campaign execution error:", err));
 
   return NextResponse.json(
