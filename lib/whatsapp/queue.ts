@@ -17,6 +17,7 @@
 
 import { logger } from "@/lib/logger";
 import { processIncomingMessage } from "./engine";
+import { enqueue, registerHandler } from "@/lib/queue";
 
 export interface InboundEvent {
   /** Meta `phone_number_id` — used to resolve the tenant. */
@@ -48,19 +49,22 @@ export interface InboundEvent {
  *   // Inngest
  *   await inngest.send({ name: "whatsapp/inbound", data: event });
  */
+const INBOUND_JOB = "whatsapp:inbound";
+
+// Register the inbound worker with the generic queue. Under the default inline
+// driver this runs in-process (same as before); setting QUEUE_DRIVER routes it
+// to a durable backend with no change to this file.
+registerHandler<InboundEvent>(INBOUND_JOB, runInboundWorker);
+
+/**
+ * Hand an inbound webhook event to the queue and return immediately, so the
+ * webhook can ack Meta within milliseconds regardless of processing time.
+ */
 export async function enqueueWebhookEvent(event: InboundEvent): Promise<void> {
-  // ── MOCK: fire-and-forget in-process execution ──────────────────────────
-  // In a real deploy, the worker runs in a separate dyno/lambda so the
-  // webhook can ack Meta within milliseconds regardless of processing time.
-  void runMockWorker(event).catch((err) => {
-    logger.error("Mock worker crashed", {
-      eventId: event.eventId,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  });
+  await enqueue(INBOUND_JOB, event, { id: event.eventId });
 }
 
-async function runMockWorker(event: InboundEvent): Promise<void> {
+async function runInboundWorker(event: InboundEvent): Promise<void> {
   if (event.kind !== "message") {
     // status / ctwa_referral handled inline by the webhook today
     return;
