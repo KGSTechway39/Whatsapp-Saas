@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature, PLANS, type PlanId } from "@/lib/razorpay";
 import { sendEmail, paymentSuccessEmail, paymentFailedEmail } from "@/lib/email";
+import * as wallet from "@/lib/billing/wallet";
 
 // Razorpay sends JSON but we must read the raw body for signature verification
 export const runtime = "nodejs";
@@ -41,10 +42,36 @@ export async function POST(request: NextRequest) {
           notes?: Record<string, string>;
         };
       };
+      order?: {
+        entity: {
+          id: string;
+          amount: number;
+          amount_paid: number;
+          status: string;
+          notes?: Record<string, string>;
+        };
+      };
     };
   };
 
   const supabase = createServiceClient();
+
+  // Idempotency: handle each Razorpay event exactly once. Insert-first acts as a
+  // lock; a unique violation means we've already processed this delivery.
+  const eventId =
+    request.headers.get("x-razorpay-event-id") ||
+    `${event.event}:${
+      event.payload.payment?.entity.id ??
+      event.payload.subscription?.entity.id ??
+      event.payload.order?.entity.id ??
+      ""
+    }`;
+  const { error: dupErr } = await supabase
+    .from("processed_events")
+    .insert({ event_id: eventId, event_type: event.event });
+  if (dupErr) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   switch (event.event) {
     case "subscription.activated": {
@@ -174,6 +201,24 @@ export async function POST(request: NextRequest) {
             html: paymentFailedEmail(userData.full_name || userData.email, plan?.name || planId, retryUrl),
           });
         }
+      }
+      break;
+    }
+
+    case "order.paid": {
+      // Prepaid wallet top-up (managed track). Credit only after Razorpay
+      // confirms payment. wallet.credit is idempotent on eventId, so even a
+      // racing duplicate delivery credits exactly once.
+      const order = event.payload.order?.entity;
+      if (order?.notes?.purpose === "wallet_topup" && order.notes.user_id) {
+        await wallet.credit({
+          userId: order.notes.user_id,
+          amountPaise: order.amount_paid ?? order.amount, // Razorpay amounts are paise
+          type: "recharge",
+          idempotencyKey: eventId,
+          description: "Wallet top-up via Razorpay",
+          paymentMethod: "razorpay",
+        });
       }
       break;
     }

@@ -5,6 +5,7 @@ import { sendTemplateMessage } from "@/lib/meta";
 import { getBillingMode } from "@/lib/billing/guarded-send";
 import { quoteSendCostPaise, toBillableCategory } from "@/lib/billing/pricing";
 import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
+import { dispatchEvent } from "@/lib/webhooks-out";
 
 const BATCH_SIZE = 50;
 const META_COST_MARKETING = 1.50;
@@ -148,6 +149,10 @@ async function processCampaign({
       cost: actualCost,
     })
     .eq("id", campaignId);
+
+  dispatchEvent(supabase, userId, "campaign.completed", {
+    id: campaignId, sent: totalSent, failed: totalFailed,
+  }).catch(() => {});
 
   // Upsert daily analytics
   const { data: existing } = await supabase

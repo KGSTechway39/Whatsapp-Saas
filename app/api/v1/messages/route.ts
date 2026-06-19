@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { withApiAuth, ApiAuthError } from "@/lib/api-keys";
 import { dispatchEvent } from "@/lib/webhooks-out";
+import { sendTemplateMessage, sendTextMessage } from "@/lib/meta";
+import { guardedSingleSend, resolveTemplateCategory } from "@/lib/billing/guarded-send";
+import { InsufficientBalanceError } from "@/lib/billing/wallet";
 
 // POST /api/v1/messages
 // Auth: Bearer wasend_… with scope `messages:write`
@@ -34,22 +37,24 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Pick sending number
-    let numberId = body.from as string | undefined;
-    if (!numberId) {
-      const { data: num } = await supabase
-        .from("whatsapp_numbers")
-        .select("id")
-        .eq("user_id", ctx.userId)
-        .eq("status", "active")
-        .order("is_primary", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      numberId = num?.id;
-    }
-    if (!numberId) {
+    // Pick sending number (with Meta credentials), scoped to the API key's tenant.
+    const numSel = "id, phone_number_id, access_token, status";
+    const { data: number } = body.from
+      ? await supabase.from("whatsapp_numbers").select(numSel)
+          .eq("id", body.from).eq("user_id", ctx.userId).maybeSingle()
+      : await supabase.from("whatsapp_numbers").select(numSel)
+          .eq("user_id", ctx.userId).eq("status", "active")
+          .order("is_primary", { ascending: false }).limit(1).maybeSingle();
+
+    if (!number?.id) {
       return NextResponse.json({ error: "No active WhatsApp number connected", code: "NO_ACTIVE_NUMBER" }, { status: 400 });
     }
+    if (number.status !== "active" || !number.phone_number_id || !number.access_token) {
+      return NextResponse.json({ error: "Sending number is not connected/active", code: "NUMBER_NOT_READY" }, { status: 400 });
+    }
+    const numberId = number.id;
+    const phoneNumberId = number.phone_number_id as string;
+    const accessToken = number.access_token as string;
 
     // Look up the contact (or create one if not present — convenience for API users)
     let contactId: string | null = null;
@@ -110,28 +115,79 @@ export async function POST(req: NextRequest) {
 
     if (msgErr) return NextResponse.json({ error: msgErr.message, code: "DB_ERROR" }, { status: 500 });
 
-    // Fire 'message.sent' webhook (the actual Meta send happens in the
-    // campaign worker / direct integration; status webhooks fire when Meta
-    // delivery callbacks come in via /api/webhook/whatsapp).
-    dispatchEvent(supabase, ctx.userId, "message.sent", {
-      id: msg.id,
-      to,
-      from_number_id: numberId,
-      type,
-      template: body.template || null,
-      text: body.text || null,
-      created_at: msg.created_at,
-    }).catch(() => {});
+    // Resolve billing category + build the template payload.
+    const category =
+      type === "text" ? "SERVICE" : await resolveTemplateCategory(ctx.userId, body.template.name);
+    const languageCode = body.template?.language || "en";
+    const vars: string[] = Array.isArray(body.template?.variables) ? body.template.variables : [];
+    const components =
+      vars.length > 0
+        ? [{ type: "body", parameters: vars.map((v) => ({ type: "text", text: v })) }]
+        : [];
 
-    return NextResponse.json({
-      id: msg.id,
-      object: "message",
-      to,
-      from: numberId,
-      type,
-      status: msg.status,
-      created_at: msg.created_at,
-    }, { status: 201 });
+    // Idempotency: caller's Idempotency-Key header, else the message id.
+    const idemKey = req.headers.get("Idempotency-Key") || `v1msg:${msg.id}`;
+
+    try {
+      // Real send through the unmodified lib/meta.ts sender, wrapped in billing.
+      // Managed tenants are charged (hard stop if unaffordable); BYO pass through.
+      const result = await guardedSingleSend({
+        userId: ctx.userId,
+        category,
+        idempotencyKey: idemKey,
+        referenceId: to,
+        send: () =>
+          type === "text"
+            ? sendTextMessage(phoneNumberId, accessToken, to, body.text)
+            : sendTemplateMessage({
+                phoneNumberId,
+                accessToken,
+                to,
+                templateName: body.template.name,
+                languageCode,
+                components,
+              }),
+      });
+
+      const sentAt = new Date().toISOString();
+      await supabase
+        .from("campaign_messages")
+        .update({ status: "sent", meta_message_id: result.messageId, sent_at: sentAt })
+        .eq("id", msg.id);
+      await supabase
+        .from("campaigns")
+        .update({ status: "completed", sent_count: 1, completed_at: sentAt })
+        .eq("id", campaign.id);
+
+      dispatchEvent(supabase, ctx.userId, "message.sent", {
+        id: msg.id, to, from_number_id: numberId, type,
+        wa_message_id: result.messageId, created_at: msg.created_at,
+      }).catch(() => {});
+
+      return NextResponse.json({
+        id: msg.id, object: "message", to, from: numberId, type,
+        status: "sent", wa_message_id: result.messageId, created_at: msg.created_at,
+      }, { status: 201 });
+    } catch (sendErr) {
+      const failMsg = sendErr instanceof Error ? sendErr.message : "Send failed";
+      await supabase
+        .from("campaign_messages")
+        .update({ status: "failed", error_message: failMsg })
+        .eq("id", msg.id);
+      await supabase
+        .from("campaigns")
+        .update({ status: "failed", failed_count: 1, completed_at: new Date().toISOString() })
+        .eq("id", campaign.id);
+
+      if (sendErr instanceof InsufficientBalanceError) {
+        return NextResponse.json(
+          { error: "Insufficient wallet balance", code: "INSUFFICIENT_BALANCE" },
+          { status: 402 },
+        );
+      }
+      dispatchEvent(supabase, ctx.userId, "message.failed", { id: msg.id, to, error: failMsg }).catch(() => {});
+      return NextResponse.json({ error: failMsg, code: "SEND_FAILED" }, { status: 502 });
+    }
   } catch (err) {
     if (err instanceof ApiAuthError) {
       return NextResponse.json({ error: err.message, code: err.code }, { status: err.status });

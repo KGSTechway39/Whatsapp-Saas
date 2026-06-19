@@ -5,6 +5,7 @@ import { sendTemplateMessage } from "@/lib/meta";
 import { getBillingMode } from "@/lib/billing/guarded-send";
 import { quoteSendCostPaise, toBillableCategory } from "@/lib/billing/pricing";
 import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
+import { dispatchEvent } from "@/lib/webhooks-out";
 
 // POST /api/campaigns/[id]/launch
 // Fetches contacts for the campaign's audience, sends template via Meta API, tracks results
@@ -234,6 +235,10 @@ async function sendCampaignMessages({
       completed_at: now,
     })
     .eq("id", campaignId);
+
+  dispatchEvent(supabase, userId, "campaign.completed", {
+    id: campaignId, sent, failed, total: recipients.length,
+  }).catch(() => {});
 
   // Increment messages_sent on the WhatsApp number
   await supabase

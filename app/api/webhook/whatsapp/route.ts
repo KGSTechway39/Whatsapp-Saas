@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, WEBHOOK_LIMIT, rateLimitHeaders } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
+import { dispatchEvent, type WebhookEventName } from "@/lib/webhooks-out";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 const APP_SECRET   = process.env.META_APP_SECRET;
@@ -240,6 +241,32 @@ export async function POST(request: NextRequest) {
         .from("campaign_messages")
         .update(updateData)
         .eq("meta_message_id", metaMessageId);
+
+      // Emit an outbound webhook for terminal/progress statuses so external
+      // apps (e-commerce, CRM) get delivery updates. message.sent is emitted
+      // at send time, so only relay delivered/read/failed here.
+      if (mappedStatus === "delivered" || mappedStatus === "read" || mappedStatus === "failed") {
+        const { data: cm } = await supabase
+          .from("campaign_messages")
+          .select("id, phone, campaigns(user_id)")
+          .eq("meta_message_id", metaMessageId)
+          .maybeSingle();
+        const ownerId = (cm?.campaigns as { user_id?: string } | null)?.user_id;
+        if (ownerId) {
+          dispatchEvent(
+            supabase,
+            ownerId,
+            `message.${mappedStatus}` as WebhookEventName,
+            {
+              id: cm!.id,
+              to: cm!.phone,
+              wa_message_id: metaMessageId,
+              status: mappedStatus,
+              timestamp: new Date(Number(timestamp) * 1000).toISOString(),
+            },
+          ).catch(() => {});
+        }
+      }
     }
 
     // ── Incoming messages ──
