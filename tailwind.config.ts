@@ -21,7 +21,8 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
-        display: ["var(--font-syne)", "sans-serif"],
+        // Inter-only direction — display reuses the Inter stack (Syne removed)
+        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -32,6 +33,7 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -40,6 +42,15 @@ const config: Config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        // Semantic status tokens — single source for badges/states everywhere
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -57,11 +68,13 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Brand palette repointed to teal-blue (was WhatsApp green).
+        // Aliases kept so existing class usages (bg-wa-green, etc.) inherit the new brand.
         wa: {
-          green: "#25D366",
-          teal: "#128C7E",
-          dark: "#075E54",
-          light: "#dcf8c6",
+          green: "#0B7285",
+          teal: "#0B7285",
+          dark: "#095C6B",
+          light: "#E0F2F1",
         },
       },
       borderRadius: {

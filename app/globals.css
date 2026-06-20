@@ -2,52 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap");
-
+/*
+ * WASend design tokens
+ * Light-first (default) with a parallel dark set.
+ * Brand: teal-blue (#0B7285) — deliberately NOT WhatsApp green.
+ * Emerald is reserved for sent/delivered states only.
+ * All values HSL so they compose with Tailwind's hsl(var(--token)) mapping.
+ */
 @layer base {
-  :root {
-    --background: 222 47% 7%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142 69% 49%;
-    --primary-foreground: 144 100% 5%;
-    --secondary: 222 47% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 222 47% 14%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 222 47% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 18%;
-    --input: 222 47% 16%;
-    --ring: 142 69% 49%;
+  /* ---- Light (default / fallback) ---- */
+  :root,
+  .light {
+    --background: 210 40% 98%; /* #F8FAFC surface */
+    --foreground: 222 47% 11%; /* Slate-900 #0F172A headings */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 189 85% 28%; /* teal-blue #0B7285 */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 189 85% 23%; /* #095C6B */
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 25% 35%; /* ~Slate-600 #475569 (AA on white) */
+    --accent: 189 60% 95%; /* faint teal tint */
+    --accent-foreground: 189 85% 23%;
+
+    --destructive: 347 77% 50%; /* rose #E11D48 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%; /* emerald #10B981 */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* amber #F59E0B */
+    --warning-foreground: 38 92% 12%;
+
+    --border: 214 32% 91%; /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 189 85% 28%; /* teal focus ring */
     --radius: 0.75rem;
   }
 
-  .light {
-    --background: 0 0% 97%;
-    --foreground: 222 47% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 8%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 8%;
-    --primary: 142 69% 38%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 222 47% 8%;
-    --muted: 220 14% 93%;
-    --muted-foreground: 220 9% 45%;
-    --accent: 220 14% 91%;
-    --accent-foreground: 222 47% 8%;
-    --destructive: 0 63% 51%;
+  /* ---- Dark (parallel) ---- */
+  .dark {
+    --background: 222 47% 6%; /* ~Slate-950 #020617 */
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%; /* Slate-900 */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 187 72% 55%; /* lightened teal for dark surfaces */
+    --primary-foreground: 222 47% 8%;
+    --primary-hover: 187 72% 62%;
+
+    --secondary: 222 47% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 47% 14%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 222 47% 17%;
+    --accent-foreground: 187 72% 70%;
+
+    --destructive: 347 77% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 14% 88%;
-    --input: 220 14% 92%;
-    --ring: 142 69% 38%;
+    --success: 160 70% 48%;
+    --success-foreground: 144 100% 6%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 38 92% 12%;
+
+    --border: 222 47% 18%;
+    --input: 222 47% 16%;
+    --ring: 187 72% 55%;
   }
 }
 
@@ -59,57 +85,105 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Accessible focus — visible teal ring, never on mouse */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
 }
 
-@layer utilities {
-  .wa-gradient {
-    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+@layer components {
+  /* ---- Type scale (one scale, reused everywhere) ---- */
+  .text-page-title {
+    @apply text-2xl sm:text-3xl font-bold tracking-tight text-foreground;
+  }
+  .text-section-title {
+    @apply text-lg font-semibold tracking-tight text-foreground;
+  }
+  .text-card-title {
+    @apply text-sm font-semibold text-foreground;
+  }
+  .text-body {
+    @apply text-sm text-muted-foreground;
+  }
+  .text-caption {
+    @apply text-xs text-muted-foreground;
   }
 
+  /* ---- Surfaces (24px card padding, 8px grid) ---- */
+  .card-surface {
+    @apply bg-card border border-border rounded-xl;
+  }
+  .card-pad {
+    @apply p-6;
+  }
+
+  /* Brand gradient — repointed from WhatsApp green to teal-blue */
+  .wa-gradient {
+    background: linear-gradient(135deg, #0b7285 0%, #095c6b 100%);
+  }
   .wa-gradient-text {
-    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    background: linear-gradient(135deg, #0b7285 0%, #095c6b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .glass-card {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    background: rgba(26, 31, 46, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-  }
-
+  /* Calm card (replaces blurred glass) — solid surface in both themes */
+  .glass-card,
   .glass-card-light {
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    @apply bg-card border border-border;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
+  /* ---- Sidebar nav items ---- */
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
     text-muted-foreground hover:text-foreground hover:bg-accent
-    transition-all duration-200 cursor-pointer;
+    transition-colors duration-150 cursor-pointer;
   }
-
   .sidebar-item-active {
-    @apply bg-primary/10 text-primary;
+    @apply bg-accent text-primary font-semibold;
   }
 
+  /* ---- Stat card ---- */
   .stat-card {
-    @apply rounded-2xl p-6 bg-card border border-border/50 hover:border-border
-    transition-all duration-300 hover:shadow-lg hover:shadow-black/20;
+    @apply rounded-xl p-6 bg-card border border-border
+    transition-shadow duration-200 hover:shadow-md hover:shadow-slate-200/60
+    dark:hover:shadow-black/30;
   }
 
+  /* ---- Skeleton (theme-aware, replaces bg-white/5) ---- */
+  .skeleton {
+    @apply rounded-lg bg-muted animate-pulse;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+}
+
+@layer utilities {
+  /* Route-mount entrance (kept; disabled under reduced-motion below) */
   .page-fade-in {
-    animation: fadeIn 0.4s ease-out forwards;
+    animation: pageFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-
-  @keyframes fadeIn {
+  @keyframes pageFadeIn {
     from {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
@@ -117,30 +191,27 @@
     }
   }
 
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--border));
-    border-radius: 9999px;
-  }
-
+  /* Subtle dotted grid — neutral, low-contrast (was green) */
   .grid-bg {
-    background-image: linear-gradient(
-        rgba(37, 211, 102, 0.03) 1px,
-        transparent 1px
-      ),
-      linear-gradient(90deg, rgba(37, 211, 102, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-image: radial-gradient(
+      hsl(var(--border)) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+}
+
+/* Accessibility: honor reduced-motion globally — REQUIRED */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .page-fade-in {
+    animation: none !important;
   }
 }

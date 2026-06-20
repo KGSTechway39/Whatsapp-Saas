@@ -74,14 +74,14 @@ export function StatsCard({
       {trend !== undefined && (
         <div className="flex items-center gap-1.5">
           {isPositive ? (
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <TrendingUp className="w-3.5 h-3.5 text-success" />
           ) : (
-            <TrendingDown className="w-3.5 h-3.5 text-red-400" />
+            <TrendingDown className="w-3.5 h-3.5 text-destructive" />
           )}
           <span
             className={cn(
               "text-xs font-medium",
-              isPositive ? "text-emerald-400" : "text-red-400"
+              isPositive ? "text-success" : "text-destructive"
             )}
           >
             {isPositive ? "+" : ""}

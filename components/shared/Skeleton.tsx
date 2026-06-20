@@ -6,7 +6,7 @@ export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "animate-pulse rounded-lg bg-white/5",
+        "animate-pulse rounded-lg bg-muted",
         className
       )}
     />
@@ -46,7 +46,7 @@ export function ChartSkeleton({ height = 240 }: { height?: number }) {
         {[65, 40, 75, 55, 80, 45, 70, 60, 85, 50, 65, 75, 40, 60].map((h, i) => (
           <div
             key={i}
-            className="flex-1 rounded-sm animate-pulse bg-white/5"
+            className="flex-1 rounded-sm animate-pulse bg-muted"
             style={{ height: `${h}%` }}
           />
         ))}

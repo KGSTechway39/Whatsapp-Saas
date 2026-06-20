@@ -1,6 +1,10 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 import { ReactNode } from "react";
+import { motion } from "framer-motion";
+import { fadeUp } from "@/lib/motion";
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -18,7 +22,10 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      animate="visible"
       className={cn(
         "flex flex-col items-center justify-center py-16 px-4 text-center",
         className
@@ -32,6 +39,6 @@ export function EmptyState({
         {description}
       </p>
       {action}
-    </div>
+    </motion.div>
   );
 }

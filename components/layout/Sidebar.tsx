@@ -189,7 +189,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
         animate={{ width: collapsed ? 60 : 256 }}
         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
         className={cn(
-          "fixed top-0 left-0 h-full bg-[#0d1117] border-r border-border/50 z-40",
+          "fixed top-0 left-0 h-full bg-card border-r border-border/50 z-40",
           "flex flex-col transition-transform duration-300 ease-in-out overflow-hidden",
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"

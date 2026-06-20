@@ -5,27 +5,27 @@ const statusConfig: Record<
   StatusType,
   { label: string; className: string }
 > = {
+  // Semantic tokens (theme-aware). Emerald (success) is reserved for
+  // sent/delivered-style states only; pending→warning, rejected→destructive.
   active: {
     label: "Active",
-    className:
-      "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+    className: "bg-success/15 text-success border border-success/25",
   },
   inactive: {
     label: "Inactive",
-    className: "bg-slate-500/15 text-slate-400 border border-slate-500/25",
+    className: "bg-muted text-muted-foreground border border-border",
   },
   approved: {
     label: "Approved",
-    className:
-      "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+    className: "bg-success/15 text-success border border-success/25",
   },
   pending: {
     label: "Pending",
-    className: "bg-amber-500/15 text-amber-400 border border-amber-500/25",
+    className: "bg-warning/15 text-warning border border-warning/25",
   },
   rejected: {
     label: "Rejected",
-    className: "bg-red-500/15 text-red-400 border border-red-500/25",
+    className: "bg-destructive/15 text-destructive border border-destructive/25",
   },
   running: {
     label: "Running",
@@ -33,12 +33,11 @@ const statusConfig: Record<
   },
   completed: {
     label: "Completed",
-    className:
-      "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+    className: "bg-success/15 text-success border border-success/25",
   },
   failed: {
     label: "Failed",
-    className: "bg-red-500/15 text-red-400 border border-red-500/25",
+    className: "bg-destructive/15 text-destructive border border-destructive/25",
   },
   scheduled: {
     label: "Scheduled",
@@ -46,11 +45,11 @@ const statusConfig: Record<
   },
   draft: {
     label: "Draft",
-    className: "bg-slate-500/15 text-slate-400 border border-slate-500/25",
+    className: "bg-muted text-muted-foreground border border-border",
   },
   invited: {
     label: "Invited",
-    className: "bg-amber-500/15 text-amber-400 border border-amber-500/25",
+    className: "bg-warning/15 text-warning border border-warning/25",
   },
 };
 
@@ -80,9 +79,9 @@ export function StatusBadge({
           className={cn(
             "w-1.5 h-1.5 rounded-full",
             status === "active" || status === "approved" || status === "completed"
-              ? "bg-emerald-400"
+              ? "bg-success"
               : status === "pending" || status === "invited"
-              ? "bg-amber-400"
+              ? "bg-warning"
               : status === "running"
               ? "bg-blue-400 animate-pulse"
               : status === "scheduled"
