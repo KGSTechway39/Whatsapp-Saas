@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Eye, EyeOff, MessageCircle, Loader2, Lock, Mail } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
@@ -14,7 +14,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   signup_failed:       "Could not create your account. Please try email signup instead.",
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromPath = searchParams.get("from") || "/dashboard";
@@ -177,5 +177,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary for static prerender (Next 14).
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -8,7 +8,7 @@ import {
   IndianRupee, MousePointerClick, Eye, Plus, X, Info,
   AlertCircle, CheckCircle2, Sparkles, ArrowRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -67,7 +67,7 @@ const formatINR = (n: number) =>
 const fmtNum = (n: number) =>
   n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
 
-export default function AdsPage() {
+function AdsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
@@ -515,5 +515,14 @@ function ManualTokenModal({ onClose, onConnected }: { onClose: () => void; onCon
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary for static prerender (Next 14).
+export default function AdsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdsPageContent />
+    </Suspense>
   );
 }
