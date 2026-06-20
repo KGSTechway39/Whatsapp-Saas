@@ -232,6 +232,29 @@ export function normalizeTemplateStatus(s: MetaTemplateStatus): "APPROVED" | "PE
   return "REJECTED";
 }
 
+// Send a document message (link-based) — e.g. resume delivery
+export async function sendDocumentMessage(
+  phoneNumberId: string,
+  accessToken: string,
+  to: string,
+  documentUrl: string,
+  filename?: string,
+  caption?: string
+): Promise<SendMessageResult> {
+  const data = await graphPost<{ messages: { id: string }[] }>(
+    `/${phoneNumberId}/messages`,
+    accessToken,
+    {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "document",
+      document: { link: documentUrl, filename, caption },
+    }
+  );
+  return { messageId: data.messages?.[0]?.id };
+}
+
 // Send a plain text message (for testing / automation)
 export async function sendTextMessage(
   phoneNumberId: string,
