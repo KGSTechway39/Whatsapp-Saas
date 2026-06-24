@@ -160,8 +160,9 @@ export async function processIncomingMessage(
     return { matched: false, reason: "unknown_phone_number_id" };
   }
 
-  // 2) Upsert contact (org_id, phone) unique
-  const contact = await upsertContact(supabase, account.organization_id, args.fromPhone);
+  // 2) Upsert contact (org_id, phone) unique + refresh the 24h window
+  const inboundAt = new Date((args.receivedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString();
+  const contact = await upsertContact(supabase, account.organization_id, args.fromPhone, inboundAt);
   if (!contact) return { matched: false, reason: "contact_upsert_failed" };
 
   // 3) Active session, or trigger-match a new one
@@ -275,6 +276,7 @@ async function upsertContact(
   supabase: SupabaseClient,
   organizationId: string,
   phone: string,
+  lastInboundAt: string,
 ): Promise<ContactRow | null> {
   const { data: existing } = await supabase
     .from("contacts")
@@ -283,7 +285,14 @@ async function upsertContact(
     .eq("phone", phone)
     .maybeSingle();
 
-  if (existing) return existing as ContactRow;
+  if (existing) {
+    // Refresh the 24h customer-service window for the returning contact.
+    await supabase
+      .from("contacts")
+      .update({ last_inbound_at: lastInboundAt })
+      .eq("id", (existing as ContactRow).id);
+    return existing as ContactRow;
+  }
 
   const { data: inserted, error } = await supabase
     .from("contacts")
@@ -292,6 +301,7 @@ async function upsertContact(
       phone,
       source: "webhook",
       opt_in_status: "opted_in",
+      last_inbound_at: lastInboundAt,
     })
     .select("id, organization_id")
     .single();
