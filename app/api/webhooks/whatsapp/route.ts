@@ -199,7 +199,9 @@ async function ingestEvents(payload: WebhookPayload): Promise<void> {
             phoneNumberId: phoneNumberId!,
             payload: status as unknown as Record<string, unknown>,
             kind: "status" as const,
-            eventId: status.id,
+            // Distinct job id per (message, status) so delivered/read/sent for the
+            // same message aren't collapsed by the queue's job-id dedup.
+            eventId: `${status.id}:${status.status}`,
             receivedAt: Number(status.timestamp ?? Math.floor(Date.now() / 1000)),
           });
         }

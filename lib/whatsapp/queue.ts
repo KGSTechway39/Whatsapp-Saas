@@ -17,6 +17,7 @@
 
 import { logger } from "@/lib/logger";
 import { processIncomingMessage } from "./engine";
+import { processStatusEvent, type StatusPayload } from "./status";
 import { enqueue, registerHandler } from "@/lib/queue";
 
 export interface InboundEvent {
@@ -65,8 +66,14 @@ export async function enqueueWebhookEvent(event: InboundEvent): Promise<void> {
 }
 
 async function runInboundWorker(event: InboundEvent): Promise<void> {
+  if (event.kind === "status") {
+    // Status lifecycle (sent/delivered/read/failed) — update the message row
+    // with a monotonic rank so out-of-order events can't regress state.
+    await processStatusEvent(event.payload as unknown as StatusPayload);
+    return;
+  }
   if (event.kind !== "message") {
-    // status / ctwa_referral handled inline by the webhook today
+    // ctwa_referral handled inline by the webhook today
     return;
   }
 

@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
 import { dispatchEvent, type WebhookEventName } from "@/lib/webhooks-out";
 import { markEventProcessed } from "@/lib/whatsapp/dedup";
+import { processStatusEvent, type StatusPayload } from "@/lib/whatsapp/status";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 const APP_SECRET   = process.env.META_APP_SECRET;
@@ -198,7 +199,7 @@ export async function POST(request: NextRequest) {
     const value   = changes?.value ?? {};
 
     // ── Status updates ──
-    const statuses = (value.statuses as {id:string;status:string;timestamp:string}[]) ?? [];
+    const statuses = (value.statuses as StatusPayload[]) ?? [];
     for (const status of statuses) {
       const { id: metaMessageId, status: msgStatus, timestamp } = status;
 
@@ -213,23 +214,14 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const updateData: Record<string, string> = { status: mappedStatus };
-      if (mappedStatus === "delivered") {
-        updateData.delivered_at = new Date(Number(timestamp) * 1000).toISOString();
-      }
-      if (mappedStatus === "read") {
-        updateData.read_at = new Date(Number(timestamp) * 1000).toISOString();
-      }
-
-      await supabase
-        .from("campaign_messages")
-        .update(updateData)
-        .eq("meta_message_id", metaMessageId);
+      // Apply with a monotonic rank (shared with the worker path).
+      const applied = await processStatusEvent(status);
 
       // Emit an outbound webhook for terminal/progress statuses so external
       // apps (e-commerce, CRM) get delivery updates. message.sent is emitted
-      // at send time, so only relay delivered/read/failed here.
-      if (mappedStatus === "delivered" || mappedStatus === "read" || mappedStatus === "failed") {
+      // at send time, so only relay delivered/read/failed — and only when the
+      // status actually moved the row forward.
+      if (applied && (mappedStatus === "delivered" || mappedStatus === "read" || mappedStatus === "failed")) {
         const { data: cm } = await supabase
           .from("campaign_messages")
           .select("id, phone, campaigns(user_id)")
