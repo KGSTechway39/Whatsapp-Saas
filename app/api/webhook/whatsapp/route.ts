@@ -5,6 +5,7 @@ import { checkRateLimit, WEBHOOK_LIMIT, rateLimitHeaders } from "@/lib/rate-limi
 import { logger } from "@/lib/logger";
 import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
 import { dispatchEvent, type WebhookEventName } from "@/lib/webhooks-out";
+import { markEventProcessed } from "@/lib/whatsapp/dedup";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 const APP_SECRET   = process.env.META_APP_SECRET;
@@ -28,21 +29,9 @@ function verifySignature(rawBody: Buffer, signature: string | null): boolean {
   }
 }
 
-// ─── Idempotency store (in-memory, last 10 min) ────────────────────────────────
-// For multi-instance deployments, replace with Redis/Supabase check.
-const processedEvents = new Map<string, number>();
-setInterval(() => {
-  const cutoff = Date.now() - 10 * 60 * 1000;
-  Array.from(processedEvents.entries()).forEach(([k, t]) => {
-    if (t < cutoff) processedEvents.delete(k);
-  });
-}, 5 * 60 * 1000);
-
-function markProcessed(id: string): boolean {
-  if (processedEvents.has(id)) return false; // already processed
-  processedEvents.set(id, Date.now());
-  return true;
-}
+// ─── Idempotency ───────────────────────────────────────────────────────────────
+// DB-backed, per-event dedup via `processed_events` (see lib/whatsapp/dedup.ts).
+// A unique constraint is the only thing that holds under Meta's concurrent retries.
 
 // ─── GET — Meta webhook verification ──────────────────────────────────────────
 
@@ -93,25 +82,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Idempotency: use Meta's entry ID
-  const entryId = (body?.entry as { id?: string }[])?.[0]?.id;
-  if (entryId) {
-    const firstChange = ((body?.entry as { changes?: { value?: { messaging_product?: string } }[] }[])?.[0]?.changes?.[0]?.value?.messaging_product) ?? "";
-    const eventKey = `${entryId}:${firstChange}:${Date.now()}`;
-    // Use message timestamps for better idempotency key
-    const msgs = ((body?.entry as { changes?: { value?: { messages?: { id?: string }[] } }[] }[])?.[0]?.changes?.[0]?.value?.messages) ?? [];
-    const statuses = ((body?.entry as { changes?: { value?: { statuses?: { id?: string }[] } }[] }[])?.[0]?.changes?.[0]?.value?.statuses) ?? [];
-    const dedupKey = msgs.length > 0
-      ? `msg:${(msgs as {id?:string}[])[0].id}`
-      : statuses.length > 0
-      ? `st:${(statuses as {id?:string}[])[0].id}`
-      : eventKey;
-
-    if (!markProcessed(dedupKey)) {
-      // Already processed — return 200 immediately (Meta expects 200 even for duplicates)
-      return NextResponse.json({ status: "duplicate" });
-    }
-  }
+  // Per-event idempotency is enforced below in the message/status loops via
+  // `processed_events` (DB unique constraint) — duplicates are skipped there.
 
   const supabase = createServiceClient();
 
@@ -203,6 +175,13 @@ export async function POST(request: NextRequest) {
       // Only forward text + interactive replies to the engine.
       if (msgType !== "text" && msgType !== "interactive") continue;
 
+      // Dedup the engine hand-off independently of the inline processing below
+      // (distinct key per consumer so a first delivery runs both, a redelivery
+      // runs neither).
+      if (!(await markEventProcessed(supabase, `wa_enq:${msg.id}`, "message"))) {
+        continue;
+      }
+
       void enqueueWebhookEvent({
         phoneNumberId: meta0.phone_number_id,
         payload: msg,
@@ -228,6 +207,11 @@ export async function POST(request: NextRequest) {
       };
       const mappedStatus = statusMap[msgStatus];
       if (!mappedStatus) continue;
+
+      // Dedup per (message_id, status) — Meta re-delivers status events.
+      if (!(await markEventProcessed(supabase, `wa_status:${metaMessageId}:${msgStatus}`, "status"))) {
+        continue;
+      }
 
       const updateData: Record<string, string> = { status: mappedStatus };
       if (mappedStatus === "delivered") {
@@ -289,6 +273,11 @@ export async function POST(request: NextRequest) {
 
     for (const message of messages) {
       if (message.type !== "text") continue;
+
+      // Dedup per Meta message id — Meta re-delivers inbound messages.
+      if (!(await markEventProcessed(supabase, `wa_msg:${message.id}`, "message"))) {
+        continue;
+      }
 
       const fromPhone = message.from;
       const text = message.text?.body ?? "";

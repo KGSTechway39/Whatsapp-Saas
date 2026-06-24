@@ -21,6 +21,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
+import { markEventProcessed } from "@/lib/whatsapp/dedup";
 
 // ── Env + constants ────────────────────────────────────────────────────
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
@@ -182,6 +183,10 @@ async function ingestEvents(payload: WebhookPayload): Promise<void> {
       if (change.field === "messages") {
         // 1) Status updates (sent / delivered / read / failed)
         for (const status of value.statuses ?? []) {
+          // Dedup per (message_id, status) — Meta re-delivers, sometimes concurrently.
+          if (!(await markEventProcessed(supabase, `wa_status:${status.id}:${status.status}`, "status"))) {
+            continue;
+          }
           logger.info("[webhooks/whatsapp] status", {
             org: tenant.organizationId,
             waMessageId: status.id,
@@ -201,6 +206,10 @@ async function ingestEvents(payload: WebhookPayload): Promise<void> {
 
         // 2) Inbound messages — text + interactive replies + CTWA
         for (const msg of value.messages ?? []) {
+          // Dedup per Meta message id — Meta re-delivers inbound messages.
+          if (!(await markEventProcessed(supabase, `wa_msg:${msg.id}`, "message"))) {
+            continue;
+          }
           const kind: "message" | "ctwa_referral" = msg.referral
             ? "ctwa_referral"
             : "message";
