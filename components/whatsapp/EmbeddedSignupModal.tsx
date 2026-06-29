@@ -175,6 +175,7 @@ export function EmbeddedSignupModal({
   const [chosen, setChosen]     = useState<{ waba: DiscoveredWaba; phone: DiscoveredPhone } | null>(null);
   const [savedAccount, setSavedAccount] = useState<SuccessSummary | null>(null);
   const initRef = useRef(false);
+  const loginPendingRef = useRef(false); // true while FB.login awaits its callback
 
   // ── Body scroll lock + ESC ──────────────────────────────────────────
   useEffect(() => {
@@ -238,6 +239,22 @@ export function EmbeddedSignupModal({
     document.body.appendChild(s);
   }, [APP_ID, embeddedConfigured, open]);
 
+  // ── Watchdog: never hang on "Opening Meta sign-in…" ─────────────────
+  // FB.login can leave us in `loading` forever if the popup was blocked or the
+  // Meta app/config can't complete the flow (callback never fires). After a
+  // grace period, fall back to a usable state with guidance. If Meta's callback
+  // does eventually fire, it overrides this and the flow resumes.
+  useEffect(() => {
+    if (phase !== "loading") return;
+    const t = setTimeout(() => {
+      setError(
+        "Meta's sign-in didn't open or didn't finish. Allow pop-ups for this site and retry, or use Manual Setup. If the pop-up opened but errored, your Meta app may not be set up for Embedded Signup yet.",
+      );
+      setPhase("idle");
+    }, 75_000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
   // ── Launch Embedded Signup ──────────────────────────────────────────
   const launchSignup = useCallback(() => {
     if (!embeddedConfigured) {
@@ -251,9 +268,24 @@ export function EmbeddedSignupModal({
 
     setError(null);
     setPhase("loading");
+    loginPendingRef.current = true;
+
+    // Popup-blocked heuristic: opening Meta's sign-in popup blurs this window.
+    // If we still have focus shortly after and the login is still pending, the
+    // browser blocked the popup — surface that fast instead of hanging.
+    setTimeout(() => {
+      if (loginPendingRef.current && typeof document !== "undefined" && document.hasFocus()) {
+        loginPendingRef.current = false;
+        setError(
+          "Your browser blocked Meta's sign-in pop-up. Allow pop-ups for this site (icon in the address bar) and retry, or use Manual Setup.",
+        );
+        setPhase("idle");
+      }
+    }, 2500);
 
     window.FB.login(
       async (response) => {
+        loginPendingRef.current = false;
         const code = response.authResponse?.code;
         if (!code) {
           setPhase("idle");
