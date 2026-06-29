@@ -11,11 +11,15 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",  // unsafe-* needed for Next.js dev + Recharts
+      // connect.facebook.net serves the Meta Embedded Signup SDK (sdk.js).
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://connect.facebook.net",  // unsafe-* needed for Next.js dev + Recharts
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://api.dicebear.com",
+      "img-src 'self' data: blob: https://api.dicebear.com https://*.facebook.com",
       "font-src 'self'",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com",
+      // graph/*.facebook.com: the SDK's XHR + the hidden cross-domain iframe it opens.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://graph.facebook.com https://*.facebook.com",
+      // The Embedded Signup SDK mounts a hidden facebook.com iframe for postMessage.
+      "frame-src 'self' https://*.facebook.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

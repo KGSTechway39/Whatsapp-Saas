@@ -86,6 +86,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${sans.variable} ${display.variable} ${jetbrainsMono.variable} antialiased`}>
+        {/* Mount point the Meta/Facebook SDK expects; without it the Embedded
+            Signup SDK can fail to initialise its cross-domain iframe. */}
+        <div id="fb-root" />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

@@ -227,6 +227,14 @@ export function EmbeddedSignupModal({
     s.async = true;
     s.defer = true;
     s.crossOrigin = "anonymous";
+    // If the SDK can't load (browser ad/tracking blocker, network), don't leave
+    // the button silently disabled — tell the user and point them at Manual Setup.
+    s.onerror = () => {
+      initRef.current = false; // allow a retry on reopen
+      setError(
+        "Couldn't load Facebook sign-in. Disable any ad/tracking blocker for this site and retry, or use Manual Setup.",
+      );
+    };
     document.body.appendChild(s);
   }, [APP_ID, embeddedConfigured, open]);
 
