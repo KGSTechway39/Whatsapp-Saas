@@ -22,6 +22,7 @@ import {
   Wrench,
   CheckCircle2,
   ChevronRight,
+  ChevronDown,
   Copy,
   ExternalLink,
   ArrowRight,
@@ -42,6 +43,9 @@ interface Step {
 export default function ConnectNumberPage(): JSX.Element {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
+  const [selfHostOpen, setSelfHostOpen] = useState(false);
+  // Self-host wizard is hidden for now — flip to `true` to bring it back.
+  const SHOW_SELF_HOST = false;
   const [justConnected, setJustConnected] = useState<ConnectedAccount | null>(null);
 
   // Server and client must render the SAME initial siteUrl to avoid
@@ -113,23 +117,37 @@ export default function ConnectNumberPage(): JSX.Element {
         </div>
       </section>
 
-      {/* Setup wizard — collapsible stepper */}
+      {/* Setup wizard — collapsible stepper (hidden; toggle SHOW_SELF_HOST to restore) */}
+      {SHOW_SELF_HOST && (
       <section>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
+        <button
+          type="button"
+          onClick={() => setSelfHostOpen((o) => !o)}
+          aria-expanded={selfHostOpen}
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left transition-colors hover:bg-accent"
+        >
+          <div className="min-w-0">
             <h2 className="text-base font-semibold">Self-host setup (optional)</h2>
             <p className="text-sm text-muted-foreground">
               Configure your own Meta app to support Embedded Signup. Skip if you&apos;re
               connecting via the button above.
             </p>
           </div>
-          {completed && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-500">
-              <CheckCircle2 className="w-3.5 h-3.5" /> All steps complete
-            </span>
-          )}
-        </div>
+          <div className="flex shrink-0 items-center gap-3">
+            {completed && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-500">
+                <CheckCircle2 className="w-3.5 h-3.5" /> All steps complete
+              </span>
+            )}
+            <ChevronDown
+              className={`h-5 w-5 text-muted-foreground transition-transform ${
+                selfHostOpen ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+        </button>
 
+        {selfHostOpen && (
         <ol className="space-y-3">
           {steps.map((step, i) => {
             const status: "done" | "active" | "pending" =
@@ -201,7 +219,9 @@ export default function ConnectNumberPage(): JSX.Element {
             );
           })}
         </ol>
+        )}
       </section>
+      )}
     </div>
   );
 

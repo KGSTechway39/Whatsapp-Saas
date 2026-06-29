@@ -73,6 +73,26 @@ export function assertConfigured(): void {
 
 // ─── Low-level HTTP ───────────────────────────────────────────────────────
 
+/**
+ * fetch wrapper that turns a connection-level failure (undici's opaque
+ * "fetch failed") into an actionable MetaApiError carrying the real cause,
+ * so callers/users see "Couldn't reach Meta (ENOTFOUND…)" instead of nothing.
+ */
+async function graphFetch(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
+    const detail = cause?.code || cause?.message || (err instanceof Error ? err.message : "unknown");
+    logger.error("[meta-client] network error reaching Graph", { url: url.split("?")[0], detail });
+    throw new MetaApiError(
+      `Couldn't reach Meta (network error: ${detail}). Check the server's internet connection/firewall and try again.`,
+      "NETWORK_ERROR",
+      502,
+    );
+  }
+}
+
 export async function graphGet<T>(
   path: string,
   accessToken: string,
@@ -82,7 +102,7 @@ export async function graphGet<T>(
   url.searchParams.set("access_token", accessToken);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
-  const res = await fetch(url.toString());
+  const res = await graphFetch(url.toString());
   const data = (await res.json()) as MetaErrorEnvelope & Record<string, unknown>;
 
   if (!res.ok) {
@@ -105,7 +125,7 @@ export async function graphPost<T>(
   const url = new URL(`${GRAPH}${path}`);
   url.searchParams.set("access_token", accessToken);
 
-  const res = await fetch(url.toString(), {
+  const res = await graphFetch(url.toString(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -131,7 +151,7 @@ export async function graphDelete<T>(
   const url = new URL(`${GRAPH}${path}`);
   url.searchParams.set("access_token", accessToken);
 
-  const res = await fetch(url.toString(), { method: "DELETE" });
+  const res = await graphFetch(url.toString(), { method: "DELETE" });
   const data = (await res.json()) as MetaErrorEnvelope & Record<string, unknown>;
 
   if (!res.ok) {
@@ -156,7 +176,7 @@ export async function exchangeCodeForToken(code: string): Promise<ExchangedToken
   url.searchParams.set("client_secret", APP_SECRET);
   url.searchParams.set("code", code);
 
-  const res = await fetch(url.toString());
+  const res = await graphFetch(url.toString());
   const data = (await res.json()) as ExchangedToken & MetaErrorEnvelope;
 
   if (!res.ok || !data.access_token) {
@@ -179,7 +199,7 @@ export async function debugToken(accessToken: string): Promise<TokenDebug> {
   url.searchParams.set("input_token", accessToken);
   url.searchParams.set("access_token", `${APP_ID}|${APP_SECRET}`);
 
-  const res = await fetch(url.toString());
+  const res = await graphFetch(url.toString());
   const data = (await res.json()) as { data?: TokenDebug } & MetaErrorEnvelope;
 
   if (!res.ok || !data.data) {

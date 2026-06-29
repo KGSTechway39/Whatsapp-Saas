@@ -101,13 +101,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 2) Refuse cross-org takeover
+  // 2) Refuse cross-tenant takeover — block if another user already owns this phone.
   const { data: existingForPhone } = await supabase
-    .from("whatsapp_accounts")
-    .select("id, organization_id")
+    .from("whatsapp_numbers")
+    .select("id, user_id")
     .eq("phone_number_id", phoneNumberId)
+    .neq("user_id", orgId)
+    .limit(1)
     .maybeSingle();
-  if (existingForPhone && existingForPhone.organization_id !== orgId) {
+  if (existingForPhone) {
     await audit({
       action: "embedded_signup.failure",
       userId: user.id,

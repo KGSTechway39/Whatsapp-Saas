@@ -1,28 +1,26 @@
 /**
  * POST /api/meta/test-message
  *
- * Sends a trial WhatsApp message from a connected account so users can
+ * Sends a trial WhatsApp message from a connected number so users can
  * verify the integration end-to-end.
  *
  * Body:
  *   - to                : recipient phone (E.164 without leading "+")
- *   - accountId?        : whatsapp_accounts.id  — required if the org has > 1 account
+ *   - accountId?        : whatsapp_numbers.id — required if the user has > 1 number
  *   - kind: 'text'      : free-form text (only works within the 24h window)
  *   - kind: 'template'  : template message — works to any opted-in number
  *       - templateName  : approved template name (defaults to "hello_world")
  *       - languageCode  : defaults to "en_US"
  *
  * Returns:
- *   { ok: true, waMessageId, messageId, status }
+ *   { ok: true, waMessageId, from, to, kind }
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
-import { decrypt } from "@/lib/crypto";
 import { logger } from "@/lib/logger";
 import { MetaApiError, graphPost } from "@/lib/meta-client";
-import { resolveOrgId } from "@/lib/whatsapp/onboarding-repo";
 
 interface TestMessageRequest {
   to?: string;
@@ -53,54 +51,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const kind = body.kind ?? "template";
 
-  // ── Resolve org + pick the account ───────────────────────────────────
+  // ── Pick the connected number ────────────────────────────────────────
   const supabase = createServiceClient();
-  const orgId = await resolveOrgId(supabase, user.id, user.company || user.name);
-  if (!orgId) {
-    return NextResponse.json({ error: "No active organization", code: "NO_ORG" }, { status: 400 });
-  }
-
   let q = supabase
-    .from("whatsapp_accounts")
-    .select("id, waba_id, phone_number_id, display_phone_number")
-    .eq("organization_id", orgId)
-    .in("status", ["active", "pending"]);
+    .from("whatsapp_numbers")
+    .select("id, waba_id, phone_number_id, phone_number, access_token")
+    .eq("user_id", user.id)
+    .in("status", ["active", "inactive", "pending"]);
   if (body.accountId) q = q.eq("id", body.accountId);
 
   const { data: account } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!account) {
     return NextResponse.json(
-      { error: "No connected WhatsApp account found. Connect one first.", code: "NO_ACCOUNT" },
+      { error: "No connected WhatsApp number found. Connect one first.", code: "NO_ACCOUNT" },
       { status: 404 },
     );
   }
-
-  // ── Decrypt the active token ─────────────────────────────────────────
-  const { data: tokenRow } = await supabase
-    .from("access_tokens")
-    .select("id, token_ciphertext")
-    .eq("whatsapp_account_id", account.id)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (!tokenRow) {
+  if (!account.phone_number_id || !account.access_token) {
     return NextResponse.json(
-      { error: "No active access token for this account", code: "NO_TOKEN" },
+      { error: "This number is not connected via the Meta API yet.", code: "NOT_CONNECTED" },
       { status: 409 },
     );
   }
 
-  let accessToken: string;
-  try {
-    accessToken = await decrypt(tokenRow.token_ciphertext);
-  } catch (err) {
-    logger.error("[api/meta/test-message] decrypt failed", {
-      accountId: account.id,
-      msg: err instanceof Error ? err.message : String(err),
-    });
-    return NextResponse.json({ error: "Token decryption failed", code: "DECRYPT_FAILED" }, { status: 500 });
-  }
-
-  // ── Build the message body ───────────────────────────────────────────
+  // ── Build the message payload ────────────────────────────────────────
   let payload: Record<string, unknown>;
   if (kind === "text") {
     const text = (body.body ?? "Hello from WASend! 👋").trim();
@@ -129,7 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const res = await graphPost<{ messages: { id: string }[] }>(
       `/${account.phone_number_id}/messages`,
-      accessToken,
+      account.access_token,
       payload,
     );
     waMessageId = res.messages?.[0]?.id;
@@ -150,33 +124,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // ── Log into messages table for analytics + dedupe ───────────────────
-  const { data: inserted } = await supabase
-    .from("messages")
-    .insert({
-      organization_id: orgId,
-      whatsapp_account_id: account.id,
-      wa_message_id: waMessageId,
-      direction: "outbound",
-      type: kind === "text" ? "text" : "template",
-      content: kind === "text"
-        ? { body: body.body ?? "Hello from WASend! 👋" }
-        : { template_name: body.templateName ?? "hello_world", language_code: body.languageCode ?? "en_US" },
-      status: "sent",
-      sent_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
   logger.info("[api/meta/test-message] sent", {
-    userId: user.id, orgId, accountId: account.id, to, waMessageId,
+    userId: user.id, accountId: account.id, to, waMessageId,
   });
 
   return NextResponse.json({
     ok: true,
     waMessageId,
-    messageId: inserted?.id ?? null,
-    from: account.display_phone_number,
+    from: account.phone_number,
     to,
     kind,
   });

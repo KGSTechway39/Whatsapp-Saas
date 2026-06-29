@@ -7,6 +7,7 @@
  * the platform default. All math is integer paise — never floats.
  */
 import { createServiceClient } from "@/lib/supabase/server";
+import { deriveQuote, type SendQuote } from "./rates";
 
 export type MessageCategory =
   | "MARKETING"
@@ -32,31 +33,58 @@ export function toBillableCategory(
 }
 
 /**
- * Resolve the cost of one send in integer paise. Prefers the user-specific
- * price row, falls back to the platform default. Throws if neither exists
- * (a managed user must always have a resolvable price).
+ * Resolve the full quote for one send (charged price + margin trail), in integer
+ * paise. Resolution order:
+ *   1. explicit per-user override row in `message_pricing` (a hand-set deal),
+ *   2. derived from wholesale × (tier markup + buffer)  [migration 017],
+ *   3. legacy platform-default row in `message_pricing`  [pre-017 fallback].
+ * Throws if none resolves (a managed user must always have a price).
+ *
+ * `wholesalePaise`/`markupBps` are populated only on the derived path — that's
+ * what the ledger margin trail records.
+ */
+export async function quoteSend(
+  userId: string,
+  category: MessageCategory,
+): Promise<SendQuote> {
+  const supabase = createServiceClient();
+
+  // 1. Explicit per-user absolute override always wins.
+  const { data: override } = await supabase
+    .from("message_pricing")
+    .select("price_paise")
+    .eq("user_id", userId)
+    .eq("category", category)
+    .maybeSingle<{ price_paise: number }>();
+  if (override) {
+    return { chargedPaise: Number(override.price_paise), wholesalePaise: null, markupBps: null };
+  }
+
+  // 2. Derived: wholesale × (tier markup + buffer).
+  const derived = await deriveQuote(userId, category);
+  if (derived) return derived;
+
+  // 3. Legacy platform default (pre-017 / unconfigured fallback).
+  const { data: def, error } = await supabase
+    .from("message_pricing")
+    .select("price_paise")
+    .is("user_id", null)
+    .eq("category", category)
+    .maybeSingle<{ price_paise: number }>();
+  if (error) throw new Error(`Pricing lookup failed: ${error.message}`);
+  if (!def) throw new Error(`No price configured for category ${category}`);
+  return { chargedPaise: Number(def.price_paise), wholesalePaise: null, markupBps: null };
+}
+
+/**
+ * Resolve the cost of one send in integer paise (charged price only). Thin
+ * wrapper over quoteSend for callers that don't need the margin trail.
  */
 export async function quoteSendCostPaise(
   userId: string,
   category: MessageCategory,
 ): Promise<number> {
-  const supabase = createServiceClient();
-
-  const { data, error } = await supabase
-    .from("message_pricing")
-    .select("user_id, price_paise")
-    .or(`user_id.eq.${userId},user_id.is.null`)
-    .eq("category", category);
-
-  if (error) throw new Error(`Pricing lookup failed: ${error.message}`);
-  if (!data || data.length === 0) {
-    throw new Error(`No price configured for category ${category}`);
-  }
-
-  // User-specific row wins over the platform default (user_id IS NULL).
-  const userRow = data.find((r) => r.user_id === userId);
-  const chosen = userRow ?? data.find((r) => r.user_id === null);
-  return Number(chosen!.price_paise);
+  return (await quoteSend(userId, category)).chargedPaise;
 }
 
 export const rupeesToPaise = (rupees: number): number => Math.round(rupees * 100);

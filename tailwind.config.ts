@@ -21,8 +21,8 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
-        // Inter-only direction — display reuses the Inter stack (Syne removed)
-        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        // Distinctive editorial display face for headings (Bricolage Grotesque)
+        display: ["var(--font-display)", "var(--font-geist-sans)", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

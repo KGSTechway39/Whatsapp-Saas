@@ -530,7 +530,7 @@ export default function InboxPage() {
     try {
       const res = await fetch(`/api/inbox/${selectedId}/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": optimisticId },
         body: JSON.stringify({ type: "text", text: body }),
       });
       const data = await res.json();
@@ -579,7 +579,7 @@ export default function InboxPage() {
     try {
       const res = await fetch(`/api/inbox/${selectedId}/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": optimisticId },
         body: JSON.stringify({ type: "template", templateId: template.id, variableValues: vars }),
       });
       const data = await res.json();
@@ -638,7 +638,7 @@ export default function InboxPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-[calc(100vh-4rem)] -mx-4 sm:-mx-6 flex overflow-hidden bg-[#0b141a]">
+    <div className="h-[calc(100vh-4rem)] -m-4 sm:-m-6 flex overflow-hidden bg-[#0b141a]">
 
       {/* ── LEFT PANEL: Conversation List ────────────────────────────────────── */}
       <div className={`${selectedId ? "hidden lg:flex" : "flex"} flex-col w-full lg:w-[320px] border-r border-border/30 flex-shrink-0 bg-[#111b21]`}>

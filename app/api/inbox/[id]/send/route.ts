@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sendTextMessage, sendTemplateMessage } from "@/lib/meta";
+import { guardedSingleSend } from "@/lib/billing/guarded-send";
+import { toBillableCategory } from "@/lib/billing/pricing";
+import { InsufficientBalanceError } from "@/lib/billing/wallet";
+import { randomUUID } from "crypto";
 
 export async function POST(
   request: NextRequest,
@@ -13,6 +17,14 @@ export async function POST(
   const supabase = createClient();
   const body = await request.json();
   const { type = "text", text, templateId, variableValues = [] } = body;
+
+  // Stable billing idempotency key: prefer a caller-supplied key (header or
+  // body) so a retried send debits the wallet exactly once. The UI passes the
+  // per-send optimistic id. Falls back to a fresh UUID (no dedupe) only when
+  // the caller supplies nothing.
+  const clientIdem =
+    request.headers.get("idempotency-key") || body.idempotencyKey || randomUUID();
+  const billingIdem = `inbox:${params.id}:${clientIdem}`;
 
   // Load conversation
   const { data: conv, error: convErr } = await supabase
@@ -69,7 +81,16 @@ export async function POST(
 
   try {
     if (type === "text" && text) {
-      const result = await sendTextMessage(wn.phone_number_id, wn.access_token, recipientPhone, text);
+      // Managed tenants are billed before the send (SERVICE category — free for
+      // session replies unless platform pricing says otherwise). BYO passes through.
+      const result = await guardedSingleSend({
+        userId: user.id,
+        category: "SERVICE",
+        idempotencyKey: billingIdem,
+        referenceId: `inbox:${params.id}`,
+        description: "Inbox reply (text)",
+        send: () => sendTextMessage(wn.phone_number_id, wn.access_token, recipientPhone, text),
+      });
       waMessageId = result.messageId ?? null;
       messageContent = { body: text };
     } else if (type === "template" && templateId) {
@@ -89,13 +110,21 @@ export async function POST(
         ? [{ type: "body", parameters: variableValues.map((v: string) => ({ type: "text", text: v })) }]
         : [];
 
-      const result = await sendTemplateMessage({
-        phoneNumberId: wn.phone_number_id,
-        accessToken: wn.access_token,
-        to: recipientPhone,
-        templateName: tmpl.name,
-        languageCode: tmpl.language || "en",
-        components,
+      const result = await guardedSingleSend({
+        userId: user.id,
+        category: toBillableCategory(tmpl.category),
+        idempotencyKey: billingIdem,
+        referenceId: `inbox:${params.id}`,
+        description: `Inbox reply (template ${tmpl.name})`,
+        send: () =>
+          sendTemplateMessage({
+            phoneNumberId: wn.phone_number_id,
+            accessToken: wn.access_token,
+            to: recipientPhone,
+            templateName: tmpl.name,
+            languageCode: tmpl.language || "en",
+            components,
+          }),
       });
       waMessageId = result.messageId ?? null;
       messageType = "template";
@@ -115,6 +144,13 @@ export async function POST(
       return NextResponse.json({ error: "Invalid message type or missing content" }, { status: 400 });
     }
   } catch (err) {
+    // Managed user with no prepaid balance: hard stop before anything was sent.
+    if (err instanceof InsufficientBalanceError) {
+      return NextResponse.json(
+        { error: "Insufficient wallet balance. Please top up to continue.", code: "INSUFFICIENT_BALANCE" },
+        { status: 402 },
+      );
+    }
     sendError = err instanceof Error ? err.message : "Send failed";
   }
 

@@ -13,22 +13,22 @@
   /* ---- Light (default / fallback) ---- */
   :root,
   .light {
-    --background: 210 40% 98%; /* #F8FAFC surface */
-    --foreground: 222 47% 11%; /* Slate-900 #0F172A headings */
-    --card: 0 0% 100%; /* #FFFFFF */
-    --card-foreground: 222 47% 11%;
+    --background: 178 44% 96%; /* cool mint tint — on-brand teal, fresh & light */
+    --foreground: 195 45% 12%; /* deep teal-slate headings (AA on mint) */
+    --card: 0 0% 100%; /* clean #FFFFFF cards pop on mint */
+    --card-foreground: 195 45% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 195 45% 12%;
 
     --primary: 189 85% 28%; /* teal-blue #0B7285 */
     --primary-foreground: 0 0% 100%;
     --primary-hover: 189 85% 23%; /* #095C6B */
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 25% 35%; /* ~Slate-600 #475569 (AA on white) */
-    --accent: 189 60% 95%; /* faint teal tint */
+    --secondary: 180 32% 93%; /* mint-tinted neutral */
+    --secondary-foreground: 195 45% 14%;
+    --muted: 180 30% 93%;
+    --muted-foreground: 196 22% 36%; /* teal-slate secondary text (AA on mint) */
+    --accent: 184 52% 90%; /* soft mint accent */
     --accent-foreground: 189 85% 23%;
 
     --destructive: 347 77% 50%; /* rose #E11D48 */
@@ -38,31 +38,31 @@
     --warning: 38 92% 50%; /* amber #F59E0B */
     --warning-foreground: 38 92% 12%;
 
-    --border: 214 32% 91%; /* #E2E8F0 */
-    --input: 214 32% 91%;
+    --border: 184 28% 86%; /* soft mint-tinted border */
+    --input: 184 28% 86%;
     --ring: 189 85% 28%; /* teal focus ring */
     --radius: 0.75rem;
   }
 
   /* ---- Dark (parallel) ---- */
   .dark {
-    --background: 222 47% 6%; /* ~Slate-950 #020617 */
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%; /* Slate-900 */
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
+    --background: 222 47% 7%; /* premium deep slate-navy (#0A0F1C-ish) */
+    --foreground: 210 40% 99%;
+    --card: 222 33% 13%; /* elevated card → clear separation from bg */
+    --card-foreground: 210 40% 99%;
+    --popover: 222 35% 12%;
+    --popover-foreground: 210 40% 99%;
 
-    --primary: 187 72% 55%; /* lightened teal for dark surfaces */
+    --primary: 187 78% 58%; /* lightened teal for dark surfaces */
     --primary-foreground: 222 47% 8%;
-    --primary-hover: 187 72% 62%;
+    --primary-hover: 187 78% 65%;
 
-    --secondary: 222 47% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 222 47% 14%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 222 47% 17%;
-    --accent-foreground: 187 72% 70%;
+    --secondary: 222 38% 18%;
+    --secondary-foreground: 210 40% 99%;
+    --muted: 222 38% 17%;
+    --muted-foreground: 215 28% 78%; /* brighter secondary text (AA) */
+    --accent: 222 38% 20%;
+    --accent-foreground: 187 78% 72%;
 
     --destructive: 347 77% 58%;
     --destructive-foreground: 0 0% 100%;
@@ -71,9 +71,9 @@
     --warning: 38 92% 58%;
     --warning-foreground: 38 92% 12%;
 
-    --border: 222 47% 18%;
-    --input: 222 47% 16%;
-    --ring: 187 72% 55%;
+    --border: 222 38% 24%; /* clearer borders between surfaces */
+    --input: 222 38% 22%;
+    --ring: 187 78% 58%;
   }
 }
 
@@ -81,9 +81,53 @@
   * {
     @apply border-border;
   }
+  /* Global type scale-up — bumps the rem base so every text-* / spacing
+     utility grows proportionally (≈ a uniform 112.5% zoom). Single lever,
+     applies to every page. */
+  html {
+    font-size: 125%; /* 16px → 20px base */
+  }
+  @media (max-width: 640px) {
+    html {
+      font-size: 112.5%; /* 18px on small screens to avoid overflow */
+    }
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.6;
+  }
+  /* Subtle atmospheric depth so the background reads as premium, not flat.
+     Fixed so it stays put while content scrolls. */
+  .dark body {
+    background-image: radial-gradient(
+        900px circle at 12% -10%,
+        hsl(189 85% 28% / 0.10),
+        transparent 45%
+      ),
+      radial-gradient(
+        1100px circle at 100% 0%,
+        hsl(210 80% 30% / 0.08),
+        transparent 50%
+      );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+  .light body {
+    background-image: radial-gradient(
+        1000px circle at 8% -12%,
+        hsl(184 70% 55% / 0.12),
+        transparent 48%
+      ),
+      radial-gradient(
+        1100px circle at 100% 4%,
+        hsl(195 75% 60% / 0.08),
+        transparent 50%
+      );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
   }
   /* Accessible focus — visible teal ring, never on mouse */
   :focus-visible {
@@ -94,19 +138,19 @@
 @layer components {
   /* ---- Type scale (one scale, reused everywhere) ---- */
   .text-page-title {
-    @apply text-2xl sm:text-3xl font-bold tracking-tight text-foreground;
+    @apply font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground;
   }
   .text-section-title {
-    @apply text-lg font-semibold tracking-tight text-foreground;
+    @apply font-display text-xl font-bold tracking-tight text-foreground;
   }
   .text-card-title {
-    @apply text-sm font-semibold text-foreground;
+    @apply text-base font-semibold text-foreground;
   }
   .text-body {
-    @apply text-sm text-muted-foreground;
+    @apply text-base text-muted-foreground;
   }
   .text-caption {
-    @apply text-xs text-muted-foreground;
+    @apply text-sm text-muted-foreground;
   }
 
   /* ---- Surfaces (24px card padding, 8px grid) ---- */

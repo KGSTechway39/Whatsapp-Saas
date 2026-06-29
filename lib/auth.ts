@@ -38,3 +38,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!token) return null;
   return verifySessionToken(token);
 }
+
+/**
+ * Platform admins are defined by the ADMIN_EMAILS env var (comma-separated,
+ * case-insensitive). There is no role column on `users` — admin is an operational
+ * allowlist, kept out of the DB so it can't be self-granted.
+ */
+export function isAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const allow = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return allow.includes(email.toLowerCase());
+}
+
+/** Return the session user only if they are a platform admin, else null. */
+export async function requireAdmin(): Promise<SessionUser | null> {
+  const user = await getSessionUser();
+  if (!user || !isAdminEmail(user.email)) return null;
+  return user;
+}

@@ -232,6 +232,85 @@ export const billing = {
   getUsage: () => request<import("@/types").BillingUsage>("/api/billing/usage"),
 };
 
+// Admin (platform-owner only; gated by ADMIN_EMAILS allowlist server-side)
+export type Tier = "starter" | "growth" | "enterprise";
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  tier: Tier;
+  billing_mode: "byo" | "managed";
+  waba_mode: "own" | "shared";
+  balance_paise: number;
+}
+
+export interface AdminMargin {
+  messageChargedPaise: number;
+  messageCostPaise: number;
+  messageMarginPaise: number;
+  messageCount: number;
+  trackedCount: number;
+  platformPaidPaise: number;
+  totalRevenuePaise: number;
+}
+
+export const admin = {
+  // Confirms the current session is a platform admin (403 → not admin).
+  check: () => request<{ admin: true }>("/api/admin/billing-mode"),
+
+  lookup: (email: string) =>
+    request<{ user: AdminUser }>(`/api/admin/billing-mode?email=${encodeURIComponent(email)}`),
+
+  // Tier is the source of truth; the server derives billing_mode + waba_mode.
+  setTier: (email: string, tier: Tier) =>
+    request<{ user: AdminUser }>("/api/admin/billing-mode", {
+      method: "POST",
+      body: JSON.stringify({ email, tier }),
+    }),
+
+  // Per-client revenue & margin (message margin + platform fees).
+  margin: (userId: string) =>
+    request<{ margin: AdminMargin }>(`/api/admin/margin?userId=${encodeURIComponent(userId)}`),
+
+  // Rate/markup config editor.
+  ratesGet: () => request<RateConfig>("/api/admin/rates"),
+  ratesSave: (body: RateConfigUpdate) =>
+    request<RateConfig>("/api/admin/rates", { method: "POST", body: JSON.stringify(body) }),
+};
+
+export type RateCategory = "MARKETING" | "UTILITY" | "AUTHENTICATION" | "SERVICE";
+
+export interface PlanTier {
+  tier: Tier;
+  model: string;
+  billing_mode: string;
+  waba_mode: string;
+  default_markup_bps: number;
+  monthly_fee_paise: number;
+  onboarding_fee_paise: number;
+  monthly_msg_cap: number | null;
+}
+
+export interface PlatformSettings {
+  buffer_bps: number;
+  min_topup_paise: number;
+  default_low_balance_threshold_paise: number;
+  credit_validity_months: number;
+}
+
+export interface RateConfig {
+  rates: Record<RateCategory, number> | null;
+  tiers: PlanTier[] | null;
+  settings: PlatformSettings | null;
+}
+
+export interface RateConfigUpdate {
+  rates?: Partial<Record<RateCategory, number>>;
+  tiers?: Array<Partial<PlanTier> & { tier: Tier }>;
+  settings?: Partial<PlatformSettings>;
+}
+
 // Type re-exports (mirrors types/index.ts for convenience)
 import type { Contact, Template, Campaign, Automation, WhatsAppNumber, Transaction, TeamMember, AnalyticsData } from "@/types";
 

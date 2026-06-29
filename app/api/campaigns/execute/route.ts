@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendTemplateMessage } from "@/lib/meta";
 import { getBillingMode } from "@/lib/billing/guarded-send";
 import { quoteSendCostPaise, toBillableCategory } from "@/lib/billing/pricing";
+import { deriveQuote } from "@/lib/billing/rates";
 import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
 import { dispatchEvent } from "@/lib/webhooks-out";
 
@@ -74,6 +75,12 @@ async function processCampaign({
   const metaCostPerMsg = category.toUpperCase() === "MARKETING" ? META_COST_MARKETING : META_COST_OTHER;
   const costPerMsg = metaCostPerMsg + PLATFORM_FEE;
 
+  // Margin trail for the prepaid ledger (one category per campaign). null pre-017
+  // or for BYO → no tagging. wholesale is the real Meta cost regardless of pricing.
+  const billableCategory = toBillableCategory(category);
+  const marginTrail =
+    billingMode === "managed" ? await deriveQuote(userId, billableCategory) : null;
+
   for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
     const batch = contacts.slice(i, i + BATCH_SIZE);
     let batchSent = 0;
@@ -103,12 +110,30 @@ async function processCampaign({
 
         // Managed: settle one unit of the reservation per success (idempotent).
         if (reservationId && costPaise > 0) {
+          const unitIdem = `cm:${campaignId}:${contact.id}`;
           await settle({
             reservationId,
             actualPaise: costPaise,
-            unitIdempotencyKey: `cm:${campaignId}:${contact.id}`,
+            unitIdempotencyKey: unitIdem,
             referenceId: campaignId,
           }).catch((e) => console.error("wallet settle failed:", e));
+
+          // Best-effort margin trail on the ledger row settle just wrote.
+          if (marginTrail) {
+            await supabase
+              .from("transactions")
+              .update({
+                category: billableCategory,
+                wholesale_paise: marginTrail.wholesalePaise,
+                markup_bps: marginTrail.markupBps,
+              })
+              .eq("user_id", userId)
+              .eq("idempotency_key", unitIdem)
+              .then(
+                () => {},
+                () => {},
+              );
+          }
         }
 
         batchSent++;

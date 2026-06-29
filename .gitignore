@@ -44,6 +44,7 @@ Thumbs.db
 
 # Local Claude / agent state
 .claude/
+setting.json
 
 # Supabase local state (only checks in migrations + seed)
 supabase/.branches/

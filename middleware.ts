@@ -20,6 +20,7 @@ const protectedPaths = [
   "/ads",
   "/segments",
   "/catalog",
+  "/admin",
 ];
 
 const authPaths = ["/login", "/register", "/forgot-password"];

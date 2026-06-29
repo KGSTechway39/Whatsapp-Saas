@@ -24,11 +24,14 @@ import {
   PhoneOff,
   ChevronRight,
   Facebook,
-  Repeat2,
   KeyRound,
   Sparkles,
   ArrowLeft,
   Info,
+  Smartphone,
+  PlayCircle,
+  HelpCircle,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,8 +45,45 @@ const REQUIREMENTS = [
   { icon: PhoneOff,  label: "Phone number not on another WhatsApp API",               description: "Or be ready to migrate it" },
 ];
 
-type Phase = "idle" | "misconfigured" | "loading" | "exchanging" | "choose" | "saving" | "success" | "error";
+type Phase = "fork" | "details" | "idle" | "managed" | "misconfigured" | "loading" | "exchanging" | "choose" | "saving" | "success" | "error";
 type Tab   = "embedded" | "manual";
+/** Onboarding fork: A = coexistence (existing app), B = fresh number, C = managed (our WABA). */
+type OnboardPath = "A" | "B" | "C";
+
+/** Business details collected up-front and injected into Meta's signup to skip screens. */
+interface BusinessDetails {
+  name: string;
+  vertical: string; // WhatsApp business vertical code (see VERTICALS)
+  city: string;
+}
+
+/** WhatsApp Business profile verticals (friendly label → Meta code). */
+const VERTICALS: { label: string; code: string }[] = [
+  { label: "Retail / Shop", code: "RETAIL" },
+  { label: "Restaurant / Food", code: "RESTAURANT" },
+  { label: "Grocery", code: "GROCERY" },
+  { label: "Education / Coaching", code: "EDU" },
+  { label: "Health / Clinic", code: "HEALTH" },
+  { label: "Beauty / Salon", code: "BEAUTY" },
+  { label: "Finance", code: "FINANCE" },
+  { label: "Travel / Hotel", code: "TRAVEL" },
+  { label: "Professional services", code: "PROF_SERVICES" },
+  { label: "Other", code: "OTHER" },
+];
+
+/** Build Meta's `extras.setup` prefill (best-effort; Meta ignores unknown keys). */
+function buildSetup(d: BusinessDetails): Record<string, unknown> | undefined {
+  const business: Record<string, unknown> = {};
+  if (d.name.trim()) business.name = d.name.trim();
+  if (d.city.trim()) business.address = { city: d.city.trim(), country: "IN" };
+  const phone: Record<string, unknown> = {};
+  if (d.vertical) phone.vertical = d.vertical;
+  if (Object.keys(business).length === 0 && Object.keys(phone).length === 0) return undefined;
+  const setup: Record<string, unknown> = {};
+  if (Object.keys(business).length) setup.business = business;
+  if (Object.keys(phone).length) setup.phone = phone;
+  return setup;
+}
 
 interface DiscoveredPhone {
   id: string;
@@ -114,8 +154,21 @@ export function EmbeddedSignupModal({
     "";
   const embeddedConfigured = !looksLikePlaceholder(APP_ID) && !looksLikePlaceholder(CONFIG_ID);
 
+  // Persistent "Chat with us on WhatsApp" target (human assist is the real
+  // differentiator for non-technical users). Set NEXT_PUBLIC_SUPPORT_WHATSAPP
+  // to your support number; falls back to wa.me's contact chooser.
+  const SUPPORT_WA = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(/\D/g, "");
+  const helpHref = SUPPORT_WA
+    ? `https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent("Hi! I need help connecting my WhatsApp Business account.")}`
+    : "https://wa.me/";
+
   const [tab, setTab]           = useState<Tab>("embedded");
-  const [phase, setPhase]       = useState<Phase>(embeddedConfigured ? "idle" : "misconfigured");
+  // The fork is always the entry point — it precedes any Meta interaction, and
+  // Path C needs no Meta at all. Missing creds only matter once a user picks a
+  // Meta path (A/B), at which point we route them to the misconfigured screen.
+  const [phase, setPhase]       = useState<Phase>("fork");
+  const [path, setPath]         = useState<OnboardPath | null>(null);
+  const [details, setDetails]   = useState<BusinessDetails>({ name: "", vertical: "", city: "" });
   const [error, setError]       = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [transfer, setTransfer] = useState<ExchangeTokenResponse | null>(null);
@@ -139,7 +192,9 @@ export function EmbeddedSignupModal({
   // ── Reset state when closed ─────────────────────────────────────────
   useEffect(() => {
     if (open) return;
-    setPhase(embeddedConfigured ? "idle" : "misconfigured");
+    setPhase("fork");
+    setPath(null);
+    setDetails({ name: "", vertical: "", city: "" });
     setError(null);
     setTransfer(null);
     setChosen(null);
@@ -226,16 +281,22 @@ export function EmbeddedSignupModal({
       },
       {
         config_id: CONFIG_ID,
+        // Re-request so a second click never dead-ends on "already logged in".
+        auth_type: "rerequest",
         response_type: "code",
         override_default_response_type: true,
         override_min_version: SDK_VERSION,
         extras: {
           feature: "whatsapp_embedded_signup",
           sessionInfoVersion: 3,
+          // Path A (coexistence): share the existing WABA and skip number entry.
+          ...(path === "A" ? { featureType: "only_waba_sharing" } : {}),
+          // Pre-fill business name / city / vertical so Meta skips those screens.
+          ...(buildSetup(details) ? { setup: buildSetup(details) } : {}),
         },
       },
     );
-  }, [CONFIG_ID, embeddedConfigured, sdkReady]);
+  }, [CONFIG_ID, embeddedConfigured, sdkReady, path, details]);
 
   const completeSave = useCallback(
     async (data: ExchangeTokenResponse, waba: DiscoveredWaba, phone: DiscoveredPhone) => {
@@ -341,8 +402,10 @@ export function EmbeddedSignupModal({
 
   if (!open) return null;
 
-  const showEmbeddedFooter =
-    phase !== "success" && phase !== "choose" && tab === "embedded";
+  // The "Continue With Facebook" footer only applies once the user has chosen
+  // a Meta path (idle/error). The fork and managed screens have their own CTAs.
+  const showEmbeddedFooter = tab === "embedded" && (phase === "idle" || phase === "error");
+  void onMigrate; // retained for API compatibility; coexistence now lives in the fork
 
   return (
     <div
@@ -354,7 +417,7 @@ export function EmbeddedSignupModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative flex w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-card text-foreground shadow-2xl ring-1 ring-border/60 sm:rounded-3xl"
+        className="relative flex max-h-[100dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-card text-foreground shadow-2xl ring-1 ring-border/60 sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl"
       >
         {/* Header — gradient banner */}
         <div className="relative bg-gradient-to-br from-[#25D366]/15 via-[#128C7E]/10 to-transparent p-6 pb-5">
@@ -370,6 +433,14 @@ export function EmbeddedSignupModal({
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   Connect your Facebook Business account to set up WhatsApp Business API.
                 </p>
+                <a
+                  href={helpHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-[#128C7E] transition-colors hover:text-[#25D366]"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" /> Need help? Chat with us on WhatsApp
+                </a>
               </div>
             </div>
             <button
@@ -392,16 +463,64 @@ export function EmbeddedSignupModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {error && phase !== "success" && <ErrorBanner message={error} />}
 
           {phase === "misconfigured" && tab === "embedded" && <MisconfiguredBlock />}
 
-          {phase === "idle" && tab === "embedded"        && <RequirementsBlock />}
-          {phase === "error" && tab === "embedded"       && <RequirementsBlock />}
-          {phase === "idle" && tab === "manual"          && <ManualForm onSubmit={onManualConnect} />}
-          {phase === "error" && tab === "manual"         && <ManualForm onSubmit={onManualConnect} />}
-          {phase === "misconfigured" && tab === "manual" && <ManualForm onSubmit={onManualConnect} />}
+          {/* Step 1 — the fork: route by what the user already has */}
+          {phase === "fork" && tab === "embedded" && (
+            <ForkBlock
+              onPick={(p) => {
+                setPath(p);
+                // A/B collect business details next; C is the managed (no-Meta) screen.
+                setPhase(p === "C" ? "managed" : "details");
+                setError(null);
+              }}
+            />
+          )}
+
+          {/* Back to the fork from any embedded sub-screen */}
+          {(phase === "details" || phase === "idle" || phase === "error" || phase === "managed" || phase === "misconfigured") && tab === "embedded" && path && (
+            <button
+              type="button"
+              onClick={() => { setPath(null); setPhase("fork"); setError(null); }}
+              className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Choose a different option
+            </button>
+          )}
+
+          {/* Step 2 — collect business details up-front so Meta's screens are pre-filled */}
+          {phase === "details" && tab === "embedded" && (
+            <DetailsBlock
+              path={path}
+              initial={details}
+              onSubmit={(d) => {
+                setDetails(d);
+                setPhase(embeddedConfigured ? "idle" : "misconfigured");
+                setError(null);
+                // Persist to our record up-front (best-effort) so we keep the
+                // details even if the user doesn't finish Meta's signup.
+                fetch("/api/onboarding/profile", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ businessName: d.name, vertical: d.vertical, city: d.city, path }),
+                }).catch(() => undefined);
+              }}
+            />
+          )}
+
+          {phase === "managed" && tab === "embedded" && <ManagedBlock helpHref={helpHref} />}
+
+          {(phase === "idle" || phase === "error") && tab === "embedded" && (
+            path === "A" ? <CoexistenceNote /> : <RequirementsBlock />
+          )}
+
+          {tab === "manual" &&
+            (phase === "fork" || phase === "idle" || phase === "error" || phase === "managed" || phase === "misconfigured") && (
+              <ManualForm onSubmit={onManualConnect} />
+            )}
 
           {(phase === "loading" || phase === "exchanging" || phase === "saving") && (
             <LoadingBlock
@@ -442,28 +561,22 @@ export function EmbeddedSignupModal({
             <>
               <button
                 type="button"
-                disabled={!embeddedConfigured || !sdkReady || phase === "loading" || phase === "exchanging" || phase === "saving"}
+                disabled={!embeddedConfigured || !sdkReady}
                 onClick={launchSignup}
                 className="inline-flex w-full items-center justify-center gap-3 rounded-xl bg-[#1877F2] px-5 py-3 font-semibold text-white shadow-sm shadow-blue-500/20 transition-colors hover:bg-[#1464D2] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {phase === "loading" || phase === "exchanging" ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Facebook className="h-5 w-5" />
-                )}
-                Continue With Facebook
+                <Facebook className="h-5 w-5" />
+                {path === "A" ? "Continue — connect my existing number" : "Continue With Facebook"}
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (onMigrate) onMigrate();
-                  else toast.info("Migration wizard coming soon — contact support to migrate manually.");
-                }}
+              <a
+                href={helpHref}
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
-                <Repeat2 className="h-4 w-4" /> Migrate Existing Number
-              </button>
+                <MessageCircle className="h-4 w-4" /> Need help? Chat with us on WhatsApp
+              </a>
             </>
           ) : null}
         </div>
@@ -473,6 +586,192 @@ export function EmbeddedSignupModal({
 }
 
 // ─── Building blocks ─────────────────────────────────────────────────────
+
+/** Step 1 — fork by what the user already has (plain language, mobile-first). */
+function ForkBlock({ onPick }: { onPick: (p: OnboardPath) => void }): JSX.Element {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold">Do you already use the WhatsApp Business app?</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Pick what matches you — we&apos;ll handle the rest.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <ChoiceCard
+          icon={Smartphone}
+          title="Yes — I use the WhatsApp Business app"
+          description="Keep your number and your chats. Quick QR scan + OTP, like linking WhatsApp Web."
+          onClick={() => onPick("A")}
+        />
+        <ChoiceCard
+          icon={Sparkles}
+          title="No — set me up with a new number"
+          description="We&apos;ll create everything for you through Meta&apos;s official signup."
+          onClick={() => onPick("B")}
+        />
+        <ChoiceCard
+          icon={HelpCircle}
+          title="I don&apos;t have Facebook / prefer it managed"
+          description="Send under our verified number — zero Meta setup. Start right away."
+          onClick={() => onPick("C")}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <VideoSlot label="How to install WhatsApp Business app" />
+        <VideoSlot label="How to create a Facebook account" />
+      </div>
+    </div>
+  );
+}
+
+function ChoiceCard({
+  icon: Icon,
+  title,
+  description,
+  onClick,
+}: {
+  icon: typeof Smartphone;
+  title: string;
+  description: string;
+  onClick: () => void;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-4 text-left transition-colors hover:border-emerald-500/50 hover:bg-emerald-500/5"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium leading-tight">{title}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+/** Short explainer-video slot (walkthrough content lands here later). */
+function VideoSlot({ label }: { label: string }): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={() => toast.info("Walkthrough video coming soon")}
+      className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/40 p-3 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+    >
+      <PlayCircle className="h-4 w-4 shrink-0 text-emerald-500" />
+      <span className="leading-tight">{label}</span>
+    </button>
+  );
+}
+
+/** Path A — what coexistence onboarding will do, in plain language. */
+function CoexistenceNote(): JSX.Element {
+  return (
+    <div className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
+      <p className="font-medium">We&apos;ll connect your existing number</p>
+      <p className="mt-1 text-muted-foreground">
+        You keep your number and chat history. During setup you&apos;ll scan a QR code and enter a
+        6-digit code from your WhatsApp Business app — that&apos;s it.
+      </p>
+    </div>
+  );
+}
+
+/** Path C — managed (Model C) under our WABA. Human-assisted activation. */
+function ManagedBlock({ helpHref }: { helpHref: string }): JSX.Element {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <h3 className="text-sm font-semibold">We&apos;ll run WhatsApp for you</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          On the <strong>Starter</strong> plan your messages go out under our verified WhatsApp
+          number — no Facebook account or Meta setup needed. You can start sending right away at
+          Starter limits.
+        </p>
+      </div>
+      <a
+        href={helpHref}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#1DA851]"
+      >
+        <MessageCircle className="h-5 w-5" /> Chat with us to get started
+      </a>
+      <p className="text-center text-xs text-muted-foreground">
+        Our team activates your Starter account in minutes.
+      </p>
+    </div>
+  );
+}
+
+/** Step 2 — collect business details once, in our UI, to pre-fill Meta's signup. */
+function DetailsBlock({
+  path,
+  initial,
+  onSubmit,
+}: {
+  path: OnboardPath | null;
+  initial: BusinessDetails;
+  onSubmit: (d: BusinessDetails) => void;
+}): JSX.Element {
+  const [name, setName] = useState(initial.name);
+  const [vertical, setVertical] = useState(initial.vertical);
+  const [city, setCity] = useState(initial.city);
+  const canSubmit = name.trim().length > 1;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!canSubmit) return;
+        onSubmit({ name: name.trim(), vertical, city: city.trim() });
+      }}
+      className="space-y-4"
+    >
+      <div>
+        <h3 className="text-sm font-semibold">Tell us about your business</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          We&apos;ll pre-fill these on Meta&apos;s screens so you have fewer steps.
+          {path === "A" ? " Your existing number and chats stay intact." : ""}
+        </p>
+      </div>
+
+      <Field label="Business name" placeholder="e.g. Sharma Textiles" value={name} onChange={setName} required />
+
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Category</span>
+        <div className="rounded-xl border border-border bg-background px-3 py-2.5 focus-within:border-emerald-500/60">
+          <select
+            value={vertical}
+            onChange={(e) => setVertical(e.target.value)}
+            className="w-full bg-transparent text-sm outline-none"
+          >
+            <option value="">Select a category…</option>
+            {VERTICALS.map((v) => (
+              <option key={v.code} value={v.code}>{v.label}</option>
+            ))}
+          </select>
+        </div>
+      </label>
+
+      <Field label="City" placeholder="e.g. Coimbatore" value={city} onChange={setCity} />
+
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 font-semibold text-white transition-colors hover:bg-[#1DA851] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Continue <ChevronRight className="h-4 w-4" />
+      </button>
+    </form>
+  );
+}
 
 interface ManualForm {
   wabaId: string;
@@ -726,13 +1025,13 @@ function SuccessBlock({ summary }: { summary: SuccessSummary }): JSX.Element {
         <span className="absolute inset-0 animate-pulse rounded-full bg-emerald-500/15" />
         <CheckCircle2 className="relative h-10 w-10 text-emerald-500" />
       </span>
-      <h3 className="mt-4 text-base font-semibold">Connected</h3>
+      <h3 className="mt-4 text-base font-semibold">✅ Your WhatsApp is connected!</h3>
       <p className="mt-1 text-sm text-muted-foreground">
         <span className="font-mono">{summary.displayPhoneNumber}</span>
         {summary.businessName ? ` — ${summary.businessName}` : ""}
       </p>
       <p className="mt-2 text-xs text-muted-foreground">
-        You can now send messages and run campaigns from this number.
+        You can start sending messages and running campaigns right away.
       </p>
     </div>
   );

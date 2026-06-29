@@ -18,6 +18,7 @@
 import { logger } from "@/lib/logger";
 import { processIncomingMessage } from "./engine";
 import { processStatusEvent, type StatusPayload } from "./status";
+import { confirmOrReleaseBilling } from "@/lib/billing/confirm";
 import { enqueue, registerHandler } from "@/lib/queue";
 
 export interface InboundEvent {
@@ -69,7 +70,10 @@ async function runInboundWorker(event: InboundEvent): Promise<void> {
   if (event.kind === "status") {
     // Status lifecycle (sent/delivered/read/failed) — update the message row
     // with a monotonic rank so out-of-order events can't regress state.
-    await processStatusEvent(event.payload as unknown as StatusPayload);
+    const status = event.payload as unknown as StatusPayload;
+    await processStatusEvent(status);
+    // Confirm (settle) or release the prepaid reservation linked to this message.
+    await confirmOrReleaseBilling(status.id, status.status);
     return;
   }
   if (event.kind !== "message") {

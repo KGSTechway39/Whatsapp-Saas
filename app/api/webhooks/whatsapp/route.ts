@@ -22,6 +22,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
 import { markEventProcessed } from "@/lib/whatsapp/dedup";
+import { persistRawEvent, markInboxDone } from "@/lib/whatsapp/inbox";
 
 // ── Env + constants ────────────────────────────────────────────────────
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
@@ -133,22 +134,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  // Persist-then-enqueue: store the raw payload BEFORE any async work so it's
+  // replayable if ingest never completes (crash / driver loss). This await is a
+  // single insert; durability of the event must precede the ack.
+  const inboxId = await persistRawEvent(payload, "/api/webhooks/whatsapp");
+
   // Acknowledge Meta immediately. The actual work happens after the
   // response is queued — Next.js keeps the function alive long enough
   // for `enqueueWebhookEvent` to write to the worker queue.
-  void ingestEvents(payload).catch((err) => {
+  void ingestEvents(payload, inboxId).catch((err) => {
     logger.error("[webhooks/whatsapp] ingest failed", {
       err: err instanceof Error ? err.message : String(err),
     });
+    void markInboxDone(inboxId, false, err instanceof Error ? err.message : String(err));
   });
 
   return NextResponse.json({ status: "ok" });
 }
 
 // ── Async ingestion — runs after the 200 OK is on the wire ─────────────
-async function ingestEvents(payload: WebhookPayload): Promise<void> {
+async function ingestEvents(payload: WebhookPayload, inboxId: string | null): Promise<void> {
   if (payload.object !== "whatsapp_business_account") {
     logger.warn("[webhooks/whatsapp] unexpected object", { object: payload.object });
+    await markInboxDone(inboxId, true);
     return;
   }
 
@@ -263,6 +271,8 @@ async function ingestEvents(payload: WebhookPayload): Promise<void> {
       });
     }
   }
+
+  await markInboxDone(inboxId, true);
 }
 
 // ── Tenant resolution ──────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature, PLANS, type PlanId } from "@/lib/razorpay";
 import { sendEmail, paymentSuccessEmail, paymentFailedEmail } from "@/lib/email";
 import * as wallet from "@/lib/billing/wallet";
+import { resolveTopupBonusBps } from "@/lib/billing/rates";
 
 // Razorpay sends JSON but we must read the raw body for signature verification
 export const runtime = "nodejs";
@@ -105,6 +106,22 @@ export async function POST(request: NextRequest) {
         payment_method: "razorpay",
         metadata: { razorpay_subscription_id: sub.id },
       });
+
+      // Platform fee revenue (separate from the message wallet). Best-effort.
+      await supabase
+        .from("platform_charges")
+        .insert({
+          user_id: userId,
+          kind: "subscription",
+          amount_paise: Math.round((plan?.priceINR || 0) * 100),
+          period: new Date(sub.current_start * 1000).toISOString().slice(0, 7),
+          razorpay_ref: sub.id,
+          status: "paid",
+        })
+        .then(
+          () => {},
+          () => {},
+        );
       break;
     }
 
@@ -140,6 +157,22 @@ export async function POST(request: NextRequest) {
         payment_method: "razorpay",
         metadata: { razorpay_subscription_id: sub.id, razorpay_payment_id: payment?.id },
       });
+
+      // Platform fee revenue for this renewal (separate from the wallet). Best-effort.
+      await supabase
+        .from("platform_charges")
+        .insert({
+          user_id: userId,
+          kind: "subscription",
+          amount_paise: payment ? payment.amount : Math.round((plan?.priceINR || 0) * 100),
+          period: new Date(sub.current_start * 1000).toISOString().slice(0, 7),
+          razorpay_ref: payment?.id || sub.id,
+          status: "paid",
+        })
+        .then(
+          () => {},
+          () => {},
+        );
 
       // Send payment success email
       const { data: userData } = await supabase
@@ -211,14 +244,32 @@ export async function POST(request: NextRequest) {
       // racing duplicate delivery credits exactly once.
       const order = event.payload.order?.entity;
       if (order?.notes?.purpose === "wallet_topup" && order.notes.user_id) {
+        const basePaise = order.amount_paid ?? order.amount; // Razorpay amounts are paise
         await wallet.credit({
           userId: order.notes.user_id,
-          amountPaise: order.amount_paid ?? order.amount, // Razorpay amounts are paise
+          amountPaise: basePaise,
           type: "recharge",
           idempotencyKey: eventId,
           description: "Wallet top-up via Razorpay",
           paymentMethod: "razorpay",
         });
+
+        // Load-size bonus: bigger top-ups grant extra credits (separate ledger
+        // entry, idempotent on a derived key).
+        const bonusBps = await resolveTopupBonusBps(basePaise);
+        const bonusPaise = Math.floor((basePaise * bonusBps) / 10000);
+        if (bonusPaise > 0) {
+          await wallet
+            .credit({
+              userId: order.notes.user_id,
+              amountPaise: bonusPaise,
+              type: "bonus",
+              idempotencyKey: `bonus:${eventId}`,
+              description: `Top-up bonus (+${(bonusBps / 100).toFixed(0)}%)`,
+              paymentMethod: "razorpay",
+            })
+            .catch(() => {}); // bonus is goodwill — never fail the top-up over it
+        }
       }
       break;
     }

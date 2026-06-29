@@ -7,6 +7,8 @@ import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
 import { dispatchEvent, type WebhookEventName } from "@/lib/webhooks-out";
 import { markEventProcessed } from "@/lib/whatsapp/dedup";
 import { processStatusEvent, type StatusPayload } from "@/lib/whatsapp/status";
+import { confirmOrReleaseBilling } from "@/lib/billing/confirm";
+import { persistRawEvent, markInboxDone } from "@/lib/whatsapp/inbox";
 
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 const APP_SECRET   = process.env.META_APP_SECRET;
@@ -87,6 +89,10 @@ export async function POST(request: NextRequest) {
   // `processed_events` (DB unique constraint) — duplicates are skipped there.
 
   const supabase = createServiceClient();
+
+  // Persist-then-enqueue: store the raw payload before any processing so it's
+  // replayable if this handler dies mid-flight.
+  const inboxId = await persistRawEvent(body, "/api/webhook/whatsapp");
 
   // ── Audit log: persist every event for replay/debug, get duplicate flag ──
   const entry0   = (body.entry as { id?: string; changes?: { value?: Record<string, unknown> }[] }[])?.[0];
@@ -216,6 +222,9 @@ export async function POST(request: NextRequest) {
 
       // Apply with a monotonic rank (shared with the worker path).
       const applied = await processStatusEvent(status);
+
+      // Confirm (settle) or release the prepaid reservation for this message.
+      await confirmOrReleaseBilling(metaMessageId, msgStatus);
 
       // Emit an outbound webhook for terminal/progress statuses so external
       // apps (e-commerce, CRM) get delivery updates. message.sent is emitted
@@ -372,10 +381,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Update contact last_contacted
+      // Update contact last_contacted + refresh the 24h customer-service window.
+      // last_inbound_at is what canSendFreeform() compares against (messaging skill).
       await supabase
         .from("contacts")
-        .update({ last_contacted: receivedAt })
+        .update({ last_contacted: receivedAt, last_inbound_at: receivedAt })
         .eq("phone", fromPhone);
 
       // Upsert into conversations if we track the inbox
@@ -439,6 +449,7 @@ export async function POST(request: NextRequest) {
         .then(() => {}, () => {});
     }
 
+    await markInboxDone(inboxId, false, err instanceof Error ? err.message : String(err));
     // Always return 200 to Meta — otherwise they retry indefinitely
     return NextResponse.json({ status: "ok" });
   }
@@ -455,5 +466,6 @@ export async function POST(request: NextRequest) {
       .then(() => {}, () => {});
   }
 
+  await markInboxDone(inboxId, true);
   return NextResponse.json({ status: "ok" });
 }

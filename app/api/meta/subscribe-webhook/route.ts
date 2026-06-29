@@ -1,19 +1,16 @@
 /**
  * POST /api/meta/subscribe-webhook
  *
- * Subscribes our Meta App to a WABA so events flow to /api/webhooks/whatsapp.
- * Idempotent — safe to call multiple times. Records the subscription state
- * in webhook_subscriptions for monitoring + automatic re-subscription.
+ * Subscribes our Meta App to a connected number's WABA so events flow to
+ * /api/webhooks/whatsapp. Idempotent — safe to call multiple times.
  *
- * Body    : { accountId: string }
+ * Body    : { accountId: string }   // whatsapp_numbers.id
  * Returns : { status: 'active' | 'failed', subscribedFields: string[] }
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { getSessionUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
-import { decrypt } from "@/lib/crypto";
 import { logger } from "@/lib/logger";
 import { audit } from "@/lib/audit";
 import { MetaApiError, subscribeWabaToApp } from "@/lib/meta-client";
@@ -49,156 +46,65 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const supabase = createServiceClient();
 
-  // 1) Load the account + verify the caller belongs to its org
-  const { data: account, error: accErr } = await supabase
-    .from("whatsapp_accounts")
-    .select("id, organization_id, waba_id, status")
+  // Load the connected number + verify ownership.
+  const { data: number, error: numErr } = await supabase
+    .from("whatsapp_numbers")
+    .select("id, user_id, waba_id, access_token")
     .eq("id", accountId)
+    .eq("user_id", user.id)
     .maybeSingle();
-  if (accErr || !account) {
+  if (numErr || !number) {
     return NextResponse.json({ error: "Account not found", code: "NOT_FOUND" }, { status: 404 });
   }
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("organization_id", account.organization_id)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden", code: "FORBIDDEN" }, { status: 403 });
-  }
-
-  // 2) Pull the active token, decrypt it (in-memory only)
-  const { data: tokenRow, error: tokenErr } = await supabase
-    .from("access_tokens")
-    .select("id, token_ciphertext")
-    .eq("whatsapp_account_id", accountId)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (tokenErr || !tokenRow) {
+  if (!number.waba_id || !number.access_token) {
     return NextResponse.json(
-      { error: "No active access token for this account", code: "NO_TOKEN" },
+      { error: "Number is not fully connected (missing WABA or token)", code: "INCOMPLETE" },
       { status: 409 },
     );
   }
 
-  let plaintext: string;
-  try {
-    plaintext = await decrypt(tokenRow.token_ciphertext);
-  } catch (err) {
-    logger.error("[api/meta/subscribe-webhook] decrypt failed", {
-      accountId, msg: err instanceof Error ? err.message : String(err),
-    });
-    return NextResponse.json({ error: "Token decryption failed", code: "DECRYPT_FAILED" }, { status: 500 });
-  }
-
-  // 3) Call Graph API — subscribe WABA to our app
-  let metaResponse: unknown;
+  // Call Graph API — subscribe the WABA to our app.
   let status: "active" | "failed" = "active";
-  let lastError: string | null = null;
   try {
-    const result = await subscribeWabaToApp(account.waba_id, plaintext);
-    metaResponse = result.raw;
-    if (!result.success) {
-      status = "failed";
-      lastError = "Meta reported success=false";
-    }
+    const result = await subscribeWabaToApp(number.waba_id, number.access_token);
+    if (!result.success) status = "failed";
   } catch (err) {
-    status = "failed";
-    lastError = err instanceof Error ? err.message : String(err);
+    const lastError = err instanceof Error ? err.message : String(err);
     const httpStatus = err instanceof MetaApiError ? err.httpStatus : 502;
-    await persistSubscription(supabase, {
-      organizationId: account.organization_id,
-      accountId,
-      wabaId: account.waba_id,
-      status,
-      lastError,
-      metaResponse: { error: lastError },
+    logger.warn("[api/meta/subscribe-webhook] subscribe failed", {
+      userId: user.id, accountId, msg: lastError,
     });
     await audit({
       action: "embedded_signup.subscribe_webhook",
       userId: user.id,
-      organizationId: account.organization_id,
-      resourceType: "whatsapp_account",
+      resourceType: "whatsapp_number",
       resourceId: accountId,
       outcome: "failure",
-      details: { lastError },
+      details: { wabaId: number.waba_id, lastError },
       request: req,
     });
     return NextResponse.json({ error: lastError, code: "META_SUBSCRIBE_FAILED" }, { status: httpStatus });
   }
 
-  // 4) Persist subscription state + flip whatsapp_accounts.webhook_verified
-  await persistSubscription(supabase, {
-    organizationId: account.organization_id,
-    accountId,
-    wabaId: account.waba_id,
-    status,
-    lastError: null,
-    metaResponse,
-  });
-
-  await supabase
-    .from("whatsapp_accounts")
-    .update({ webhook_verified: true, updated_at: new Date().toISOString() })
-    .eq("id", accountId);
+  if (status === "active") {
+    await supabase
+      .from("whatsapp_numbers")
+      .update({ webhook_verified: true, updated_at: new Date().toISOString() })
+      .eq("id", accountId);
+  }
 
   await audit({
     action: "embedded_signup.subscribe_webhook",
     userId: user.id,
-    organizationId: account.organization_id,
-    resourceType: "whatsapp_account",
+    resourceType: "whatsapp_number",
     resourceId: accountId,
-    details: { wabaId: account.waba_id, fields: SUBSCRIBED_FIELDS },
+    details: { wabaId: number.waba_id, fields: SUBSCRIBED_FIELDS, status },
     request: req,
   });
 
   logger.info("[api/meta/subscribe-webhook] subscribed", {
-    accountId, wabaId: account.waba_id,
+    userId: user.id, accountId, wabaId: number.waba_id, result: status,
   });
 
   return NextResponse.json({ status, subscribedFields: SUBSCRIBED_FIELDS });
-}
-
-type SupabaseClient = ReturnType<typeof createServiceClient>;
-
-async function persistSubscription(
-  supabase: SupabaseClient,
-  args: {
-    organizationId: string;
-    accountId: string;
-    wabaId: string;
-    status: "active" | "failed";
-    lastError: string | null;
-    metaResponse: unknown;
-  },
-): Promise<void> {
-  const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ?? "";
-  const callbackUrl =
-    `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}`.replace(/\/$/, "") +
-    "/api/webhooks/whatsapp";
-
-  const payload = {
-    organization_id: args.organizationId,
-    whatsapp_account_id: args.accountId,
-    waba_id: args.wabaId,
-    callback_url: callbackUrl,
-    verify_token_fingerprint: sha256(verifyToken),
-    subscribed_fields: SUBSCRIBED_FIELDS,
-    status: args.status,
-    last_verified_at: args.status === "active" ? new Date().toISOString() : null,
-    last_error: args.lastError,
-    meta_response: args.metaResponse as Record<string, unknown>,
-  };
-
-  await supabase
-    .from("webhook_subscriptions")
-    .upsert(payload, { onConflict: "whatsapp_account_id" });
-}
-
-function sha256(s: string): string {
-  return createHash("sha256").update(s).digest("hex");
 }

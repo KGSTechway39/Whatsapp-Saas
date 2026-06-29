@@ -23,6 +23,8 @@ interface FbLoginResponse {
 interface FbLoginOptions {
   config_id: string;
   response_type: "code" | "token";
+  /** Force a re-prompt so a repeat click never dead-ends on "already logged in". */
+  auth_type?: "rerequest" | "reauthenticate" | "reauthorize";
   override_default_response_type?: boolean;
   override_min_version?: string;
   extras?: Record<string, unknown>;

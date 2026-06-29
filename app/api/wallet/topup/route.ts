@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { getRazorpay } from "@/lib/razorpay";
+import { getPlatformSettings } from "@/lib/billing/rates";
 
 /**
  * POST /api/wallet/topup
@@ -22,6 +23,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Minimum top-up is ₹1" }, { status: 400 });
   }
   const amountPaise = Math.round(rupees * 100);
+
+  // Configurable top-up floor (falls back to ₹1 pre-017).
+  const settings = await getPlatformSettings();
+  const minPaise = settings?.min_topup_paise ?? 100;
+  if (amountPaise < minPaise) {
+    return NextResponse.json(
+      { error: `Minimum top-up is ₹${(minPaise / 100).toLocaleString("en-IN")}` },
+      { status: 400 },
+    );
+  }
 
   let razorpay;
   try {
