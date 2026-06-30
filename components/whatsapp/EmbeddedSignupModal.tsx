@@ -176,6 +176,15 @@ export function EmbeddedSignupModal({
   const [savedAccount, setSavedAccount] = useState<SuccessSummary | null>(null);
   const initRef = useRef(false);
   const loginPendingRef = useRef(false); // true while FB.login awaits its callback
+  const popupPollRef = useRef<ReturnType<typeof setInterval> | null>(null); // watches the Meta popup
+
+  // Stop watching the Meta sign-in popup (callback resolved, closed, or unmount).
+  const stopPopupPoll = useCallback(() => {
+    if (popupPollRef.current) {
+      clearInterval(popupPollRef.current);
+      popupPollRef.current = null;
+    }
+  }, []);
 
   // ── Body scroll lock + ESC ──────────────────────────────────────────
   useEffect(() => {
@@ -193,6 +202,8 @@ export function EmbeddedSignupModal({
   // ── Reset state when closed ─────────────────────────────────────────
   useEffect(() => {
     if (open) return;
+    stopPopupPoll();
+    loginPendingRef.current = false;
     setPhase("fork");
     setPath(null);
     setDetails({ name: "", vertical: "", city: "" });
@@ -201,7 +212,10 @@ export function EmbeddedSignupModal({
     setChosen(null);
     setSavedAccount(null);
     setTab("embedded");
-  }, [open, embeddedConfigured]);
+  }, [open, embeddedConfigured, stopPopupPoll]);
+
+  // Clear any popup watcher on unmount.
+  useEffect(() => stopPopupPoll, [stopPopupPoll]);
 
   // ── Lazy-load Meta SDK on first open ────────────────────────────────
   useEffect(() => {
@@ -247,13 +261,15 @@ export function EmbeddedSignupModal({
   useEffect(() => {
     if (phase !== "loading") return;
     const t = setTimeout(() => {
+      stopPopupPoll();
+      loginPendingRef.current = false;
       setError(
         "Meta's sign-in didn't open or didn't finish. Allow pop-ups for this site and retry, or use Manual Setup. If the pop-up opened but errored, your Meta app may not be set up for Embedded Signup yet.",
       );
       setPhase("idle");
     }, 75_000);
     return () => clearTimeout(t);
-  }, [phase]);
+  }, [phase, stopPopupPoll]);
 
   // ── Launch Embedded Signup ──────────────────────────────────────────
   const launchSignup = useCallback(() => {
@@ -271,11 +287,12 @@ export function EmbeddedSignupModal({
     loginPendingRef.current = true;
 
     // Reliable popup-block detection. FB.login opens its sign-in window via
-    // window.open() *synchronously* inside this call (to stay within the click
-    // gesture), so we briefly wrap window.open to capture the handle it returns.
-    // A null/closed handle means the browser actually blocked it. This replaces
-    // the old focus-based heuristic, which fired false positives whenever the OS
-    // kept the opener window focused even though the popup had opened fine.
+    // window.open(), but it may do so EITHER synchronously inside this gesture OR
+    // asynchronously after an internal status check. An async open lands outside
+    // the click gesture, so the browser silently blocks it — and if we restored
+    // window.open immediately we'd miss it and hang to the 75s watchdog. So we
+    // wrap window.open to capture the handle and evaluate after a short delay,
+    // which covers both the sync and async cases.
     const nativeOpen = window.open.bind(window);
     let openAttempted = false;
     let popup: Window | null = null;
@@ -285,10 +302,47 @@ export function EmbeddedSignupModal({
       return popup;
     } as typeof window.open;
 
+    const evaluatePopup = () => {
+      window.open = nativeOpen; // restore (idempotent)
+      if (!loginPendingRef.current) return; // callback already resolved
+      if (!openAttempted) return; // FB never tried to open — let the watchdog handle it
+      if (!popup || popup.closed) {
+        loginPendingRef.current = false;
+        setError(
+          "Your browser blocked Meta's sign-in pop-up. Allow pop-ups for this site (icon in the address bar) and retry, or use Manual Setup.",
+        );
+        setPhase("idle");
+        return;
+      }
+      // Popup is open — watch for it closing before Meta calls us back. A user who
+      // dismisses an errored Meta window (domain not whitelisted, app not in Live
+      // mode, or Embedded Signup not fully configured) would otherwise wait out
+      // the 75s watchdog. On success the SDK closes its own window just before
+      // firing the callback, so give a short grace period to avoid a false alarm.
+      const handle: Window = popup;
+      stopPopupPoll();
+      popupPollRef.current = setInterval(() => {
+        if (!handle.closed) return;
+        stopPopupPoll();
+        setTimeout(() => {
+          if (!loginPendingRef.current) return; // callback already resolved (success/cancel)
+          loginPendingRef.current = false;
+          setError(
+            "The Meta sign-in window closed before finishing. If you closed it, just retry. If it showed an error (e.g. “URL blocked” or “app not active”), your Meta app isn’t fully set up for Embedded Signup yet — use Manual Setup or contact support.",
+          );
+          setPhase("idle");
+        }, 1800);
+      }, 500);
+    };
+    const evalTimer = setTimeout(evaluatePopup, 1200);
+
     try {
       window.FB.login(
       async (response) => {
         loginPendingRef.current = false;
+        clearTimeout(evalTimer);
+        window.open = nativeOpen;
+        stopPopupPoll();
         const code = response.authResponse?.code;
         if (!code) {
           setPhase("idle");
@@ -339,24 +393,14 @@ export function EmbeddedSignupModal({
         },
       },
       );
-    } finally {
-      // FB.login has now (synchronously) attempted to open its popup — restore
-      // the native opener so nothing else is affected.
+    } catch {
+      clearTimeout(evalTimer);
       window.open = nativeOpen;
-    }
-
-    // If the popup was blocked, surface guidance immediately instead of leaving
-    // the user on "Opening Meta sign-in…" until the watchdog fires. If the SDK
-    // didn't open synchronously (openAttempted false), we skip this and let the
-    // watchdog handle any genuine hang.
-    if (openAttempted && (!popup || (popup as Window).closed)) {
       loginPendingRef.current = false;
-      setError(
-        "Your browser blocked Meta's sign-in pop-up. Allow pop-ups for this site (icon in the address bar) and retry, or use Manual Setup.",
-      );
+      setError("Couldn't start Meta sign-in. Please retry, or use Manual Setup.");
       setPhase("idle");
     }
-  }, [CONFIG_ID, embeddedConfigured, sdkReady, path, details]);
+  }, [CONFIG_ID, embeddedConfigured, sdkReady, path, details, stopPopupPoll]);
 
   const completeSave = useCallback(
     async (data: ExchangeTokenResponse, waba: DiscoveredWaba, phone: DiscoveredPhone) => {
