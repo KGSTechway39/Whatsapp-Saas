@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/templates/use-library
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
   const finalName = body.name || body.library_template_name;
 
   // Meta endpoint: POST /{WABA_ID}/message_templates
-  const url = `https://graph.facebook.com/v22.0/${conn.waba_id}/message_templates?access_token=${encodeURIComponent(conn.access_token)}`;
+  const url = `https://graph.facebook.com/v22.0/${conn.waba_id}/message_templates?access_token=${encodeURIComponent(await decrypt(conn.access_token))}`;
 
   const metaBody: Record<string, unknown> = {
     name: finalName,

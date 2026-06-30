@@ -18,6 +18,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { MetaApiError, graphPost } from "@/lib/meta-client";
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const res = await graphPost<{ messages: { id: string }[] }>(
       `/${account.phone_number_id}/messages`,
-      account.access_token,
+      await decrypt(account.access_token),
       payload,
     );
     waMessageId = res.messages?.[0]?.id;

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sendTextMessage, sendTemplateMessage } from "@/lib/meta";
@@ -56,6 +57,8 @@ export async function POST(
     return NextResponse.json({ error: "WhatsApp number is inactive" }, { status: 400 });
   }
 
+  const wnToken = await decrypt(wn.access_token);
+
   const recipientPhone = (conv.contact_phone ?? "").replace(/[^\d+]/g, "");
   if (!recipientPhone) {
     return NextResponse.json({ error: "Contact phone number missing" }, { status: 400 });
@@ -89,7 +92,7 @@ export async function POST(
         idempotencyKey: billingIdem,
         referenceId: `inbox:${params.id}`,
         description: "Inbox reply (text)",
-        send: () => sendTextMessage(wn.phone_number_id, wn.access_token, recipientPhone, text),
+        send: () => sendTextMessage(wn.phone_number_id, wnToken, recipientPhone, text),
       });
       waMessageId = result.messageId ?? null;
       messageContent = { body: text };
@@ -119,7 +122,7 @@ export async function POST(
         send: () =>
           sendTemplateMessage({
             phoneNumberId: wn.phone_number_id,
-            accessToken: wn.access_token,
+            accessToken: wnToken,
             to: recipientPhone,
             templateName: tmpl.name,
             languageCode: tmpl.language || "en",

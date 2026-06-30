@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sendTextMessage } from "@/lib/meta";
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
             const wn = (conv?.whatsapp_numbers as unknown) as { phone_number_id: string; access_token: string } | null;
             if (wn && conv?.contact_phone) {
+              const wnToken = await decrypt(wn.access_token);
               const text = String(cfg.text || "").replace(/\{\{name\}\}/g, String(context.name || "there"));
               // Bill managed tenants (SERVICE category); BYO passes through.
               await guardedSingleSend({
@@ -147,7 +149,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 idempotencyKey: `flow:${sessionId ?? conversationId}:${node.id}`,
                 referenceId: `flow:${params.id}`,
                 description: "Automation flow message",
-                send: () => sendTextMessage(wn.phone_number_id, wn.access_token, conv.contact_phone, text),
+                send: () => sendTextMessage(wn.phone_number_id, wnToken, conv.contact_phone, text),
               });
             }
           }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { withApiAuth, ApiAuthError } from "@/lib/api-keys";
 import { dispatchEvent } from "@/lib/webhooks-out";
 import { sendTemplateMessage, sendTextMessage } from "@/lib/meta";
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
     const numberId = number.id;
     const phoneNumberId = number.phone_number_id as string;
-    const accessToken = number.access_token as string;
+    const accessToken = await decrypt(number.access_token as string);
 
     // Look up the contact (or create one if not present — convenience for API users)
     let contactId: string | null = null;

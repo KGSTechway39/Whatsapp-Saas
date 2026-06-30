@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { audit } from "@/lib/audit";
@@ -48,7 +49,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   // Best-effort: unsubscribe the WABA webhook from Meta.
   if (number.waba_id && number.access_token) {
     try {
-      await unsubscribeWabaFromApp(number.waba_id, number.access_token);
+      await unsubscribeWabaFromApp(number.waba_id, await decrypt(number.access_token));
       logger.info("[api/meta/disconnect] unsubscribed waba", { wabaId: number.waba_id });
     } catch (err) {
       logger.warn("[api/meta/disconnect] graph unsubscribe failed (non-fatal)", {

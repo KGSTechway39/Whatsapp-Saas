@@ -50,3 +50,4 @@ setting.json
 supabase/.branches/
 supabase/.temp/
 .vercel
+.env*

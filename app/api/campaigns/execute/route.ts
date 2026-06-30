@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sendTemplateMessage } from "@/lib/meta";
@@ -451,7 +452,7 @@ export async function POST(request: NextRequest) {
     campaignId: campaign.id,
     contacts,
     phoneNumberId: number.phone_number_id,
-    accessToken: number.access_token,
+    accessToken: await decrypt(number.access_token),
     templateName: template.name,
     languageCode: template.language || "en",
     variables: template.variables || [],

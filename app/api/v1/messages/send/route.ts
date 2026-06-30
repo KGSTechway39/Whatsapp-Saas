@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { withApiAuth, ApiAuthError } from "@/lib/api-keys";
 import { sendTemplateMessage, sendTextMessage, sendDocumentMessage } from "@/lib/meta";
 import { guardedSingleSend, resolveTemplateCategory } from "@/lib/billing/guarded-send";
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ id: messageId, status: "failed", error: "No active WhatsApp number connected" }, { status: 400 });
     }
     const phoneNumberId = number.phone_number_id as string;
-    const accessToken = number.access_token as string;
+    const accessToken = await decrypt(number.access_token as string);
 
     // Billing category: template uses its real category; document/text = SERVICE.
     const category =

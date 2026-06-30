@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { audit } from "@/lib/audit";
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Call Graph API — subscribe the WABA to our app.
   let status: "active" | "failed" = "active";
   try {
-    const result = await subscribeWabaToApp(number.waba_id, number.access_token);
+    const result = await subscribeWabaToApp(number.waba_id, await decrypt(number.access_token));
     if (!result.success) status = "failed";
   } catch (err) {
     const lastError = err instanceof Error ? err.message : String(err);
