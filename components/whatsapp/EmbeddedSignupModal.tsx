@@ -222,20 +222,31 @@ export function EmbeddedSignupModal({
     if (!open || !embeddedConfigured || initRef.current) return;
     initRef.current = true;
 
-    window.fbAsyncInit = () => {
-      window.FB?.init({
-        appId: APP_ID,
-        autoLogAppEvents: true,
-        xfbml: false,
-        version: SDK_VERSION,
-      });
-      setSdkReady(true);
+    const initFb = () => {
+      try {
+        window.FB?.init({
+          appId: APP_ID,
+          autoLogAppEvents: true,
+          xfbml: false,
+          version: SDK_VERSION,
+        });
+        setSdkReady(true);
+      } catch (e) {
+        console.error("[EmbeddedSignup] FB.init failed:", e);
+        setError("Couldn't initialize Facebook sign-in. Retry, or use Manual Setup.");
+      }
     };
+    window.fbAsyncInit = initFb;
 
-    if (document.getElementById("facebook-jssdk")) {
-      if (window.FB) setSdkReady(true);
+    // If the SDK object is already present (e.g. loaded by a previous mount or a
+    // client-side navigation), fbAsyncInit won't fire again — initialize now so
+    // FB.login never runs against an uninitialized SDK.
+    if (window.FB) {
+      initFb();
       return;
     }
+    // Script tag exists but FB isn't ready yet — fbAsyncInit will run when it loads.
+    if (document.getElementById("facebook-jssdk")) return;
     const s = document.createElement("script");
     s.id = "facebook-jssdk";
     s.src = SDK_SRC;
@@ -277,7 +288,7 @@ export function EmbeddedSignupModal({
       setPhase("misconfigured");
       return;
     }
-    if (!window.FB || !sdkReady) {
+    if (!window.FB || typeof window.FB.login !== "function" || !sdkReady) {
       setError("Meta SDK is still loading. Try again in a moment.");
       return;
     }
@@ -393,11 +404,14 @@ export function EmbeddedSignupModal({
         },
       },
       );
-    } catch {
+    } catch (err) {
       clearTimeout(evalTimer);
       window.open = nativeOpen;
       loginPendingRef.current = false;
-      setError("Couldn't start Meta sign-in. Please retry, or use Manual Setup.");
+      // Surface the SDK's own reason so misconfig is diagnosable instead of opaque.
+      console.error("[EmbeddedSignup] FB.login threw:", err);
+      const detail = err instanceof Error && err.message ? ` (${err.message})` : "";
+      setError(`Couldn't start Meta sign-in${detail}. Please retry, or use Manual Setup.`);
       setPhase("idle");
     }
   }, [CONFIG_ID, embeddedConfigured, sdkReady, path, details, stopPopupPoll]);
