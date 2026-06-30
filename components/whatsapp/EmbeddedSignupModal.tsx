@@ -270,20 +270,23 @@ export function EmbeddedSignupModal({
     setPhase("loading");
     loginPendingRef.current = true;
 
-    // Popup-blocked heuristic: opening Meta's sign-in popup blurs this window.
-    // If we still have focus shortly after and the login is still pending, the
-    // browser blocked the popup — surface that fast instead of hanging.
-    setTimeout(() => {
-      if (loginPendingRef.current && typeof document !== "undefined" && document.hasFocus()) {
-        loginPendingRef.current = false;
-        setError(
-          "Your browser blocked Meta's sign-in pop-up. Allow pop-ups for this site (icon in the address bar) and retry, or use Manual Setup.",
-        );
-        setPhase("idle");
-      }
-    }, 2500);
+    // Reliable popup-block detection. FB.login opens its sign-in window via
+    // window.open() *synchronously* inside this call (to stay within the click
+    // gesture), so we briefly wrap window.open to capture the handle it returns.
+    // A null/closed handle means the browser actually blocked it. This replaces
+    // the old focus-based heuristic, which fired false positives whenever the OS
+    // kept the opener window focused even though the popup had opened fine.
+    const nativeOpen = window.open.bind(window);
+    let openAttempted = false;
+    let popup: Window | null = null;
+    window.open = function wrappedOpen(...args: Parameters<Window["open"]>) {
+      openAttempted = true;
+      popup = nativeOpen(...args);
+      return popup;
+    } as typeof window.open;
 
-    window.FB.login(
+    try {
+      window.FB.login(
       async (response) => {
         loginPendingRef.current = false;
         const code = response.authResponse?.code;
@@ -335,7 +338,24 @@ export function EmbeddedSignupModal({
           ...(buildSetup(details) ? { setup: buildSetup(details) } : {}),
         },
       },
-    );
+      );
+    } finally {
+      // FB.login has now (synchronously) attempted to open its popup — restore
+      // the native opener so nothing else is affected.
+      window.open = nativeOpen;
+    }
+
+    // If the popup was blocked, surface guidance immediately instead of leaving
+    // the user on "Opening Meta sign-in…" until the watchdog fires. If the SDK
+    // didn't open synchronously (openAttempted false), we skip this and let the
+    // watchdog handle any genuine hang.
+    if (openAttempted && (!popup || (popup as Window).closed)) {
+      loginPendingRef.current = false;
+      setError(
+        "Your browser blocked Meta's sign-in pop-up. Allow pop-ups for this site (icon in the address bar) and retry, or use Manual Setup.",
+      );
+      setPhase("idle");
+    }
   }, [CONFIG_ID, embeddedConfigured, sdkReady, path, details]);
 
   const completeSave = useCallback(
