@@ -124,6 +124,12 @@ export interface ProcessResult {
   sessionId?: string;
   nextNodeId?: string;
   outbound?: OutboundPayload;
+  /**
+   * Contact's last inbound timestamp at the moment we processed this event.
+   * The dispatcher uses it for the 24h-window check before delivering
+   * `outbound`. Present whenever a contact was resolved.
+   */
+  lastInboundAt?: string;
   reason?: string;
 }
 
@@ -245,6 +251,7 @@ export async function processIncomingMessage(
     sessionId: session.id,
     nextNodeId: nextNode.id,
     outbound,
+    lastInboundAt: inboundAt,
   };
 }
 
