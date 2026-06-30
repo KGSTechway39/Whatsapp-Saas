@@ -348,8 +348,12 @@ export function EmbeddedSignupModal({
     const evalTimer = setTimeout(evaluatePopup, 1200);
 
     try {
+      // NOTE: this callback MUST be a plain (non-async) function. The Facebook
+      // SDK type-checks the callback and throws "Expression is of type
+      // asyncfunction, not function" if given an async function. So we keep the
+      // callback synchronous and run the await work in an inner async IIFE.
       window.FB.login(
-      async (response) => {
+      (response) => {
         loginPendingRef.current = false;
         clearTimeout(evalTimer);
         window.open = nativeOpen;
@@ -364,28 +368,30 @@ export function EmbeddedSignupModal({
         }
 
         setPhase("exchanging");
-        try {
-          const res = await fetch("/api/meta/exchange-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
-          });
-          const data = (await res.json()) as ExchangeTokenResponse & { error?: string };
-          if (!res.ok) throw new Error(data.error || "Token exchange failed");
+        void (async () => {
+          try {
+            const res = await fetch("/api/meta/exchange-token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code }),
+            });
+            const data = (await res.json()) as ExchangeTokenResponse & { error?: string };
+            if (!res.ok) throw new Error(data.error || "Token exchange failed");
 
-          setTransfer(data);
-          const onlyWaba  = data.wabas.length === 1 ? data.wabas[0] : null;
-          const onlyPhone = onlyWaba?.phoneNumbers.length === 1 ? onlyWaba.phoneNumbers[0] : null;
-          if (onlyWaba && onlyPhone) {
-            await completeSave(data, onlyWaba, onlyPhone);
-          } else {
-            setPhase("choose");
+            setTransfer(data);
+            const onlyWaba  = data.wabas.length === 1 ? data.wabas[0] : null;
+            const onlyPhone = onlyWaba?.phoneNumbers.length === 1 ? onlyWaba.phoneNumbers[0] : null;
+            if (onlyWaba && onlyPhone) {
+              await completeSave(data, onlyWaba, onlyPhone);
+            } else {
+              setPhase("choose");
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "Setup failed";
+            setError(msg);
+            setPhase("error");
           }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Setup failed";
-          setError(msg);
-          setPhase("error");
-        }
+        })();
       },
       {
         config_id: CONFIG_ID,
