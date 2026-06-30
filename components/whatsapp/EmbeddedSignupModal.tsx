@@ -119,6 +119,26 @@ interface SuccessSummary {
   phoneNumberId: string;
   displayPhoneNumber: string;
   businessName: string | null;
+  /** false if webhook subscription failed (inbound won't arrive until retried). */
+  webhookOk: boolean;
+  /** true when connected via Manual Setup (token may be temporary / 24h). */
+  viaManual?: boolean;
+}
+
+/** Turn raw Meta Graph errors into plain language a non-technical user can act on. */
+function humanizeMetaError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("cannot parse") || m.includes("malformed"))
+    return "That access token doesn't look complete. Copy the full token (it starts with “EAA…”) from Meta → WhatsApp → API Setup and paste it again.";
+  if (m.includes("session has expired") || m.includes("expired"))
+    return "That access token has expired. Generate a fresh token in Meta → WhatsApp → API Setup and paste it again.";
+  if (m.includes("invalid oauth") || (m.includes("code") && m.includes("190")))
+    return "That access token isn't valid. Make sure you copied the WhatsApp access token (starts with “EAA…”), not the App ID or App Secret.";
+  if (m.includes("unsupported get request") || m.includes("does not exist") || m.includes("nonexisting"))
+    return "We couldn't find that account. Double-check the WABA ID and Phone Number ID match the same app in Meta → WhatsApp → API Setup.";
+  if (m.includes("permission") || m.includes("(#10)") || m.includes("(#200)"))
+    return "This token is missing WhatsApp permissions. Use a token with whatsapp_business_management and whatsapp_business_messaging.";
+  return raw;
 }
 
 interface Props {
@@ -174,6 +194,8 @@ export function EmbeddedSignupModal({
   const [transfer, setTransfer] = useState<ExchangeTokenResponse | null>(null);
   const [chosen, setChosen]     = useState<{ waba: DiscoveredWaba; phone: DiscoveredPhone } | null>(null);
   const [savedAccount, setSavedAccount] = useState<SuccessSummary | null>(null);
+  // Preserve the last Manual Setup entry so a failed submit doesn't wipe the form.
+  const [manualDraft, setManualDraft] = useState<ManualForm | null>(null);
   const initRef = useRef(false);
   const loginPendingRef = useRef(false); // true while FB.login awaits its callback
   const popupPollRef = useRef<ReturnType<typeof setInterval> | null>(null); // watches the Meta popup
@@ -211,6 +233,7 @@ export function EmbeddedSignupModal({
     setTransfer(null);
     setChosen(null);
     setSavedAccount(null);
+    setManualDraft(null);
     setTab("embedded");
   }, [open, embeddedConfigured, stopPopupPoll]);
 
@@ -422,6 +445,32 @@ export function EmbeddedSignupModal({
     }
   }, [CONFIG_ID, embeddedConfigured, sdkReady, path, details, stopPopupPoll]);
 
+  // Subscribe the connected WABA to our webhook. Returns true on success — the
+  // caller surfaces failure to the user instead of silently dropping inbound.
+  const subscribeWebhook = useCallback(async (accountId: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/meta/subscribe-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId }),
+      });
+      if (!res.ok) return false;
+      const data = (await res.json().catch(() => ({}))) as { status?: string };
+      return data.status !== "failed";
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Retry from the success screen's "incoming messages may not work" warning.
+  const retrySubscribe = useCallback(async () => {
+    if (!savedAccount) return;
+    const ok = await subscribeWebhook(savedAccount.accountId);
+    setSavedAccount((s) => (s ? { ...s, webhookOk: ok } : s));
+    if (ok) toast.success("Incoming messages enabled");
+    else toast.error("Still couldn't enable incoming messages — contact support");
+  }, [savedAccount, subscribeWebhook]);
+
   const completeSave = useCallback(
     async (data: ExchangeTokenResponse, waba: DiscoveredWaba, phone: DiscoveredPhone) => {
       setPhase("saving");
@@ -448,17 +497,14 @@ export function EmbeddedSignupModal({
         const saved = (await saveRes.json()) as SaveAccountResponse & { error?: string };
         if (!saveRes.ok) throw new Error(saved.error || "Save failed");
 
-        await fetch("/api/meta/subscribe-webhook", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accountId: saved.accountId }),
-        }).catch(() => undefined);
+        const webhookOk = await subscribeWebhook(saved.accountId);
 
         const summary: SuccessSummary = {
           accountId: saved.accountId,
           phoneNumberId: phone.id,
           displayPhoneNumber: phone.displayPhoneNumber,
           businessName: phone.verifiedName || waba.name,
+          webhookOk,
         };
         setSavedAccount(summary);
         setPhase("success");
@@ -466,15 +512,16 @@ export function EmbeddedSignupModal({
         onSuccess?.(summary);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Save failed";
-        setError(msg);
+        setError(humanizeMetaError(msg));
         setPhase("error");
       }
     },
-    [onSuccess],
+    [onSuccess, subscribeWebhook],
   );
 
   const onManualConnect = useCallback(
     async (form: ManualForm) => {
+      setManualDraft(form); // keep entries so a failed submit doesn't wipe the form
       setPhase("saving");
       setError(null);
       try {
@@ -492,17 +539,15 @@ export function EmbeddedSignupModal({
         };
         if (!res.ok) throw new Error(data.error || "Manual setup failed");
 
-        await fetch("/api/meta/subscribe-webhook", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accountId: data.accountId }),
-        }).catch(() => undefined);
+        const webhookOk = await subscribeWebhook(data.accountId);
 
         const summary: SuccessSummary = {
           accountId: data.accountId,
           phoneNumberId: data.phoneNumberId,
           displayPhoneNumber: data.displayPhoneNumber,
           businessName: data.businessName,
+          webhookOk,
+          viaManual: true,
         };
         setSavedAccount(summary);
         setPhase("success");
@@ -510,11 +555,11 @@ export function EmbeddedSignupModal({
         onSuccess?.(summary);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Manual setup failed";
-        setError(msg);
+        setError(humanizeMetaError(msg));
         setPhase("error");
       }
     },
-    [onSuccess],
+    [onSuccess, subscribeWebhook],
   );
 
   const flatPhones = useMemo(() => {
@@ -643,7 +688,7 @@ export function EmbeddedSignupModal({
 
           {tab === "manual" &&
             (phase === "fork" || phase === "idle" || phase === "error" || phase === "managed" || phase === "misconfigured") && (
-              <ManualForm onSubmit={onManualConnect} />
+              <ManualForm onSubmit={onManualConnect} initial={manualDraft} />
             )}
 
           {(phase === "loading" || phase === "exchanging" || phase === "saving") && (
@@ -660,7 +705,9 @@ export function EmbeddedSignupModal({
             <ChooseBlock options={flatPhones} chosen={chosen} onChoose={(opt) => setChosen(opt)} />
           )}
 
-          {phase === "success" && savedAccount && <SuccessBlock summary={savedAccount} />}
+          {phase === "success" && savedAccount && (
+            <SuccessBlock summary={savedAccount} onRetrySubscribe={retrySubscribe} />
+          )}
         </div>
 
         {/* Footer */}
@@ -906,11 +953,19 @@ interface ManualForm {
   displayPhoneNumber?: string;
 }
 
-function ManualForm({ onSubmit }: { onSubmit: (form: ManualForm) => void }): JSX.Element {
-  const [wabaId, setWabaId] = useState("");
-  const [phoneNumberId, setPhoneNumberId] = useState("");
-  const [accessToken, setAccessToken] = useState("");
-  const [businessName, setBusinessName] = useState("");
+function ManualForm({
+  onSubmit,
+  initial,
+}: {
+  onSubmit: (form: ManualForm) => void;
+  initial?: ManualForm | null;
+}): JSX.Element {
+  // Seed from `initial` so a failed submit (which remounts this form) keeps
+  // what the user already typed instead of clearing every field.
+  const [wabaId, setWabaId] = useState(initial?.wabaId ?? "");
+  const [phoneNumberId, setPhoneNumberId] = useState(initial?.phoneNumberId ?? "");
+  const [accessToken, setAccessToken] = useState(initial?.accessToken ?? "");
+  const [businessName, setBusinessName] = useState(initial?.businessName ?? "");
   const [showToken, setShowToken] = useState(false);
 
   const canSubmit = wabaId.trim() && phoneNumberId.trim() && accessToken.trim();
@@ -1142,7 +1197,13 @@ function ChooseBlock({ options, chosen, onChoose }: ChooseProps): JSX.Element {
   );
 }
 
-function SuccessBlock({ summary }: { summary: SuccessSummary }): JSX.Element {
+function SuccessBlock({
+  summary,
+  onRetrySubscribe,
+}: {
+  summary: SuccessSummary;
+  onRetrySubscribe: () => void;
+}): JSX.Element {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <span className="relative flex h-16 w-16 items-center justify-center">
@@ -1157,6 +1218,44 @@ function SuccessBlock({ summary }: { summary: SuccessSummary }): JSX.Element {
       <p className="mt-2 text-xs text-muted-foreground">
         You can start sending messages and running campaigns right away.
       </p>
+
+      {/* Inbound won't work until the webhook is subscribed — make that fixable, not silent. */}
+      {!summary.webhookOk && (
+        <div className="mt-4 w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-left text-xs text-amber-700 dark:text-amber-300">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium">Incoming messages aren&apos;t enabled yet</p>
+              <p className="mt-0.5 text-muted-foreground">
+                You can send messages now, but replies from customers won&apos;t reach you until we
+                finish connecting the webhook.
+              </p>
+              <button
+                type="button"
+                onClick={onRetrySubscribe}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 py-1.5 font-medium text-amber-700 transition-colors hover:bg-amber-500/25 dark:text-amber-200"
+              >
+                Enable incoming messages
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual tokens from API Setup are typically temporary (24h) — say so loudly. */}
+      {summary.viaManual && (
+        <div className="mt-3 w-full rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-left text-xs text-blue-700 dark:text-blue-300">
+          <div className="flex items-start gap-2">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              If you pasted a <strong>temporary</strong> token, this connection will stop working in
+              about <strong>24 hours</strong>. For a permanent connection, use{" "}
+              <strong>Embedded Signup</strong> (Continue With Facebook) or paste a permanent
+              system-user token.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

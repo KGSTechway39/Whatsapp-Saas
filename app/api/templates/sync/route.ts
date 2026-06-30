@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { createClient } from "@/lib/supabase/server";
 import {
   getMessageTemplates,
@@ -30,7 +31,7 @@ export async function POST() {
 
   const wabaSet = new Map<string, string>(); // waba_id → token
   for (const n of numbers || []) {
-    if (n.waba_id && n.access_token) wabaSet.set(n.waba_id, n.access_token);
+    if (n.waba_id && n.access_token) wabaSet.set(n.waba_id, await decrypt(n.access_token));
   }
 
   if (wabaSet.size === 0) {

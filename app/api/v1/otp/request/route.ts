@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomInt, randomUUID } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { withApiAuth, ApiAuthError } from "@/lib/api-keys";
 import { sendTemplateMessage } from "@/lib/meta";
 import { guardedSingleSend } from "@/lib/billing/guarded-send";
@@ -86,10 +87,10 @@ export async function POST(req: NextRequest) {
         idempotencyKey: `otp:${req.headers.get("idempotency-key") || body.idempotency_key || randomUUID()}`,
         referenceId: to,
         description: "OTP verification",
-        send: () =>
+        send: async () =>
           sendTemplateMessage({
             phoneNumberId: number.phone_number_id,
-            accessToken: number.access_token,
+            accessToken: await decrypt(number.access_token),
             to,
             templateName,
             languageCode: body.language || "en",

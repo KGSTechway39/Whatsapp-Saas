@@ -7,14 +7,15 @@
  * keeps a number connected via Embedded Signup immediately usable across
  * the whole app, with no separate account/token tables to keep in sync.
  *
- * Token storage matches the rest of the platform: the access token is held
- * in whatsapp_numbers.access_token and consumed directly by the send paths.
- * External exposure is prevented by RLS (anon/authenticated roles cannot
- * read the table; only the service-role key used by API routes can).
+ * Token storage: the access token is encrypted at rest (AES-256-GCM via
+ * lib/crypto) with token_encrypted=true. The send paths decrypt on read
+ * (decrypt() is a no-op on legacy plaintext rows, so old data keeps working).
+ * RLS additionally prevents anon/authenticated roles from reading the table.
  */
 
 import { createHash } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import { encrypt } from "@/lib/crypto";
 import type { MetaPhoneNumber, MetaWaba } from "@/lib/meta-client";
 
 type SupabaseClient = ReturnType<typeof createServiceClient>;
@@ -78,14 +79,17 @@ export async function saveAccount(
     args.phone.verified_name || args.waba.name || displayPhone;
   const status = args.phone.status === "VERIFIED" ? "active" : "inactive";
 
+  // Encrypt the token at rest. Send paths decrypt on read.
+  const encryptedToken = await encrypt(args.accessToken);
+
   const basePayload = {
     user_id: userId,
     phone_number: displayPhone,
     display_name: displayName,
     waba_id: args.waba.id,
     phone_number_id: args.phone.id,
-    access_token: args.accessToken,
-    token_encrypted: false,
+    access_token: encryptedToken,
+    token_encrypted: true,
     token_expires_at: args.tokenExpiresAt,
     meta_app_id: realMetaAppId(),
     status,

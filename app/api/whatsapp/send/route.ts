@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
 import { sendTemplateMessage, sendTextMessage } from "@/lib/meta";
 import { guardedSingleSend, resolveTemplateCategory } from "@/lib/billing/guarded-send";
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
   if (!number.phone_number_id || !number.access_token) {
     return NextResponse.json({ error: "Number not connected via Meta API" }, { status: 400 });
   }
+  const decryptedToken = await decrypt(number.access_token);
 
   // Validate type-specific inputs before any billing happens.
   if (type === "text" && !text) {
@@ -66,10 +68,10 @@ export async function POST(request: NextRequest) {
       referenceId: to,
       send: () =>
         type === "text"
-          ? sendTextMessage(number.phone_number_id, number.access_token, to, text)
+          ? sendTextMessage(number.phone_number_id, decryptedToken, to, text)
           : sendTemplateMessage({
               phoneNumberId: number.phone_number_id,
-              accessToken: number.access_token,
+              accessToken: decryptedToken,
               to,
               templateName,
               languageCode: languageCode || "en",

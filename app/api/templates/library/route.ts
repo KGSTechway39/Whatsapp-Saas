@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { createClient } from "@/lib/supabase/server";
 
 // Meta's Template Library is exposed via:
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
   }
 
   const url = new URL(`https://graph.facebook.com/v22.0/${conn.waba_id}/template_library`);
-  url.searchParams.set("access_token", conn.access_token);
+  url.searchParams.set("access_token", await decrypt(conn.access_token));
   url.searchParams.set("category", category);
   if (topic) url.searchParams.set("topic", topic);
   url.searchParams.set("language", language);
