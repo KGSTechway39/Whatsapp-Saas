@@ -17,6 +17,7 @@
 
 import { logger } from "@/lib/logger";
 import { processIncomingMessage } from "./engine";
+import { sendOutbound } from "./dispatch";
 import { processStatusEvent, type StatusPayload } from "./status";
 import { confirmOrReleaseBilling } from "@/lib/billing/confirm";
 import { enqueue, registerHandler } from "@/lib/queue";
@@ -97,13 +98,24 @@ async function runInboundWorker(event: InboundEvent): Promise<void> {
     return;
   }
 
-  await processIncomingMessage({
+  const result = await processIncomingMessage({
     phoneNumberId: event.phoneNumberId,
     fromPhone: payload.from,
     incoming: normalizeInbound(payload),
     eventId: event.eventId,
     receivedAt: event.receivedAt,
   });
+
+  // Deliver the engine's reply. Previously this return value was discarded, so
+  // every automation computed a reply and then sent nothing — the dispatcher
+  // enforces the 24h window and resolves/decrypts the tenant token before send.
+  if (result.outbound) {
+    await sendOutbound({
+      phoneNumberId: event.phoneNumberId,
+      outbound: result.outbound,
+      lastInboundAt: result.lastInboundAt ?? null,
+    });
+  }
 }
 
 function normalizeInbound(p: {
