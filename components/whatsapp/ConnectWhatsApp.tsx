@@ -78,8 +78,11 @@ export function ConnectWhatsApp({ onConnected, compact = false }: Props) {
     setError(null);
     setConnecting(true);
 
+    // The FB SDK type-checks this callback and throws "Expression is of type
+    // asyncfunction, not function" if it's async — keep it plain and run the
+    // await work in an inner async IIFE.
     window.FB.login(
-      async (response) => {
+      (response) => {
         if (!response.authResponse?.code) {
           setConnecting(false);
           if (response.status !== "unknown") {
@@ -90,35 +93,37 @@ export function ConnectWhatsApp({ onConnected, compact = false }: Props) {
 
         const { code, waba_id, phone_number_id } = response.authResponse;
 
-        try {
-          const res = await fetch("/api/whatsapp/embedded-signup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              code,
-              wabaId: waba_id,
-              phoneNumberId: phone_number_id,
-            }),
-          });
+        void (async () => {
+          try {
+            const res = await fetch("/api/whatsapp/embedded-signup", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                code,
+                wabaId: waba_id,
+                phoneNumberId: phone_number_id,
+              }),
+            });
 
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error ?? "Connection failed");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? "Connection failed");
 
-          const accounts = data.connected as ConnectedAccount[];
-          setConnected(accounts);
-          toast.success(
-            accounts.length === 1
-              ? "WhatsApp number connected!"
-              : `${accounts.length} numbers connected!`
-          );
-          onConnected?.(accounts);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Connection failed";
-          setError(msg);
-          toast.error(msg);
-        } finally {
-          setConnecting(false);
-        }
+            const accounts = data.connected as ConnectedAccount[];
+            setConnected(accounts);
+            toast.success(
+              accounts.length === 1
+                ? "WhatsApp number connected!"
+                : `${accounts.length} numbers connected!`
+            );
+            onConnected?.(accounts);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "Connection failed";
+            setError(msg);
+            toast.error(msg);
+          } finally {
+            setConnecting(false);
+          }
+        })();
       },
       {
         config_id: CONFIG_ID,
