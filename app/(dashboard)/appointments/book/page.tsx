@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AIAppointmentAssist } from "@/components/ai/AIAppointmentAssist";
 
 type ServiceType = "consultation" | "follow_up" | "demo" | "checkup" | "meeting" | "callback";
 
@@ -118,6 +119,26 @@ export default function BookAppointmentPage() {
   return (
     <div className="max-w-4xl">
       <PageHeader title="Book Appointment" subtitle="Schedule and send automatic WhatsApp confirmations & reminders" />
+
+      {/* ── Optional AI quick-book — pre-fills the form; never books ── */}
+      <AIAppointmentAssist
+        services={SERVICES.map((s) => ({ id: s.id, label: s.label }))}
+        onApply={(p) => {
+          if (p.service) setService(p.service as ServiceType);
+          if (p.date) setSelDate(p.date);
+          if (p.time) setSelTime(p.time);
+          setContact((c) => ({
+            ...c,
+            name: p.customerName || c.name,
+            phone: p.customerPhone || c.phone,
+            notes: p.notes || c.notes,
+          }));
+          // Route to the earliest incomplete step, else jump to Confirm — the
+          // manual "Confirm & Book" action stays the only thing that books.
+          const next = !p.service ? 1 : !p.date || !p.time ? 2 : !p.customerName || !p.customerPhone ? 3 : 5;
+          setStep(next);
+        }}
+      />
 
       {/* Step bar */}
       <div className="flex items-center gap-1.5 mb-8 overflow-x-auto pb-2">

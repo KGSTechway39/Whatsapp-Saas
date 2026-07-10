@@ -4,15 +4,37 @@ import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sendTemplateMessage } from "@/lib/meta";
 import { getBillingMode } from "@/lib/billing/guarded-send";
-import { quoteSendCostPaise, toBillableCategory } from "@/lib/billing/pricing";
-import { deriveQuote } from "@/lib/billing/rates";
+import { quoteSendCostPaise, toBillableCategory, type MessageCategory } from "@/lib/billing/pricing";
+import { deriveQuote, getWholesalePaise } from "@/lib/billing/rates";
 import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
 import { dispatchEvent } from "@/lib/webhooks-out";
 
 const BATCH_SIZE = 50;
-const META_COST_MARKETING = 1.50;
-const META_COST_OTHER = 0.80;
-const PLATFORM_FEE = 0.30;
+
+// WASend's own per-message platform fee (paise). This is our margin, NOT a Meta
+// rate — Meta wholesale rates are never hardcoded (Law #2); they come from the
+// `meta_rates` table via getWholesalePaise().
+const PLATFORM_FEE_PAISE = 30;
+
+// Last-resort wholesale fallback (paise) used only when `meta_rates` has no row
+// for the category — e.g. a deploy before migration 017 is seeded. The table is
+// always the source of truth; these keep an unconfigured install from charging 0.
+const FALLBACK_WHOLESALE_PAISE: Record<MessageCategory, number> = {
+  MARKETING: 150,
+  UTILITY: 80,
+  AUTHENTICATION: 80,
+  SERVICE: 0,
+};
+
+/**
+ * Resolve the BYO per-message cost in integer paise: Meta wholesale (from
+ * `meta_rates`) + WASend's flat platform fee. Managed users price via
+ * quoteSendCostPaise instead (wholesale × tier markup).
+ */
+async function byoUnitCostPaise(category: MessageCategory): Promise<number> {
+  const wholesale = (await getWholesalePaise(category)) ?? FALLBACK_WHOLESALE_PAISE[category];
+  return wholesale + PLATFORM_FEE_PAISE;
+}
 
 function buildTemplateComponents(
   variableMapping: Record<string, { type: "name" | "phone" | "custom"; value?: string }>,
@@ -73,8 +95,9 @@ async function processCampaign({
   let totalSent = 0;
   let totalFailed = 0;
   const today = new Date().toISOString().split("T")[0];
-  const metaCostPerMsg = category.toUpperCase() === "MARKETING" ? META_COST_MARKETING : META_COST_OTHER;
-  const costPerMsg = metaCostPerMsg + PLATFORM_FEE;
+  // Rupee cost per message, derived from the resolved per-message paise (rate
+  // table + fee) passed in — never from hardcoded Meta rates.
+  const costPerMsg = costPaise / 100;
 
   // Margin trail for the prepaid ledger (one category per campaign). null pre-017
   // or for BYO → no tagging. wholesale is the real Meta cost regardless of pricing.
@@ -333,18 +356,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No contacts found for the selected audience" }, { status: 400 });
   }
 
-  // Calculate cost
-  const metaCostPerMsg = (template.category || "").toUpperCase() === "MARKETING" ? META_COST_MARKETING : META_COST_OTHER;
-  const totalCost = (metaCostPerMsg + PLATFORM_FEE) * contacts.length;
+  // Resolve the per-message cost in integer paise from the rate tables — Meta
+  // wholesale rates are never hardcoded (Law #2).
+  //  • managed → wholesale × tier markup (quoteSendCostPaise)
+  //  • byo     → wholesale (meta_rates) + flat platform fee
+  const billableCategory = toBillableCategory(template.category);
+  const billingMode = await getBillingMode(user.id);
+  const unitCostPaise =
+    billingMode === "managed"
+      ? await quoteSendCostPaise(user.id, billableCategory)
+      : await byoUnitCostPaise(billableCategory);
+  const totalCost = (unitCostPaise / 100) * contacts.length;
 
   // Billing track:
   //  • managed → new prepaid wallet (reserved below, once the campaign row exists)
   //  • byo     → existing legacy wallet pre-check, UNCHANGED
-  const billingMode = await getBillingMode(user.id);
-  let unitCostPaise = 0;
-  if (billingMode === "managed") {
-    unitCostPaise = await quoteSendCostPaise(user.id, toBillableCategory(template.category));
-  } else {
+  if (billingMode !== "managed") {
     const { data: walletRow } = await supabase
       .from("wallet")
       .select("balance")

@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/shared/PageHeader";
+import { AICampaignAssist } from "@/components/ai/AICampaignAssist";
 import {
   templates as templatesApi,
   numbers as numbersApi,
@@ -362,6 +363,29 @@ export default function CreateCampaignPage() {
           );
         })}
       </div>
+
+      {/* ── Optional AI assist — pre-fills the manual form; never sends ── */}
+      {step === 1 && (
+        <AICampaignAssist
+          onApply={(draft) => {
+            setForm((p) => ({
+              ...p,
+              name: draft.campaignName || p.name,
+              ...(draft.suggestedSendTime ? { campaignType: "scheduled" as const, sendNow: false } : {}),
+            }));
+            if (draft.suggestedSendTime) {
+              toast.message(`Suggested send time: ${draft.suggestedSendTime}`, {
+                description: "Set the exact date/time in Step 4.",
+              });
+            }
+            if (draft.messageBody) {
+              toast.message("AI drafted message copy", {
+                description: "Campaigns send via an approved template — paste this copy when creating your template.",
+              });
+            }
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* ── Left: Form ── */}

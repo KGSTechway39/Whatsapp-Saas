@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/drain-queue", "schedule": "0 0 * * *" }
+    { "path": "/api/cron/drain-queue", "schedule": "* * * * *" }
   ]
 }

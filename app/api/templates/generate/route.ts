@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import Anthropic from "@anthropic-ai/sdk";
+import { getUserTier } from "@/lib/ai/config";
+import { runTask } from "@/lib/ai/service";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Governed via AIProviderService (task: template_content) — model/provider come
+// from ai_model_config, and every call is usage-logged. This replaces the former
+// direct, hardcoded @anthropic-ai/sdk call so there is one governed AI path.
 
 const TONE_HINTS: Record<string, string> = {
   friendly:     "warm, conversational, uses emojis appropriately",
@@ -14,10 +17,6 @@ const TONE_HINTS: Record<string, string> = {
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: "AI not configured. Set ANTHROPIC_API_KEY." }, { status: 503 });
-  }
 
   const { description, category = "MARKETING", tone = "friendly", language = "en" } = await req.json();
   if (!description?.trim()) {
@@ -67,33 +66,25 @@ Make each variation meaningfully different:
 - Variation 2: more detailed with context
 - Variation 3: ${tone === "urgent" ? "maximum urgency angle" : "emotionally engaging angle"}`;
 
-  try {
-    const msg = await client.messages.create({
-      model:      "claude-sonnet-4-6",
-      max_tokens: 1500,
-      system:     systemPrompt,
-      messages:   [{ role: "user", content: userPrompt }],
-    });
+  interface GenTemplate {
+    displayName: string;
+    name: string;
+    body: string;
+    footer: string;
+    variableNames: string[];
+    whyItWorks: string;
+    category: string;
+    language: string;
+  }
 
-    const raw = (msg.content[0] as { type: string; text: string }).text ?? "";
-
-    // Parse JSON robustly
+  const parse = (raw: string): GenTemplate[] => {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Invalid AI response format");
-
     const parsed = JSON.parse(jsonMatch[0]) as {
-      templates: {
-        displayName: string;
-        name: string;
-        body: string;
-        footer: string;
-        variableNames: string[];
-        whyItWorks: string;
-      }[];
+      templates: Omit<GenTemplate, "category" | "language">[];
     };
-
-    // Normalize
-    const templates = parsed.templates.map((t) => ({
+    if (!Array.isArray(parsed.templates)) throw new Error("No templates in AI response");
+    return parsed.templates.map((t) => ({
       displayName:   (t.displayName || "").slice(0, 50),
       name:          (t.name || "").toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30),
       body:          (t.body || "").slice(0, 1024),
@@ -103,11 +94,23 @@ Make each variation meaningfully different:
       category,
       language,
     }));
+  };
 
-    return NextResponse.json({ templates });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "AI generation failed";
-    console.error("Template generate error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  const tier = await getUserTier(user.id);
+  const result = await runTask<GenTemplate[]>({
+    userId:         user.id,
+    tier,
+    taskType:       "template_content",
+    system:         systemPrompt,
+    prompt:         userPrompt,
+    maxTokens:      1500,
+    idempotencyKey: `tmpl:${user.id}:${Date.now()}`, // each generation is its own action
+    parse,
+  });
+
+  if (result.status === "fallback") {
+    // Template generation has no manual fallback UI; surface as unavailable.
+    return NextResponse.json({ error: result.message }, { status: 503 });
   }
+  return NextResponse.json({ templates: result.data });
 }
