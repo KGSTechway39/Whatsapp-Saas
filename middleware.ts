@@ -46,9 +46,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isProtected && !isAuthenticated) {
-    // Dev-only auto-login: skip the /login screen and land directly on the
-    // requested page using the seeded test user. Enable with DEV_AUTO_LOGIN=true.
-    if (process.env.NODE_ENV !== "production" && process.env.DEV_AUTO_LOGIN === "true") {
+    // Auto-login: skip the /login screen and land directly on the requested
+    // page using the seeded demo user.
+    //   • DEV_AUTO_LOGIN=true  → dev/preview only (refuses in production)
+    //   • DEMO_AUTO_LOGIN=true → explicit opt-in that ALSO works in production
+    //     (public demo deployment — anyone with the URL enters as the demo user)
+    const autoLoginEnabled =
+      process.env.DEMO_AUTO_LOGIN === "true" ||
+      (process.env.NODE_ENV !== "production" && process.env.DEV_AUTO_LOGIN === "true");
+    if (autoLoginEnabled) {
       const devUrl = new URL("/api/auth/dev-login", request.url);
       devUrl.searchParams.set("from", pathname + request.nextUrl.search);
       return NextResponse.redirect(devUrl);
