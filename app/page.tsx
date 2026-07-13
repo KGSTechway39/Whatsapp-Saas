@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
 
+// Read the env flag at request time (not build time) so the redirect target
+// is never statically cached into an ambiguous client-side redirect shell.
+export const dynamic = "force-dynamic";
+
 export default function RootPage() {
   // In demo mode the root URL drops straight into the app; middleware performs
   // the auto-login. Otherwise land on the login screen as usual.
