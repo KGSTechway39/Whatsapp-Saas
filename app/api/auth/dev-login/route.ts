@@ -15,12 +15,15 @@ import { logger } from "@/lib/logger";
 const DEV_USER_EMAIL = "admin@wasend.demo";
 
 export async function GET(req: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
+  // DEMO_AUTO_LOGIN is the explicit production opt-in for public demo deploys;
+  // DEV_AUTO_LOGIN is dev/preview-only and refuses to run in production.
+  const demoMode = process.env.DEMO_AUTO_LOGIN === "true";
+  if (process.env.NODE_ENV === "production" && !demoMode) {
     return NextResponse.json({ error: "Not available in production" }, { status: 403 });
   }
-  if (process.env.DEV_AUTO_LOGIN !== "true") {
+  if (!demoMode && process.env.DEV_AUTO_LOGIN !== "true") {
     return NextResponse.json(
-      { error: "Set DEV_AUTO_LOGIN=true in .env.local to enable this bypass" },
+      { error: "Set DEV_AUTO_LOGIN=true (or DEMO_AUTO_LOGIN=true for prod) to enable this bypass" },
       { status: 403 },
     );
   }
@@ -52,7 +55,7 @@ export async function GET(req: NextRequest) {
 
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure:   false,
+    secure:   process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge:   60 * 60 * 24 * 7,
     path:     "/",
