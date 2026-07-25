@@ -7,8 +7,11 @@
  */
 
 import { logger } from "@/lib/logger";
+import { GRAPH_SDK_BASE } from "@/lib/meta-version";
 
-const GRAPH = "https://graph.facebook.com/v19.0";
+// Pinned to META_SDK_VERSION — this client handles Embedded Signup tokens, so it
+// stays aligned with the browser FB SDK version (see lib/meta-version).
+const GRAPH = GRAPH_SDK_BASE;
 
 const APP_ID =
   process.env.META_APP_ID ?? process.env.NEXT_PUBLIC_META_APP_ID ?? "";

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { createClient } from "@/lib/supabase/server";
+import { createLibraryTemplate } from "@/lib/meta";
 
 // POST /api/templates/use-library
 // Clones a Meta Template Library entry into the user's WABA and submits it
@@ -38,27 +39,19 @@ export async function POST(req: NextRequest) {
   const language = body.language || "en_US";
   const finalName = body.name || body.library_template_name;
 
-  // Meta endpoint: POST /{WABA_ID}/message_templates
-  const url = `https://graph.facebook.com/v22.0/${conn.waba_id}/message_templates?access_token=${encodeURIComponent(await decrypt(conn.access_token))}`;
-
-  const metaBody: Record<string, unknown> = {
-    name: finalName,
-    language,
-    library_template_name: body.library_template_name,
-  };
-  if (body.button_inputs) metaBody.library_template_button_inputs = body.button_inputs;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(metaBody),
-  });
-  const data = await res.json();
-
-  if (!res.ok) {
+  // Route through the typed Graph wrapper (single pinned version, no scattered fetch).
+  let created;
+  try {
+    created = await createLibraryTemplate(conn.waba_id, await decrypt(conn.access_token), {
+      name: finalName,
+      language,
+      libraryTemplateName: body.library_template_name,
+      buttonInputs: body.button_inputs,
+    });
+  } catch (err) {
     return NextResponse.json(
-      { error: data.error?.message || `Graph error ${res.status}` },
-      { status: res.status },
+      { error: err instanceof Error ? err.message : "Failed to create template" },
+      { status: 502 },
     );
   }
 
@@ -67,18 +60,18 @@ export async function POST(req: NextRequest) {
     user_id:          user.id,
     name:             finalName,
     display_name:     finalName.split(/[_-]/).filter(Boolean).map((w: string) => w[0].toUpperCase() + w.slice(1)).join(" "),
-    category:         data.category || "UTILITY",
+    category:         created.category || "UTILITY",
     language,
-    status:           data.status || "PENDING",
+    status:           created.status || "PENDING",
     body:             "(synced from Meta library — pending approval)",
     variables:        [],
-    meta_template_id: data.id,
+    meta_template_id: created.id,
   });
 
   return NextResponse.json({
-    id: data.id,
+    id: created.id,
     name: finalName,
-    status: data.status || "PENDING",
-    category: data.category,
+    status: created.status || "PENDING",
+    category: created.category,
   });
 }

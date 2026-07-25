@@ -1,8 +1,11 @@
 // Meta Marketing API helpers for Click-to-WhatsApp Ads (CTWA) integration.
-// Uses Graph API v22.0. Provide a long-lived user access token with
-// scopes: ads_read, ads_management, business_management.
+// Graph version comes from lib/meta-version (GRAPH_API_VERSION). Provide a
+// long-lived user access token with scopes: ads_read, ads_management,
+// business_management.
 
-const GRAPH = "https://graph.facebook.com/v22.0";
+import { GRAPH_API_BASE, FB_DIALOG_BASE } from "@/lib/meta-version";
+
+const GRAPH = GRAPH_API_BASE;
 
 export interface FBAdAccount {
   id: string;             // act_<numeric>
@@ -110,7 +113,7 @@ export async function getCampaignInsights(
 
 /** Build a Facebook OAuth login URL for Marketing API access. */
 export function buildOAuthUrl(redirectUri: string, state: string): string {
-  const url = new URL("https://www.facebook.com/v22.0/dialog/oauth");
+  const url = new URL(`${FB_DIALOG_BASE}/dialog/oauth`);
   url.searchParams.set("client_id", process.env.NEXT_PUBLIC_META_APP_ID || "");
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);

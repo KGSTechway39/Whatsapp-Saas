@@ -1,4 +1,6 @@
-const GRAPH = "https://graph.facebook.com/v20.0";
+import { GRAPH_API_BASE } from "@/lib/meta-version";
+
+const GRAPH = GRAPH_API_BASE;
 const APP_ID = process.env.META_APP_ID || process.env.NEXT_PUBLIC_META_APP_ID!;
 const APP_SECRET = process.env.META_APP_SECRET!;
 
@@ -174,7 +176,11 @@ export interface MetaTemplateComponent {
   format?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
   text?: string;
   example?: { body_text?: string[][]; header_text?: string[]; header_handle?: string[] };
-  buttons?: { type: string; text: string; url?: string; phone_number?: string }[];
+  buttons?: { type: string; text?: string; url?: string; phone_number?: string; otp_type?: "COPY_CODE" | "ONE_TAP" }[];
+  /** AUTHENTICATION-only: attach Meta's system security-warning line to the BODY. */
+  add_security_recommendation?: boolean;
+  /** AUTHENTICATION-only: code-expiry minutes, shown on the FOOTER. */
+  code_expiration_minutes?: number;
 }
 
 export interface MetaTemplate {
@@ -232,6 +238,117 @@ export function normalizeTemplateStatus(s: MetaTemplateStatus): "APPROVED" | "PE
   return "REJECTED";
 }
 
+// ── TEMPLATE CREATION ────────────────────────────────────────────────────────
+
+export interface CreateTemplateInput {
+  /** lowercase, digits and underscores only per Meta rules. */
+  name: string;
+  category: MetaTemplateCategory;
+  /** e.g. "en", "en_US", "hi". */
+  language: string;
+  /** Components as Meta expects them for POST (uppercase types). */
+  components: MetaTemplateComponent[];
+}
+
+export interface CreateTemplateResult {
+  id: string;
+  status: MetaTemplateStatus;
+  category: MetaTemplateCategory;
+}
+
+/**
+ * Validate AUTHENTICATION-category templates at creation time.
+ *
+ * Meta does not allow custom body copy on authentication templates — the body is
+ * system-generated and code-only. Callers express expiry / security copy via the
+ * structured `add_security_recommendation` / `code_expiration_minutes` fields, not
+ * free text. Anything with promotional or free-form BODY text would be rejected by
+ * Meta; we reject it up front with a clear, actionable message instead of a raw
+ * Graph error dump.
+ */
+function assertAuthTemplateShape(components: MetaTemplateComponent[]): void {
+  const body = components.find((c) => c.type === "BODY");
+  if (body && typeof body.text === "string" && body.text.trim().length > 0) {
+    throw new Error(
+      "Authentication templates cannot contain custom body text (code-only, no marketing language). " +
+        "Use add_security_recommendation / code_expiration_minutes instead of a BODY text field.",
+    );
+  }
+}
+
+/**
+ * Submit a new message template for Meta approval.
+ * POST /{waba_id}/message_templates. Supports MARKETING, UTILITY, AUTHENTICATION.
+ *
+ * Tenant-agnostic: the caller resolves the tenant → (waba_id, decrypted token)
+ * before calling, exactly like getMessageTemplates. Never pass a shared token.
+ */
+export async function createTemplate(
+  wabaId: string,
+  token: string,
+  def: CreateTemplateInput,
+): Promise<CreateTemplateResult> {
+  if (def.category === "AUTHENTICATION") assertAuthTemplateShape(def.components);
+
+  const data = await graphPost<{ id: string; status?: MetaTemplateStatus; category?: MetaTemplateCategory }>(
+    `/${wabaId}/message_templates`,
+    token,
+    {
+      name: def.name,
+      language: def.language,
+      category: def.category,
+      components: def.components,
+    },
+  );
+  return {
+    id: data.id,
+    status: data.status || "PENDING",
+    category: data.category || def.category,
+  };
+}
+
+export interface CreateLibraryTemplateInput {
+  /** Our chosen name for the instantiated template. */
+  name: string;
+  /** e.g. "en_US". */
+  language: string;
+  /** The Meta library template to clone. */
+  libraryTemplateName: string;
+  /** Optional button URL/phone inputs the library template requires. */
+  buttonInputs?: unknown[];
+}
+
+/**
+ * Instantiate a template from Meta's shared template library.
+ * POST /{waba_id}/message_templates with `library_template_name`.
+ *
+ * Same endpoint as createTemplate but the library shape (no custom components).
+ * Kept as a typed wrapper so features never hand-roll a Graph URL / version.
+ */
+export async function createLibraryTemplate(
+  wabaId: string,
+  token: string,
+  input: CreateLibraryTemplateInput,
+): Promise<CreateTemplateResult> {
+  const body: Record<string, unknown> = {
+    name: input.name,
+    language: input.language,
+    library_template_name: input.libraryTemplateName,
+  };
+  if (input.buttonInputs) body.library_template_button_inputs = input.buttonInputs;
+
+  const data = await graphPost<{ id: string; status?: MetaTemplateStatus; category?: MetaTemplateCategory }>(
+    `/${wabaId}/message_templates`,
+    token,
+    body,
+  );
+  return {
+    id: data.id,
+    status: data.status || "PENDING",
+    category: data.category || "UTILITY",
+  };
+}
+
 // Send a document message (link-based) — e.g. resume delivery
 export async function sendDocumentMessage(
   phoneNumberId: string,
@@ -253,6 +370,48 @@ export async function sendDocumentMessage(
     }
   );
   return { messageId: data.messages?.[0]?.id };
+}
+
+// ── MEDIA UPLOAD ─────────────────────────────────────────────────────────────
+
+export interface UploadMediaInput {
+  /** Raw file bytes. */
+  data: Blob | Buffer | Uint8Array;
+  /** MIME type Meta requires, e.g. "application/pdf", "image/jpeg". */
+  mimeType: string;
+  /** Optional filename surfaced to the recipient for document sends. */
+  filename?: string;
+}
+
+/**
+ * Upload media to a phone number and get a reusable `media_id`.
+ * POST /{phone_number_id}/media (multipart/form-data).
+ *
+ * The returned id is what you pass in a document/image header parameter
+ * (e.g. { type: "document", document: { id, filename } }) on a subsequent send.
+ * Media ids are tied to the uploading number and expire after ~30 days.
+ */
+export async function uploadMedia(
+  phoneNumberId: string,
+  accessToken: string,
+  file: UploadMediaInput,
+): Promise<{ mediaId: string }> {
+  const blob =
+    file.data instanceof Blob
+      ? file.data
+      : new Blob([file.data as BlobPart], { type: file.mimeType });
+
+  const form = new FormData();
+  form.append("messaging_product", "whatsapp");
+  form.append("type", file.mimeType);
+  form.append("file", blob, file.filename || "upload");
+
+  const url = new URL(`${GRAPH}/${phoneNumberId}/media`);
+  url.searchParams.set("access_token", accessToken);
+  const res = await fetch(url.toString(), { method: "POST", body: form });
+  const data = await res.json();
+  if (!res.ok || !data.id) throw new Error(data.error?.message || `Media upload failed (${res.status})`);
+  return { mediaId: data.id as string };
 }
 
 // Send a plain text message (for testing / automation)

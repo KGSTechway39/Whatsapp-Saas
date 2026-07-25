@@ -34,9 +34,11 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { META_SDK_VERSION } from "@/lib/meta-version";
 
 const SDK_SRC = "https://connect.facebook.net/en_US/sdk.js";
-const SDK_VERSION = "v19.0";
+// Must equal the server-side ESU version — sourced from the shared constant.
+const SDK_VERSION = META_SDK_VERSION;
 
 const REQUIREMENTS = [
   { icon: Building2, label: "Registered business",                                    description: "Sole proprietor or registered entity" },

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { createClient } from "@/lib/supabase/server";
+import { GRAPH_API_BASE } from "@/lib/meta-version";
 
 // Meta's Template Library is exposed via:
-//   GET https://graph.facebook.com/v22.0/{WABA_ID}/template_library
+//   GET {GRAPH_API_BASE}/{WABA_ID}/template_library
 //     ?category=UTILITY|AUTHENTICATION
 //     ?topic=ACCOUNT_UPDATES|...
 //     ?language=en_US
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const url = new URL(`https://graph.facebook.com/v22.0/${conn.waba_id}/template_library`);
+  const url = new URL(`${GRAPH_API_BASE}/${conn.waba_id}/template_library`);
   url.searchParams.set("access_token", await decrypt(conn.access_token));
   url.searchParams.set("category", category);
   if (topic) url.searchParams.set("topic", topic);

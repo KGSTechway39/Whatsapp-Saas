@@ -21,12 +21,13 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { logger } from "@/lib/logger";
+import { GRAPH_SDK_BASE } from "@/lib/meta-version";
 
 // ── Pinned Graph API version ───────────────────────────────────────────
-// We intentionally pin v19.0 to match the SDK initialized on the client
-// (see components/whatsapp/MetaConnectButton.tsx). Upgrading the version
-// requires retesting Embedded Signup end-to-end.
-const GRAPH = "https://graph.facebook.com/v19.0";
+// Uses META_SDK_VERSION (see lib/meta-version) to stay matched to the FB SDK
+// initialized on the client (components/whatsapp/EmbeddedSignupModal.tsx).
+// Upgrading that constant requires retesting Embedded Signup end-to-end.
+const GRAPH = GRAPH_SDK_BASE;
 const APP_ID =
   process.env.META_APP_ID ?? process.env.NEXT_PUBLIC_META_APP_ID ?? "";
 const APP_SECRET = process.env.META_APP_SECRET ?? "";
