@@ -41,6 +41,7 @@ const TIER_TASKS: Record<Tier, ReadonlySet<TaskType>> = {
   growth: new Set<TaskType>([
     "campaign_content",
     "appointment_nl_parse",
+    "automation_flow_builder", // Growth+ gets full AI access (design-time flow builder)
     "automation_runtime_intent",
     "reminder_draft",
     "template_content",

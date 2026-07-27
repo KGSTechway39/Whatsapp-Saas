@@ -74,14 +74,49 @@ class AnthropicAdapter implements ProviderAdapter {
 }
 
 /**
- * Resolve an adapter by config.provider. Extend here (GeminiAdapter, a Vercel AI
- * Gateway adapter that takes "provider/model" strings, …) — routes never change.
+ * Google Gemini adapter (REST — no SDK dependency added). Used for the cheapest
+ * fast task, `automation_runtime_intent`, which runs on EVERY inbound message —
+ * cost efficiency there protects margin (config points it at a Flash-Lite class
+ * model). `model_id` in config is the bare Gemini id, e.g. "gemini-2.5-flash-lite".
+ */
+class GeminiAdapter implements ProviderAdapter {
+  async generate({ modelId, system, prompt, maxTokens, signal }: GenerateArgs): Promise<GenerateResult> {
+    const key = process.env.GEMINI_API_KEY;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0 },
+      }),
+    });
+    if (!res.ok) throw new Error(`gemini ${res.status}: ${await res.text().catch(() => "")}`);
+    const json = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    };
+    const text = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+    return {
+      text,
+      tokensIn: json.usageMetadata?.promptTokenCount ?? 0,
+      tokensOut: json.usageMetadata?.candidatesTokenCount ?? 0,
+    };
+  }
+}
+
+/**
+ * Resolve an adapter by config.provider. Extend here (a Vercel AI Gateway adapter
+ * that takes "provider/model" strings, …) — routes never change.
  */
 function getAdapter(provider: string): ProviderAdapter | null {
   switch (provider) {
     case "anthropic":
       return process.env.ANTHROPIC_API_KEY ? new AnthropicAdapter() : null;
-    // case "google":  return process.env.GEMINI_API_KEY ? new GeminiAdapter() : null;
+    case "google":
+      return process.env.GEMINI_API_KEY ? new GeminiAdapter() : null;
     // case "gateway": return process.env.AI_GATEWAY_API_KEY ? new GatewayAdapter() : null;
     default:
       return null;

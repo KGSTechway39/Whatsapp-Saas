@@ -21,6 +21,7 @@ import { sendOutbound } from "./dispatch";
 import { processStatusEvent, type StatusPayload } from "./status";
 import { confirmOrReleaseBilling } from "@/lib/billing/confirm";
 import { enqueue, registerHandler } from "@/lib/queue";
+import { resolveUserIdByPhoneNumberId, resolveFlowForInbound, renderFirstReply } from "@/lib/automation/runtime";
 
 export interface InboundEvent {
   /** Meta `phone_number_id` — used to resolve the tenant. */
@@ -114,6 +115,53 @@ async function runInboundWorker(event: InboundEvent): Promise<void> {
       phoneNumberId: event.phoneNumberId,
       outbound: result.outbound,
       lastInboundAt: result.lastInboundAt ?? null,
+    });
+    return;
+  }
+
+  // ── Runtime AI intent routing (LEGACY user_id automation model) ─────────────
+  // The org-model engine above is coded but NOT deployed (CLAUDE.md deployment
+  // reality), so in production it never matches. Fall back to the live user_id
+  // model: classify the inbound message against the tenant's ACTIVE flows (cheap
+  // fast model, 0 credits) and deliver the matched flow's first auto-reply. This
+  // routes silently — the flow was already approved/published by the owner, so no
+  // draft/confirm step (rule: AI never sends net-new customer content unprompted).
+  //
+  // TODO(persistent-worker): multi-step traversal (waits/conditions/sessions)
+  // belongs on a persistent host (Railway/Render). This inline path handles the
+  // common trigger→auto-reply case within the Vercel Hobby queue/cron constraints.
+  // Decoupled + mockable: see lib/automation/{intent,runtime}.ts — testable
+  // against synthetic payloads before the Meta webhook is finalized.
+  const text = payload.text?.body?.trim();
+  if (!text) return;
+  try {
+    const userId = await resolveUserIdByPhoneNumberId(event.phoneNumberId);
+    if (!userId) return;
+    const flow = await resolveFlowForInbound({ userId, message: text });
+    if (!flow) return;
+    const reply = renderFirstReply(flow.flowData);
+    if (!reply) return;
+    await sendOutbound({
+      phoneNumberId: event.phoneNumberId,
+      outbound: {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: payload.from,
+        type: "text",
+        text: { body: reply, preview_url: false },
+      },
+      lastInboundAt: new Date((event.receivedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+    });
+    logger.info("automation.runtime: delivered flow reply", {
+      userId,
+      flowId: flow.flowId,
+      matchedBy: flow.matchedBy,
+      confidence: flow.confidence,
+    });
+  } catch (err) {
+    logger.warn("automation.runtime: intent routing failed", {
+      eventId: event.eventId,
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 }

@@ -11,6 +11,8 @@ import {
   nodeTypes, NODE_CATALOGUE, DEFAULT_CONFIGS, DEFAULT_LABELS,
   type FlowNodeData,
 } from "@/components/automation/FlowNodes";
+import { AIFlowAssist } from "@/components/ai/AIFlowAssist";
+import type { CanvasGraph } from "@/lib/automation/flow-schema";
 import {
   Save, Play, Zap, ChevronLeft, X, Trash2, Copy, Check,
   Loader2, ToggleLeft, ToggleRight, Info, Terminal,
@@ -557,6 +559,45 @@ function FlowCanvas({
     [setNodes, setEdges]
   );
 
+  // Drop an AI-generated draft onto the canvas. It's a starting point only —
+  // ids are re-namespaced to avoid collisions, and the human still edits + Saves +
+  // Activates manually (the AI never publishes). If the canvas is still just the
+  // default single trigger, we replace it; otherwise we append below existing nodes.
+  const applyAiFlow = useCallback(
+    (graph: CanvasGraph) => {
+      const stamp = Date.now().toString(36);
+      const idMap = new Map<string, string>();
+      graph.nodes.forEach((n, i) => idMap.set(n.id, `ai_${stamp}_${i}`));
+
+      // One consistent snapshot decides replace-vs-append for both nodes & edges.
+      const replace = nodes.length <= 1;
+      const yOffset = replace ? 0 : Math.max(0, ...nodes.map((n) => n.position.y)) + 160;
+
+      const newNodes: Node[] = graph.nodes.map((n) => ({
+        id: idMap.get(n.id)!,
+        type: n.type,
+        position: { x: n.position.x, y: n.position.y + yOffset },
+        data: { label: n.data.label, config: n.data.config },
+      }));
+      const newEdges: Edge[] = graph.edges.map((e, i) => ({
+        id: `ai_${stamp}_e${i}`,
+        source: idMap.get(e.source)!,
+        target: idMap.get(e.target)!,
+        sourceHandle: e.sourceHandle,
+        label: e.label,
+        animated: true,
+        style: { stroke: "rgba(255,255,255,0.2)", strokeWidth: 2 },
+      }));
+
+      setNodes((nds) => (replace ? newNodes : [...nds, ...newNodes]));
+      setEdges((eds) => (replace ? newEdges : [...eds, ...newEdges]));
+
+      if (graph.name && (!flowName.trim() || flowName === "Untitled Flow")) setFlowName(graph.name);
+      setSelectedNode(null);
+    },
+    [nodes, flowName, setNodes, setEdges]
+  );
+
   const triggerType =
     ((nodes.find((n) => n.type === "triggerNode")?.data as unknown as FlowNodeData | undefined)?.config?.triggerType as string) || "keyword";
 
@@ -622,6 +663,7 @@ function FlowCanvas({
           placeholder="Flow name..."
         />
         <div className="flex items-center gap-2 flex-shrink-0">
+          <AIFlowAssist onApply={applyAiFlow} />
           <button
             onClick={() => setShowTest(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all"
