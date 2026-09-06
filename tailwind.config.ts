@@ -85,6 +85,7 @@ const config: Config = {
           faint: "hsl(var(--a-ink-faint))",
           primary: "hsl(var(--a-primary))",
           primarySoft: "hsl(var(--a-primary-soft))",
+          onAccent: "hsl(var(--a-on-accent))",
           green: "hsl(var(--a-green))",
           greenSoft: "hsl(var(--a-green-soft))",
           red: "hsl(var(--a-red))",
@@ -93,6 +94,10 @@ const config: Config = {
           amberSoft: "hsl(var(--a-amber-soft))",
           blue: "hsl(var(--a-blue))",
           blueSoft: "hsl(var(--a-blue-soft))",
+          // Categorical chart series — reserved, never reused for status.
+          series1: "hsl(var(--a-series-1))",
+          series2: "hsl(var(--a-series-2))",
+          series3: "hsl(var(--a-series-3))",
         },
         // Amber: a higher per-message cost is information, not an error.
         cost: "hsl(var(--cost-note))",

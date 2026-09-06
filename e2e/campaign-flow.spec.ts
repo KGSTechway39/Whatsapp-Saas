@@ -26,18 +26,30 @@ test.describe("Campaign Creation Flow", () => {
 
   test("validates campaign name is required", async ({ page }) => {
     await page.goto(`${BASE_URL}/campaigns/create`);
-    // Try to advance without filling in name
+    // The form gates progress by DISABLING the button, so the assertion is that
+    // it is disabled. The previous version clicked it and waited for a
+    // navigation that by design never happens — a 30s timeout, not a check.
     const nextBtn = page.getByRole("button", { name: /next|continue/i }).first();
-    await nextBtn.click();
-    // Should still be on step 1
+    await expect(nextBtn).toBeDisabled();
     await expect(page.getByText(/setup/i).first()).toBeVisible();
   });
 
   test("fills step 1 and advances", async ({ page }) => {
     await page.goto(`${BASE_URL}/campaigns/create`);
-    const nameInput = page.getByPlaceholder(/campaign name/i).first();
+    // Matches the real placeholder ("e.g. Diwali Sale 2026, New Product Launch").
+    // The old /campaign name/i never matched anything.
+    const nameInput = page.getByPlaceholder(/diwali sale|product launch/i).first();
     await nameInput.fill("E2E Test Campaign");
-    const nextBtn = page.getByRole("button", { name: /next|continue/i });
+
+    // Step 1 gates on name AND a selected sending number (canProceed[1]), so
+    // filling only the name leaves Next disabled — which is what the previous
+    // version of this test tripped over. Pick the first ACTIVE number; a
+    // disconnected one renders disabled and cannot be chosen.
+    const numberOption = page.locator("button:not([disabled])").filter({ hasText: /\+?\d[\d\s]{8,}/ }).first();
+    await numberOption.click();
+
+    const nextBtn = page.getByRole("button", { name: /next|continue/i }).first();
+    await expect(nextBtn).toBeEnabled();
     await nextBtn.click();
     // Should advance to step 2
     await expect(page.getByText(/audience/i).first()).toBeVisible({ timeout: 3000 });

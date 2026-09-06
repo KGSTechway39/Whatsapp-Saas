@@ -82,11 +82,41 @@ export default function BookAppointmentPage() {
   };
 
   const handleBook = async () => {
+    // Previously a 1.2s sleep and a success toast — the booking was never saved
+    // anywhere. This now persists it; the success screen below only shows on a
+    // real 201, so the wizard can no longer claim a booking that does not exist.
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setSaving(false);
-    setBooked(true);
-    toast.success("Appointment booked! WhatsApp confirmation sent.");
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contactName: contact.name,
+          contactPhone: contact.phone,
+          service,
+          date: selectedDate,
+          time: selectedTime,
+          durationMinutes: selectedService?.duration ?? 30,
+          notes: contact.notes || undefined,
+          assignedTo: contact.assignedTo || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Could not book the appointment");
+        return;
+      }
+      setBooked(true);
+      // Overlaps are allowed but surfaced, so the owner knows before the day arrives.
+      if (data.conflictNote) toast.warning(data.conflictNote);
+      // Deliberately NOT claiming a confirmation was sent: reminders go out via
+      // the scheduled sweep, and saying "WhatsApp sent" here would be a lie.
+      toast.success("Appointment booked");
+    } catch {
+      toast.error("Could not book the appointment");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (booked) {

@@ -8,7 +8,7 @@ import {
   CalendarDays, List, Bell, X, Edit2, Trash2, Check,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,21 +31,10 @@ interface Appointment {
   assignedTo?: string;
 }
 
-// ─── Demo data ────────────────────────────────────────────────────────────────
-const TODAY = "2026-04-26";
-const DEMO_APPOINTMENTS: Appointment[] = [
-  { id: "a1",  contactName: "Rajesh Kumar",   contactPhone: "+91 98765 43210", service: "consultation", date: "2026-04-26", time: "09:00", duration: 30, status: "confirmed",  notes: "Interested in enterprise plan",      reminderSent: true,  confirmationSent: true,  followUpSent: false, assignedTo: "Vikram" },
-  { id: "a2",  contactName: "Anita Desai",    contactPhone: "+91 88776 65544", service: "demo",         date: "2026-04-26", time: "10:30", duration: 45, status: "scheduled",  notes: "Wants product walkthrough",          reminderSent: true,  confirmationSent: true,  followUpSent: false, assignedTo: "Priya" },
-  { id: "a3",  contactName: "Suresh Babu",    contactPhone: "+91 77665 54433", service: "follow_up",    date: "2026-04-26", time: "14:00", duration: 15, status: "confirmed",  notes: "Follow-up on last week's proposal",  reminderSent: false, confirmationSent: true,  followUpSent: false },
-  { id: "a4",  contactName: "Priya Sharma",   contactPhone: "+91 99887 11223", service: "meeting",      date: "2026-04-26", time: "15:30", duration: 60, status: "scheduled",  notes: "",                                   reminderSent: false, confirmationSent: false, followUpSent: false, assignedTo: "Vikram" },
-  { id: "a5",  contactName: "Kavya Pillai",   contactPhone: "+91 77889 22334", service: "checkup",      date: "2026-04-27", time: "09:30", duration: 30, status: "scheduled",  notes: "Monthly review",                     reminderSent: false, confirmationSent: false, followUpSent: false },
-  { id: "a6",  contactName: "Mohan Reddy",    contactPhone: "+91 66778 11223", service: "callback",     date: "2026-04-27", time: "11:00", duration: 15, status: "scheduled",  notes: "Price negotiation callback",         reminderSent: false, confirmationSent: true,  followUpSent: false },
-  { id: "a7",  contactName: "Deepa Menon",    contactPhone: "+91 55667 00112", service: "consultation", date: "2026-04-28", time: "10:00", duration: 45, status: "scheduled",  notes: "New client onboarding",              reminderSent: false, confirmationSent: false, followUpSent: false, assignedTo: "Priya" },
-  { id: "a8",  contactName: "Vikram Nair",    contactPhone: "+91 88990 33445", service: "demo",         date: "2026-04-24", time: "11:00", duration: 45, status: "completed",  notes: "Signed up for Pro plan",             reminderSent: true,  confirmationSent: true,  followUpSent: true  },
-  { id: "a9",  contactName: "Arjun Singh",    contactPhone: "+91 44556 99001", service: "meeting",      date: "2026-04-23", time: "14:00", duration: 30, status: "no_show",    notes: "Didn't pick up",                     reminderSent: true,  confirmationSent: true,  followUpSent: false },
-  { id: "a10", contactName: "Sunita Verma",   contactPhone: "+91 33445 88990", service: "follow_up",    date: "2026-04-22", time: "16:00", duration: 20, status: "cancelled",  notes: "Rescheduled to next week",           reminderSent: true,  confirmationSent: true,  followUpSent: false },
-];
-
+// ─── Today ────────────────────────────────────────────────────────────────────
+// Was pinned to a hardcoded date alongside the demo array. With real data it has
+// to be the actual current day, in the tenant's zone, or "Today" drifts.
+const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
 // ─── Config maps ──────────────────────────────────────────────────────────────
 const STATUS_META: Record<ApptStatus, { label: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
   scheduled:   { label: "Scheduled",   color: "text-primary",    bg: "bg-accent",    border: "border-primary/25",    icon: Clock },
@@ -261,7 +250,8 @@ function MiniCalendar({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AppointmentsPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>(DEMO_APPOINTMENTS);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [statusFilter, setStatusFilter] = useState<ApptStatus | "all">("all");
   const [search, setSearch] = useState("");
@@ -270,9 +260,38 @@ export default function AppointmentsPage() {
 
   const appointmentDates = new Set(appointments.map((a) => a.date));
 
-  const changeStatus = (id: string, status: ApptStatus) => {
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/appointments?limit=500");
+      if (!res.ok) throw new Error("Could not load appointments");
+      const data = await res.json();
+      setAppointments(data.appointments ?? []);
+    } catch {
+      toast.error("Could not load appointments");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const changeStatus = async (id: string, status: ApptStatus) => {
+    // Optimistic, then reconciled against the server. A failed write rolls the
+    // row back rather than leaving the screen showing a status that was never saved.
+    const previous = appointments;
     setAppointments((prev) => prev.map((a) => a.id === id ? { ...a, status } : a));
-    toast.success(`Appointment marked as ${STATUS_META[status].label}`);
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`Appointment marked as ${STATUS_META[status].label}`);
+    } catch {
+      setAppointments(previous);
+      toast.error("Could not update the appointment");
+    }
   };
 
   const sendWA = (appt: Appointment, action: string) => {
@@ -436,7 +455,13 @@ export default function AppointmentsPage() {
           )}
 
           {/* Appointment cards */}
-          {displayAppts.length === 0 ? (
+          {loading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skeleton h-24 w-full" />
+              ))}
+            </div>
+          ) : displayAppts.length === 0 ? (
             <div className="bg-card rounded-2xl border-2 border-dashed border-border/50 p-16 text-center">
               <CalendarDays className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="font-medium text-muted-foreground">No appointments {view === "day" ? "on this day" : "found"}</p>

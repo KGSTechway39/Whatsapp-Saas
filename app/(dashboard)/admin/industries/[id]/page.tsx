@@ -138,7 +138,7 @@ export default function IndustryDetailPage() {
           <button
             onClick={toggleLive}
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent hover:opacity-90 disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : v.isActive ? <Eye className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
             {v.isActive ? "Hide from picker" : "Make it live"}
@@ -226,7 +226,7 @@ export default function IndustryDetailPage() {
               </p>
               <Link
                 href={`/admin/tenants?vertical=${verticalId}`}
-                className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white"
+                className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent"
               >
                 Assign a client
               </Link>

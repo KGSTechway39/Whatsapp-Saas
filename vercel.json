@@ -1,6 +1,30 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_comment_crons": [
+    "CADENCE IS A PRODUCT CONSTRAINT, NOT A DETAIL.",
+    "drain-queue runs campaign send batches and inbound jobs when QUEUE_DRIVER=pgboss;",
+    "resume-flows restarts automation flows parked on a wait node;",
+    "appointment-reminders sends the 24h and 1h reminders.",
+    "At the daily schedule below: a broadcast advances one batch per day, a",
+    "'wait 15 minutes' step waits until the next midnight, and the 1h appointment",
+    "reminder is effectively never sent (the slot falls outside the horizon by the",
+    "time the sweep runs). Hobby plans allow only daily crons - sub-daily needs",
+    "Vercel Pro, or an external scheduler (GitHub Actions / cron-job.org) hitting",
+    "these endpoints with the CRON_SECRET bearer. Raise all three to '*/5 * * * *'",
+    "once the plan allows it."
+  ],
   "crons": [
-    { "path": "/api/cron/drain-queue", "schedule": "0 0 * * *" }
+    {
+      "path": "/api/cron/drain-queue",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/resume-flows",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/appointment-reminders",
+      "schedule": "0 0 * * *"
+    }
   ]
 }

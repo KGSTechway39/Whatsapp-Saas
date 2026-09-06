@@ -4,7 +4,25 @@ const BASE_URL      = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001"
 const TEST_EMAIL    = "admin@sendanjal.com";
 const TEST_PASSWORD = "Test@12345";
 
+/**
+ * These exercise the real login flow, which is mutually exclusive with the
+ * auto-login bypass: with DEV_AUTO_LOGIN=true, /dashboard mints a session
+ * instead of redirecting to /login, and /login bounces straight to the
+ * dashboard — so every assertion here would fail for a reason that is
+ * configuration, not a defect.
+ *
+ * Skipped rather than deleted: auth is deferred, not abandoned, and these are
+ * the tests that must pass before it ships. Run them with DEV_AUTO_LOGIN unset.
+ */
+const AUTO_LOGIN =
+  process.env.DEV_AUTO_LOGIN === "true" || process.env.DEMO_AUTO_LOGIN === "true";
+
 test.describe("Authentication", () => {
+  test.skip(
+    AUTO_LOGIN,
+    "auto-login bypass is enabled — the login flow cannot be exercised in this configuration",
+  );
+
   test("redirects unauthenticated users to /login", async ({ page }) => {
     // Fresh context — no cookies
     await page.goto(`${BASE_URL}/dashboard`);

@@ -17,8 +17,19 @@ test.describe("Inbox", () => {
   test("shows conversation list or empty state", async ({ page }) => {
     await page.goto(`${BASE_URL}/inbox`);
     // Either a conversation item or empty state should be visible
-    const hasConversations = await page.getByText(/\+91|\+1/i).first().isVisible().catch(() => false);
-    const hasEmpty = await page.getByText(/no conversations|start messaging/i).first().isVisible().catch(() => false);
+    // Numbers render WITHOUT a leading "+" (e.g. "919000009999"), so the old
+    // /\+91/ regex matched neither a populated list nor the empty state, and the
+    // test failed whichever was on screen.
+    const hasConversations = await page
+      .getByText(/\b\d{10,15}\b/)
+      .first()
+      .isVisible()
+      .catch(() => false);
+    const hasEmpty = await page
+      .getByText(/no conversations|start messaging|select a conversation/i)
+      .first()
+      .isVisible()
+      .catch(() => false);
     expect(hasConversations || hasEmpty).toBe(true);
   });
 

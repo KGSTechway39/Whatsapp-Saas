@@ -181,7 +181,7 @@ export default function OpsConsolePage() {
           </div>
           <button
             onClick={() => setComposing(true)}
-            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent transition-opacity hover:opacity-90"
           >
             <Plus className="h-3.5 w-3.5" /> New ticket
           </button>
@@ -466,7 +466,7 @@ function TicketRow({
     <tr className="border-t border-adm-line text-sm">
       <td className="px-2 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-adm-primary text-[10px] font-bold text-white">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-adm-primary text-[10px] font-bold text-adm-onAccent">
             {ticket.tenant.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -600,7 +600,7 @@ function NewTicketDialog({ onClose, onCreated }: { onClose: () => void; onCreate
             Cancel
           </button>
           <button type="submit" disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">
+                  className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent disabled:opacity-60">
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Create ticket
           </button>

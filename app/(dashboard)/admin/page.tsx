@@ -55,9 +55,11 @@ const dayLabel = (iso: string) =>
 const RANGES = [7, 30, 90] as const;
 
 const SERIES = [
-  { key: "marketing", label: "Marketing", color: "hsl(var(--a-amber))" },
-  { key: "utility", label: "Utility", color: "hsl(var(--a-blue))" },
-  { key: "authentication", label: "Authentication", color: "hsl(var(--a-primary))" },
+  // Series colours, not status colours: --a-amber doubles as the "Needs
+  // attention" pill, so the chart uses the reserved --a-series-* set instead.
+  { key: "marketing", label: "Marketing", color: "hsl(var(--a-series-1))" },
+  { key: "utility", label: "Utility", color: "hsl(var(--a-series-2))" },
+  { key: "authentication", label: "Authentication", color: "hsl(var(--a-series-3))" },
 ] as const;
 
 type Tab = "all" | "marketing" | "utility" | "authentication";
@@ -192,7 +194,7 @@ export default function AdminOverviewPage() {
           </div>
           <Link
             href="/admin/rates"
-            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent transition-opacity hover:opacity-90"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" /> Rates &amp; markup
           </Link>
@@ -385,7 +387,7 @@ export default function AdminOverviewPage() {
                       <td className="px-2 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className={cn(
-                            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white",
+                            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-adm-onAccent",
                             AVATAR_TINTS[i % AVATAR_TINTS.length],
                           )}>
                             {initials(t.name)}

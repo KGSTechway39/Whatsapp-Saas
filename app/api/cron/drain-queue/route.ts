@@ -6,18 +6,28 @@
  * pg-boss queue, run the registered handler, and ack/fail each. Only active when
  * QUEUE_DRIVER=pgboss; for the default inline driver `drainQueue` is a no-op.
  *
- * Importing "@/lib/whatsapp/queue" for its side effect registers the
- * "whatsapp:inbound" handler in this process so drain() can find it.
+ * Importing the worker modules for their side effects registers their handlers
+ * in THIS process so drain() can find them. A queue whose module is not imported
+ * here would accumulate jobs that never run — so every new job type must be
+ * added to both the import list and QUEUES below.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { drainQueue } from "@/lib/queue";
 import "@/lib/whatsapp/queue";
+import { CAMPAIGN_SEND_JOB } from "@/lib/campaigns/worker";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const INBOUND_JOB = "whatsapp:inbound";
+
+/**
+ * Every durable queue this cron drains. Campaign batches re-enqueue themselves
+ * until a broadcast is finished, so a run that drains 50 jobs simply continues
+ * on the next tick.
+ */
+const QUEUES = [INBOUND_JOB, CAMPAIGN_SEND_JOB];
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   // Vercel Cron sends `Authorization: Bearer ${CRON_SECRET}` when CRON_SECRET is set.
@@ -27,8 +37,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const result = await drainQueue(INBOUND_JOB, 50);
-    return NextResponse.json({ ok: true, queue: INBOUND_JOB, ...result });
+    // Drained independently so one queue's failure cannot starve the other.
+    const drained: Record<string, unknown> = {};
+    for (const queue of QUEUES) {
+      try {
+        drained[queue] = await drainQueue(queue, 50);
+      } catch (err) {
+        drained[queue] = { error: err instanceof Error ? err.message : String(err) };
+        logger.error("drain-queue: queue failed", { queue, err: String(err) });
+      }
+    }
+    return NextResponse.json({ ok: true, drained });
   } catch (err) {
     logger.error("drain-queue failed", {
       err: err instanceof Error ? err.message : String(err),

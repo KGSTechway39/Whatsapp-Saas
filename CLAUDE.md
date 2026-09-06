@@ -173,7 +173,12 @@ verify X-Hub-Signature-256  →  rate-limit  →  persist raw payload (webhook i
 **Job queue** (`lib/queue/index.ts`): generic `enqueue()` / `registerHandler()` with a
 swappable driver. Default = **inline** (runs in-process, off the response path). Set
 `QUEUE_DRIVER=pgboss` for durable Postgres-backed jobs, drained by the Vercel cron
-`/api/cron/drain-queue` (runs every minute — see `vercel.json`).
+`/api/cron/drain-queue` — which is currently scheduled **daily** (`0 0 * * *`), not
+every minute; Hobby plans allow only daily crons. At that cadence a queued
+broadcast advances one batch per day, so sub-daily scheduling (Vercel Pro, or an
+external scheduler calling the endpoint with the CRON_SECRET bearer) is required
+before the durable queue is usable in production. `/api/cron/resume-flows`
+restarts automation flows parked on a wait node and has the same constraint.
 
 **Billing models & pricing** (`lib/billing/`): `rates.ts` (reads `meta_rates`, derives
 price = wholesale × (1 + tier markup + buffer)), `pricing.ts` (per-message quote),

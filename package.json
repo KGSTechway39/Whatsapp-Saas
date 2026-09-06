@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "node scripts/seed.mjs",
-    "check": "bash scripts/production-check.sh"
+    "check": "bash scripts/production-check.sh",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:load": "k6 run tests/load/k6-read-paths.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.0",
@@ -45,6 +50,7 @@
     "@types/react-dom": "^18",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^2.1.9"
   }
 }

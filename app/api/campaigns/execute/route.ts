@@ -1,17 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import { decrypt } from "@/lib/crypto";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { sendTemplateMessage } from "@/lib/meta";
 import { getBillingMode } from "@/lib/billing/guarded-send";
+import { getWholesalePaise } from "@/lib/billing/rates";
 import { quoteSendCostPaise, toBillableCategory, type MessageCategory } from "@/lib/billing/pricing";
-import { deriveQuote, getWholesalePaise } from "@/lib/billing/rates";
-import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
+import { reserve, InsufficientBalanceError } from "@/lib/billing/wallet";
 import { dispatchEvent } from "@/lib/webhooks-out";
 import { consentPolicyFor, splitByConsent } from "@/lib/compliance/consent";
 import { templateSendability } from "@/lib/whatsapp/template-sendable";
-
-const BATCH_SIZE = 50;
+import { enqueueCampaignSend } from "@/lib/campaigns/worker";
 
 // SendAnjal's own per-message platform fee (paise). This is our margin, NOT a Meta
 // rate — Meta wholesale rates are never hardcoded (Law #2); they come from the
@@ -36,224 +33,6 @@ const FALLBACK_WHOLESALE_PAISE: Record<MessageCategory, number> = {
 async function byoUnitCostPaise(category: MessageCategory): Promise<number> {
   const wholesale = (await getWholesalePaise(category)) ?? FALLBACK_WHOLESALE_PAISE[category];
   return wholesale + PLATFORM_FEE_PAISE;
-}
-
-function buildTemplateComponents(
-  variableMapping: Record<string, { type: "name" | "phone" | "custom"; value?: string }>,
-  contact: { name: string; phone: string },
-  variables: string[]
-): unknown[] {
-  if (!variables || variables.length === 0) return [];
-
-  const parameters = variables.map((_, i) => {
-    const key = `v${i}`;
-    const mapping = variableMapping?.[key];
-    let text = contact.name; // default
-
-    if (mapping) {
-      if (mapping.type === "name") text = contact.name;
-      else if (mapping.type === "phone") text = contact.phone;
-      else if (mapping.type === "custom" && mapping.value) text = mapping.value;
-    }
-
-    return { type: "text", text };
-  });
-
-  return [{ type: "body", parameters }];
-}
-
-async function processCampaign({
-  campaignId,
-  contacts,
-  phoneNumberId,
-  accessToken,
-  templateName,
-  languageCode,
-  variables,
-  variableMapping,
-  category,
-  supabase,
-  userId,
-  billingMode,
-  reservationId,
-  costPaise,
-}: {
-  campaignId: string;
-  contacts: { id: string; phone: string; name: string }[];
-  phoneNumberId: string;
-  accessToken: string;
-  templateName: string;
-  languageCode: string;
-  variables: string[];
-  variableMapping: Record<string, { type: "name" | "phone" | "custom"; value?: string }>;
-  category: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any;
-  userId: string;
-  billingMode: string;
-  reservationId: string | null;
-  costPaise: number;
-}) {
-  let totalSent = 0;
-  let totalFailed = 0;
-  const today = new Date().toISOString().split("T")[0];
-  // Rupee cost per message, derived from the resolved per-message paise (rate
-  // table + fee) passed in — never from hardcoded Meta rates.
-  const costPerMsg = costPaise / 100;
-
-  // Margin trail for the prepaid ledger (one category per campaign). null pre-017
-  // or for BYO → no tagging. wholesale is the real Meta cost regardless of pricing.
-  const billableCategory = toBillableCategory(category);
-  const marginTrail =
-    billingMode === "managed" ? await deriveQuote(userId, billableCategory) : null;
-
-  for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
-    const batch = contacts.slice(i, i + BATCH_SIZE);
-    let batchSent = 0;
-    let batchFailed = 0;
-
-    for (const contact of batch) {
-      try {
-        const components = buildTemplateComponents(variableMapping, contact, variables);
-        const { messageId } = await sendTemplateMessage({
-          phoneNumberId,
-          accessToken,
-          to: contact.phone,
-          templateName,
-          languageCode,
-          components,
-        });
-
-        await supabase
-          .from("campaign_messages")
-          .update({
-            status: "sent",
-            meta_message_id: messageId,
-            sent_at: new Date().toISOString(),
-          })
-          .eq("campaign_id", campaignId)
-          .eq("contact_id", contact.id);
-
-        // Managed: settle one unit of the reservation per success (idempotent).
-        if (reservationId && costPaise > 0) {
-          const unitIdem = `cm:${campaignId}:${contact.id}`;
-          await settle({
-            reservationId,
-            actualPaise: costPaise,
-            unitIdempotencyKey: unitIdem,
-            referenceId: campaignId,
-          }).catch((e) => console.error("wallet settle failed:", e));
-
-          // Best-effort margin trail on the ledger row settle just wrote.
-          if (marginTrail) {
-            await supabase
-              .from("transactions")
-              .update({
-                category: billableCategory,
-                wholesale_paise: marginTrail.wholesalePaise,
-                markup_bps: marginTrail.markupBps,
-              })
-              .eq("user_id", userId)
-              .eq("idempotency_key", unitIdem)
-              .then(
-                () => {},
-                () => {},
-              );
-          }
-        }
-
-        batchSent++;
-      } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : "Send failed";
-        await supabase
-          .from("campaign_messages")
-          .update({ status: "failed", error_message: errMsg })
-          .eq("campaign_id", campaignId)
-          .eq("contact_id", contact.id);
-        batchFailed++;
-      }
-
-      await new Promise((r) => setTimeout(r, 15));
-    }
-
-    totalSent += batchSent;
-    totalFailed += batchFailed;
-
-    // Update running totals after each batch
-    await supabase
-      .from("campaigns")
-      .update({ sent_count: totalSent, failed_count: totalFailed })
-      .eq("id", campaignId);
-  }
-
-  const now = new Date().toISOString();
-  const actualCost = totalSent * costPerMsg;
-
-  // Mark complete
-  await supabase
-    .from("campaigns")
-    .update({
-      status: "completed",
-      sent_count: totalSent,
-      failed_count: totalFailed,
-      completed_at: now,
-      cost: actualCost,
-    })
-    .eq("id", campaignId);
-
-  dispatchEvent(supabase, userId, "campaign.completed", {
-    id: campaignId, sent: totalSent, failed: totalFailed,
-  }).catch(() => {});
-
-  // Upsert daily analytics
-  const { data: existing } = await supabase
-    .from("daily_analytics")
-    .select("total_sent, total_failed")
-    .eq("user_id", userId)
-    .eq("date", today)
-    .single();
-
-  await supabase.from("daily_analytics").upsert(
-    {
-      user_id: userId,
-      date: today,
-      total_sent: (existing?.total_sent || 0) + totalSent,
-      total_failed: (existing?.total_failed || 0) + totalFailed,
-    },
-    { onConflict: "user_id,date" }
-  );
-
-  if (billingMode === "managed") {
-    // Prepaid wallet: release the reservation — frees the hold for any
-    // failed/unsent recipients (only settled successes were actually debited).
-    if (reservationId) {
-      await release(reservationId).catch((e) => console.error("wallet release failed:", e));
-    }
-  } else {
-    // Legacy (byo) wallet debit — UNCHANGED behavior.
-    const { data: walletRow } = await supabase
-      .from("wallet")
-      .select("balance")
-      .eq("user_id", userId)
-      .single();
-
-    if (walletRow) {
-      const newBalance = Math.max(0, Number(walletRow.balance) - actualCost);
-      await supabase
-        .from("wallet")
-        .update({ balance: newBalance, updated_at: now })
-        .eq("user_id", userId);
-
-      await supabase.from("transactions").insert({
-        user_id: userId,
-        type: "debit",
-        description: `Campaign: ${campaignId} — ${totalSent} messages sent`,
-        amount: actualCost,
-        balance_after: newBalance,
-        payment_method: "wallet",
-      });
-    }
-  }
 }
 
 export async function POST(request: NextRequest) {
@@ -467,6 +246,12 @@ export async function POST(request: NextRequest) {
       scheduled_at: scheduledAt,
       started_at: scheduledAt ? null : new Date().toISOString(),
       cost: totalCost,
+      // Persisted for the fan-out worker to rehydrate (migration 035). These
+      // were previously request-memory only, which is why the send could not
+      // survive the response being flushed.
+      variable_mapping: variableMapping,
+      unit_cost_paise: unitCostPaise,
+      billing_mode: billingMode,
     })
     .select()
     .single();
@@ -475,15 +260,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: campErr?.message || "Failed to create campaign" }, { status: 500 });
   }
 
-  // Bulk insert campaign_messages (skip for CSV contacts with synthetic IDs)
-  const messageRows = contacts
-    .filter((c) => !c.id.startsWith("csv-"))
-    .map((c) => ({
+  // Bulk insert campaign_messages. CSV-uploaded recipients are included with a
+  // NULL contact_id and their name carried on the row: campaign_messages is the
+  // worker's cursor, so anyone missing from it would simply never be sent to.
+  const messageRows = contacts.map((c) => {
+    const isCsv = c.id.startsWith("csv-");
+    return {
       campaign_id: campaign.id,
-      contact_id: c.id,
+      contact_id: isCsv ? null : c.id,
       phone: c.phone,
+      recipient_name: c.name ?? null,
       status: "pending",
-    }));
+    };
+  });
 
   if (messageRows.length > 0) {
     await supabase.from("campaign_messages").insert(messageRows);
@@ -519,25 +308,19 @@ export async function POST(request: NextRequest) {
       }
       throw err;
     }
+
+    if (reservationId) {
+      await supabase
+        .from("campaigns")
+        .update({ reservation_id: reservationId })
+        .eq("id", campaign.id);
+    }
   }
 
-  // Fire-and-forget
-  processCampaign({
-    campaignId: campaign.id,
-    contacts,
-    phoneNumberId: number.phone_number_id,
-    accessToken: await decrypt(number.access_token),
-    templateName: template.name,
-    languageCode: template.language || "en",
-    variables: template.variables || [],
-    variableMapping,
-    category: template.category || "UTILITY",
-    supabase,
-    userId: user.id,
-    billingMode,
-    reservationId,
-    costPaise: unitCostPaise,
-  }).catch((err) => console.error("Campaign execution error:", err));
+  // Law #4: hand the fan-out to the queue and return. The worker claims batches
+  // off campaign_messages, so the broadcast survives this function being frozen
+  // or reclaimed, and resumes exactly where it stopped rather than restarting.
+  await enqueueCampaignSend({ campaignId: campaign.id, userId: user.id });
 
   return NextResponse.json(
     {

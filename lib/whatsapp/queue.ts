@@ -22,6 +22,8 @@ import { processStatusEvent, type StatusPayload } from "./status";
 import { confirmOrReleaseBilling } from "@/lib/billing/confirm";
 import { enqueue, registerHandler } from "@/lib/queue";
 import { resolveUserIdByPhoneNumberId, resolveFlowForInbound, renderFirstReply } from "@/lib/automation/runtime";
+import { runFlow } from "@/lib/automation/engine";
+import { createClient } from "@/lib/supabase/server";
 
 export interface InboundEvent {
   /** Meta `phone_number_id` — used to resolve the tenant. */
@@ -127,11 +129,15 @@ async function runInboundWorker(event: InboundEvent): Promise<void> {
   // routes silently — the flow was already approved/published by the owner, so no
   // draft/confirm step (rule: AI never sends net-new customer content unprompted).
   //
-  // TODO(persistent-worker): multi-step traversal (waits/conditions/sessions)
-  // belongs on a persistent host (Railway/Render). This inline path handles the
-  // common trigger→auto-reply case within the Vercel Hobby queue/cron constraints.
-  // Decoupled + mockable: see lib/automation/{intent,runtime}.ts — testable
-  // against synthetic payloads before the Meta webhook is finalized.
+  // Runs the FULL flow, not just its first reply. This used to call
+  // renderFirstReply(), which walks the graph only far enough to find the first
+  // free-text message and returns that one string — so delays, conditions, AI
+  // Reply, tagging and template sends all worked in the builder's test run and
+  // were silently dropped in production.
+  //
+  // runFlow() is the same engine the builder previews, so what a tenant tests is
+  // what their customers get. Sends inside it go through guardedSingleSend (24h
+  // window + billing) and are consent-checked per node.
   const text = payload.text?.body?.trim();
   if (!text) return;
   try {
@@ -139,6 +145,42 @@ async function runInboundWorker(event: InboundEvent): Promise<void> {
     if (!userId) return;
     const flow = await resolveFlowForInbound({ userId, message: text });
     if (!flow) return;
+
+    // The engine sends THROUGH the conversation (that is how it resolves the
+    // number and enforces the window), so resolve it for this inbound. The
+    // webhook route creates contact + conversation before this job runs.
+    const supabase = createClient();
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id, contact_id")
+      .eq("user_id", userId)
+      .eq("contact_phone", payload.from)
+      .order("last_message_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (conv?.id && conv.contact_id) {
+      const result = await runFlow({
+        userId,
+        flowId: flow.flowId,
+        contactId: conv.contact_id,
+        conversationId: conv.id,
+        testMode: false,
+      });
+      logger.info("automation.runtime: ran flow", {
+        userId,
+        flowId: flow.flowId,
+        matchedBy: flow.matchedBy,
+        confidence: flow.confidence,
+        flowStatus: result.status,
+        steps: result.log.length,
+      });
+      return;
+    }
+
+    // No conversation row yet (first-ever contact, or a webhook write that lost
+    // the race). Fall back to the single auto-reply rather than dropping the
+    // message entirely — degraded, but never silent.
     const reply = renderFirstReply(flow.flowData);
     if (!reply) return;
     await sendOutbound({
@@ -152,11 +194,10 @@ async function runInboundWorker(event: InboundEvent): Promise<void> {
       },
       lastInboundAt: new Date((event.receivedAt ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
     });
-    logger.info("automation.runtime: delivered flow reply", {
+    logger.info("automation.runtime: delivered first reply (no conversation row)", {
       userId,
       flowId: flow.flowId,
       matchedBy: flow.matchedBy,
-      confidence: flow.confidence,
     });
   } catch (err) {
     logger.warn("automation.runtime: intent routing failed", {

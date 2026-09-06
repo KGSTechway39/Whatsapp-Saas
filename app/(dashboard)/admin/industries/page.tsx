@@ -142,7 +142,7 @@ export default function IndustriesPage() {
           </button>
           <button
             onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent hover:opacity-90"
           >
             <Plus className="h-3.5 w-3.5" /> New industry
           </button>
@@ -160,7 +160,7 @@ export default function IndustriesPage() {
           <button
             onClick={reseed}
             disabled={seeding}
-            className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+            className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-adm-primary px-4 py-2 text-xs font-semibold text-adm-onAccent disabled:opacity-60"
           >
             {seeding && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Re-seed shipped industries
           </button>
@@ -211,7 +211,7 @@ export default function IndustriesPage() {
               <div className="mt-4 flex items-center gap-2 border-t border-adm-line pt-3">
                 <Link
                   href={`/admin/industries/${v.id}`}
-                  className="inline-flex items-center gap-1.5 rounded-[7px] bg-adm-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-[7px] bg-adm-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-adm-onAccent hover:opacity-90"
                 >
                   <ArrowRight className="h-3.5 w-3.5" /> Open
                 </Link>
