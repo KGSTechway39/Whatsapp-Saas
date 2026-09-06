@@ -12,10 +12,11 @@
  *   POST { config }           → inserts a new active version, returns it
  *   PATCH { id, is_active }   → toggle a version on/off (dark-launch / rollback)
  *
- * Gated by requireAdmin() (ADMIN_EMAILS allowlist).
+ * SUPER ADMIN ONLY (requireSuperAdmin) — sets price-per-token and credit costs.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/roles";
+import { audit } from "@/lib/audit";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const TASK_TYPES = [
@@ -32,7 +33,7 @@ const SELECT =
   "id, task_type, provider, model_id, input_price_per_million_paise, output_price_per_million_paise, markup_multiplier, credits_per_action, timeout_ms, max_regens, is_active, effective_from, updated_at, note";
 
 export async function GET() {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const supabase = createServiceClient();
@@ -47,7 +48,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
@@ -88,11 +89,20 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceClient();
   const { data, error } = await supabase.from("ai_model_config").insert(row).select(SELECT).single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Model routing sets per-token cost and credits charged — a margin lever.
+  await audit({
+    action: "ai_config.update",
+    userId: admin.id,
+    resourceType: "ai_model_config",
+    resourceId: String((data as { id?: string } | null)?.id ?? ""),
+    request: req,
+    details: { op: "create", config: row },
+  });
   return NextResponse.json({ config: data }, { status: 201 });
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
@@ -108,5 +118,13 @@ export async function PATCH(req: NextRequest) {
     .select(SELECT)
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await audit({
+    action: "ai_config.update",
+    userId: admin.id,
+    resourceType: "ai_model_config",
+    resourceId: String(body.id),
+    request: req,
+    details: { op: "set_active", is_active: body.is_active },
+  });
   return NextResponse.json({ config: data });
 }

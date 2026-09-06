@@ -26,6 +26,10 @@ export async function GET() {
     metaAccountId: n.waba_id,
     phoneNumberId: n.phone_number_id,
     isPrimary: n.is_primary,
+    // Surfaced so the UI can warn BEFORE a token dies. It was already being
+    // written by every connect path and read by nothing, which is how a
+    // 60-day token expires and the number just silently stops sending.
+    tokenExpiresAt: n.token_expires_at ?? null,
   }));
 
   return NextResponse.json({ numbers });

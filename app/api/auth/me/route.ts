@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, isAdminEmail } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -23,5 +23,8 @@ export async function GET() {
     phone: data.phone,
     timezone: data.timezone,
     avatarUrl: data.avatar_url,
+    // Cosmetic only — lets the sidebar show the Admin section. Every /api/admin/*
+    // route re-checks with requireAdmin() server-side, so this flag grants nothing.
+    isAdmin: isAdminEmail(data.email),
   });
 }

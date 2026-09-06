@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
         });
         await sendEmail({
           to: userData.email,
-          subject: `Payment received — ${plan?.name || "WASend"} Plan`,
+          subject: `Payment received — ${plan?.name || "SendAnjal"} Plan`,
           html: paymentSuccessEmail(userData.full_name || userData.email, amountINR, plan?.name || planId, nextBilling),
         });
       }

@@ -87,15 +87,15 @@ function WhatsAppPreview({ body, variables, mapping, contact }: {
   });
 
   return (
-    <div className="bg-[#0b141a] rounded-2xl p-4 mt-4">
+    <div className="bg-chat-ground rounded-2xl p-4 mt-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-2 h-2 rounded-full bg-emerald-400" />
-        <span className="text-[11px] text-[#8696a0]">WhatsApp Preview</span>
+        <div className="w-2 h-2 rounded-full bg-success" />
+        <span className="text-[11px] text-muted-foreground">WhatsApp Preview</span>
       </div>
       <div className="space-y-1">
-        <div className="bg-[#202c33] rounded-2xl rounded-tl-none p-3.5 max-w-[88%] shadow-sm">
-          <p className="text-[13px] text-[#e9edef] leading-relaxed whitespace-pre-wrap">{preview}</p>
-          <p className="text-[10px] text-[#8696a0] text-right mt-1.5">12:30 ✓✓</p>
+        <div className="bg-chat-in border border-chat-inBorder rounded-2xl rounded-tl-none p-3.5 max-w-[88%] shadow-sm">
+          <p className="text-[13px] text-foreground leading-relaxed whitespace-pre-wrap">{preview}</p>
+          <p className="text-[10px] text-muted-foreground text-right mt-1.5">12:30 ✓✓</p>
         </div>
       </div>
     </div>
@@ -271,7 +271,7 @@ export default function CreateCampaignPage() {
   };
 
   const approvedTemplates = templateList
-    .filter((t) => t.status === "APPROVED")
+    .filter((t) => t.status === "APPROVED" && t.sendable !== false)
     .filter((t) => !templateSearch || t.displayName.toLowerCase().includes(templateSearch.toLowerCase()) || t.name.toLowerCase().includes(templateSearch.toLowerCase()));
 
   // ── Success screen ─────────────────────────────────────────────────────────
@@ -279,19 +279,19 @@ export default function CreateCampaignPage() {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
         <div className="relative w-24 h-24 mx-auto mb-6">
-          <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
-          <div className="relative w-24 h-24 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400" />
+          <div className="absolute inset-0 rounded-full bg-success-soft animate-ping" />
+          <div className="relative w-24 h-24 rounded-full bg-success-soft border border-success/25 flex items-center justify-center">
+            <CheckCircle2 className="w-12 h-12 text-success" />
           </div>
         </div>
         <h2 className="text-2xl font-bold mb-2">
           {launched.status === "scheduled" ? "Campaign Scheduled!" : "Campaign Launched!"}
         </h2>
         <p className="text-muted-foreground mb-1">{form.name}</p>
-        <p className="text-emerald-400 font-semibold mb-1">
+        <p className="text-success font-semibold mb-1">
           {launched.recipients.toLocaleString()} recipients
         </p>
-        <p className="text-amber-400 font-medium mb-6">Est. ₹{totalCost.toFixed(2)}</p>
+        <p className="text-warning font-medium mb-6">Est. ₹{totalCost.toFixed(2)}</p>
         <div className="bg-card border border-border/50 rounded-2xl p-4 text-left mb-6 space-y-2">
           {[
             { label: "Campaign ID", value: launched.campaignId.slice(0, 8) + "…" },
@@ -308,7 +308,7 @@ export default function CreateCampaignPage() {
         <div className="flex gap-3 justify-center">
           <Link
             href="/campaigns"
-            className="wa-gradient text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+            className="wa-gradient text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
           >
             View Campaigns
           </Link>
@@ -345,19 +345,19 @@ export default function CreateCampaignPage() {
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   done
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-success text-white"
                     : active
-                    ? "wa-gradient text-white shadow-lg shadow-primary/30"
+                    ? "wa-gradient text-primary-foreground shadow-lg shadow-primary/30"
                     : "bg-muted text-muted-foreground"
                 }`}>
                   {done ? <Check className="w-4 h-4" /> : num}
                 </div>
                 <span className={`text-sm font-medium hidden sm:block ${
-                  active ? "text-foreground" : done ? "text-emerald-400" : "text-muted-foreground"
+                  active ? "text-foreground" : done ? "text-success" : "text-muted-foreground"
                 }`}>{label}</span>
               </button>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-px mx-3 transition-colors ${done ? "bg-emerald-500/40" : "bg-border"}`} />
+                <div className={`flex-1 h-px mx-3 transition-colors ${done ? "bg-success-soft" : "bg-border"}`} />
               )}
             </div>
           );
@@ -432,7 +432,7 @@ export default function CreateCampaignPage() {
                         }`}
                       >
                         {disabled && (
-                          <span className="absolute top-1.5 right-1.5 text-[9px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-medium">
+                          <span className="absolute top-1.5 right-1.5 text-[9px] bg-warning-soft text-warning px-1.5 py-0.5 rounded-full font-medium">
                             Soon
                           </span>
                         )}
@@ -448,7 +448,7 @@ export default function CreateCampaignPage() {
                 <div>
                   <label className="text-sm font-medium block mb-2">WhatsApp Number *</label>
                   {numberList.length === 0 ? (
-                    <div className="p-4 border border-amber-500/20 bg-amber-500/5 rounded-xl text-xs text-amber-400 flex gap-2 items-start">
+                    <div className="p-4 border border-warning/25 bg-warning-soft rounded-xl text-xs text-warning flex gap-2 items-start">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                       <span>
                         No active numbers connected.{" "}
@@ -535,7 +535,7 @@ export default function CreateCampaignPage() {
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                           form.audienceType === id ? "border-primary bg-primary" : "border-border"
                         }`}>
-                          {form.audienceType === id && <div className="w-2 h-2 rounded-full bg-white" />}
+                          {form.audienceType === id && <div className="w-2 h-2 rounded-full bg-card" />}
                         </div>
                       </div>
                     </button>
@@ -563,7 +563,7 @@ export default function CreateCampaignPage() {
                       ))}
                     </div>
                     {form.selectedTags.length === 0 && (
-                      <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                      <p className="text-xs text-warning mt-2 flex items-center gap-1">
                         <Info className="w-3 h-3" /> Select at least one tag to filter contacts
                       </p>
                     )}
@@ -599,12 +599,12 @@ export default function CreateCampaignPage() {
                     {csvPreview.length > 0 && (
                       <div className="mt-3">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-medium text-emerald-400">
+                          <p className="text-xs font-medium text-success">
                             {form.csvContacts.length} contacts loaded
                           </p>
                           <button
                             onClick={() => { up("csvContacts", []); setCsvPreview([]); setAudienceCount(0); }}
-                            className="text-xs text-muted-foreground hover:text-red-400 flex items-center gap-1"
+                            className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
                           >
                             <X className="w-3 h-3" /> Clear
                           </button>
@@ -648,7 +648,7 @@ export default function CreateCampaignPage() {
                       onClick={() => up("excludeOptedOut", !form.excludeOptedOut)}
                       className={`relative w-10 h-5 rounded-full transition-colors ${form.excludeOptedOut ? "bg-primary" : "bg-muted"}`}
                     >
-                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.excludeOptedOut ? "translate-x-5" : "translate-x-0.5"}`} />
+                      <div className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${form.excludeOptedOut ? "translate-x-5" : "translate-x-0.5"}`} />
                     </button>
                   </div>
 
@@ -682,7 +682,7 @@ export default function CreateCampaignPage() {
                     </div>
                   ) : audienceCount !== null ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-emerald-400">{audienceCount.toLocaleString()}</span>
+                      <span className="text-sm font-semibold text-success">{audienceCount.toLocaleString()}</span>
                       <span className="text-sm text-muted-foreground">contacts estimated</span>
                     </div>
                   ) : (
@@ -736,10 +736,10 @@ export default function CreateCampaignPage() {
                         <div className="flex items-center gap-1.5">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                             t.category === "MARKETING"
-                              ? "bg-blue-500/10 text-blue-400"
+                              ? "bg-accent text-primary"
                               : t.category === "UTILITY"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-amber-500/10 text-amber-400"
+                              ? "bg-success-soft text-success"
+                              : "bg-warning-soft text-warning"
                           }`}>{t.category}</span>
                           {form.templateId === t.id && (
                             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
@@ -842,7 +842,7 @@ export default function CreateCampaignPage() {
                         <tr className="border-b border-border/20">
                           <td className="px-4 py-2.5">
                             Meta fee
-                            <span className="ml-1.5 text-[10px] text-blue-400">({selectedTemplate?.category || "UTILITY"})</span>
+                            <span className="ml-1.5 text-[10px] text-primary">({selectedTemplate?.category || "UTILITY"})</span>
                           </td>
                           <td className="px-4 py-2.5 text-center text-muted-foreground text-xs">
                             {recipientCount} × ₹{metaCostPerMsg.toFixed(2)}
@@ -871,23 +871,23 @@ export default function CreateCampaignPage() {
                   walletBalance === null
                     ? "bg-muted/20 border-border/40"
                     : walletSufficient && !walletWarning
-                    ? "bg-emerald-500/5 border-emerald-500/20"
+                    ? "bg-success-soft border-success/25"
                     : walletWarning
-                    ? "bg-amber-500/5 border-amber-500/20"
-                    : "bg-red-500/5 border-red-500/20"
+                    ? "bg-warning-soft border-warning/25"
+                    : "bg-destructive-soft border-destructive/25"
                 }`}>
                   <div className="flex items-center gap-2.5">
                     <Wallet className={`w-4 h-4 ${
                       walletBalance === null ? "text-muted-foreground" :
-                      walletSufficient && !walletWarning ? "text-emerald-400" :
-                      walletWarning ? "text-amber-400" : "text-red-400"
+                      walletSufficient && !walletWarning ? "text-success" :
+                      walletWarning ? "text-warning" : "text-destructive"
                     }`} />
                     <div>
                       <p className="text-sm font-medium">Wallet Balance</p>
                       <p className={`text-xs ${
                         walletBalance === null ? "text-muted-foreground" :
-                        walletSufficient && !walletWarning ? "text-emerald-400" :
-                        walletWarning ? "text-amber-400" : "text-red-400"
+                        walletSufficient && !walletWarning ? "text-success" :
+                        walletWarning ? "text-warning" : "text-destructive"
                       }`}>
                         {walletBalance !== null
                           ? walletSufficient
@@ -912,16 +912,16 @@ export default function CreateCampaignPage() {
                 {/* Smart Schedule Suggestion */}
                 {(smartSchedule || smartLoading) && (
                   <div className={`p-4 rounded-xl border transition-all ${
-                    useSmartTime ? "border-violet-500/40 bg-violet-500/5" : "border-border/50 bg-muted/20"
+                    useSmartTime ? "border-primary/25 bg-accent" : "border-border/50 bg-muted/20"
                   }`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                          <Brain className="w-4 h-4 text-violet-400" />
+                        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+                          <Brain className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold flex items-center gap-1.5">
-                            <Sparkles className="w-3 h-3 text-violet-400" />
+                            <Sparkles className="w-3 h-3 text-primary" />
                             Smart Schedule
                           </p>
                           {smartLoading ? (
@@ -930,7 +930,7 @@ export default function CreateCampaignPage() {
                             <p className="text-xs text-muted-foreground mt-0.5">{smartSchedule.recommendation}</p>
                           ) : null}
                           {smartSchedule && !smartSchedule.hasData && (
-                            <p className="text-[10px] text-amber-400 mt-0.5">Based on industry benchmarks (send more campaigns to get personalised insights)</p>
+                            <p className="text-[10px] text-warning mt-0.5">Based on industry benchmarks (send more campaigns to get personalised insights)</p>
                           )}
                         </div>
                       </div>
@@ -949,8 +949,8 @@ export default function CreateCampaignPage() {
                           }}
                           className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all flex-shrink-0 ${
                             useSmartTime
-                              ? "bg-violet-500 text-white"
-                              : "border border-violet-500/40 text-violet-400 hover:bg-violet-500/10"
+                              ? "bg-primary text-primary-foreground"
+                              : "border border-primary/25 text-primary hover:bg-accent"
                           }`}
                         >
                           {useSmartTime ? "✓ Applied" : "Use this time"}
@@ -1011,7 +1011,7 @@ export default function CreateCampaignPage() {
                 <button
                   onClick={() => setShowConfirm(true)}
                   disabled={submitting || (walletBalance !== null && !walletSufficient)}
-                  className="flex items-center justify-center gap-2 w-full wa-gradient text-white font-semibold py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+                  className="flex items-center justify-center gap-2 w-full wa-gradient text-primary-foreground font-semibold py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
                 >
                   {submitting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Launching…</>
@@ -1020,7 +1020,7 @@ export default function CreateCampaignPage() {
                 </button>
 
                 {walletBalance !== null && !walletSufficient && (
-                  <p className="text-xs text-red-400 text-center flex items-center justify-center gap-1.5">
+                  <p className="text-xs text-destructive text-center flex items-center justify-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5" />
                     Insufficient balance.{" "}
                     <Link href="/billing/recharge" className="underline font-medium">Recharge wallet →</Link>
@@ -1043,7 +1043,7 @@ export default function CreateCampaignPage() {
                 <button
                   onClick={() => canProceed[step] && setStep((p) => (p + 1) as Step)}
                   disabled={!canProceed[step]}
-                  className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto shadow-md shadow-primary/20"
+                  className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto shadow-md shadow-primary/20"
                 >
                   Continue <ArrowRight className="w-4 h-4" />
                 </button>
@@ -1099,7 +1099,7 @@ export default function CreateCampaignPage() {
                 </div>
                 <div className="flex justify-between text-sm font-bold pt-1 border-t border-border/30">
                   <span>Total</span>
-                  <span className="text-amber-400">₹{totalCost.toFixed(2)}</span>
+                  <span className="text-warning">₹{totalCost.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -1129,11 +1129,11 @@ export default function CreateCampaignPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Estimated cost</span>
-                <span className="font-bold text-amber-400">₹{totalCost.toFixed(2)}</span>
+                <span className="font-bold text-warning">₹{totalCost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Wallet after</span>
-                <span className={`font-medium ${walletSufficient ? "text-emerald-400" : "text-red-400"}`}>
+                <span className={`font-medium ${walletSufficient ? "text-success" : "text-destructive"}`}>
                   ₹{walletBalance !== null ? (walletBalance - totalCost).toFixed(2) : "—"}
                 </span>
               </div>
@@ -1151,7 +1151,7 @@ export default function CreateCampaignPage() {
               <button
                 onClick={handleLaunch}
                 disabled={submitting}
-                className="flex-1 py-2.5 rounded-xl wa-gradient text-white text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl wa-gradient text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>

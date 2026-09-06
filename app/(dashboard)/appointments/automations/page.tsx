@@ -94,14 +94,14 @@ const INITIAL_AUTOMATIONS: ApptAutomation[] = [
 ];
 
 const TYPE_META: Record<AutoType, { icon: React.ElementType; color: string; bg: string; border: string; triggerColor: string; triggerBg: string }> = {
-  auto_confirm:      { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", triggerColor: "text-emerald-400", triggerBg: "bg-emerald-500/10" },
-  reminder_24h:      { icon: Bell,         color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/30",    triggerColor: "text-blue-400",    triggerBg: "bg-blue-500/10"    },
-  reminder_1h:       { icon: Clock,        color: "text-cyan-400",    bg: "bg-cyan-500/10",    border: "border-cyan-500/30",    triggerColor: "text-cyan-400",    triggerBg: "bg-cyan-500/10"    },
-  followup:          { icon: MessageSquare,color: "text-violet-400",  bg: "bg-violet-500/10",  border: "border-violet-500/30",  triggerColor: "text-violet-400",  triggerBg: "bg-violet-500/10"  },
-  noshow:            { icon: AlertCircle,  color: "text-orange-400",  bg: "bg-orange-500/10",  border: "border-orange-500/30",  triggerColor: "text-orange-400",  triggerBg: "bg-orange-500/10"  },
-  completed_review:  { icon: Star,         color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/30",   triggerColor: "text-amber-400",   triggerBg: "bg-amber-500/10"   },
-  reschedule_nudge:  { icon: RefreshCw,    color: "text-pink-400",    bg: "bg-pink-500/10",    border: "border-pink-500/30",    triggerColor: "text-pink-400",    triggerBg: "bg-pink-500/10"    },
-  sequence:          { icon: Zap,          color: "text-indigo-400",  bg: "bg-indigo-500/10",  border: "border-indigo-500/30",  triggerColor: "text-indigo-400",  triggerBg: "bg-indigo-500/10"  },
+  auto_confirm:      { icon: CheckCircle2, color: "text-success", bg: "bg-success-soft", border: "border-success/25", triggerColor: "text-success", triggerBg: "bg-success-soft" },
+  reminder_24h:      { icon: Bell,         color: "text-primary",    bg: "bg-accent",    border: "border-primary/25",    triggerColor: "text-primary",    triggerBg: "bg-accent"    },
+  reminder_1h:       { icon: Clock,        color: "text-primary",    bg: "bg-accent",    border: "border-primary/25",    triggerColor: "text-primary",    triggerBg: "bg-accent"    },
+  followup:          { icon: MessageSquare,color: "text-primary",  bg: "bg-accent",  border: "border-primary/25",  triggerColor: "text-primary",  triggerBg: "bg-accent"  },
+  noshow:            { icon: AlertCircle,  color: "text-warning",  bg: "bg-warning-soft",  border: "border-warning/25",  triggerColor: "text-warning",  triggerBg: "bg-warning-soft"  },
+  completed_review:  { icon: Star,         color: "text-warning",   bg: "bg-warning-soft",   border: "border-warning/25",   triggerColor: "text-warning",   triggerBg: "bg-warning-soft"   },
+  reschedule_nudge:  { icon: RefreshCw,    color: "text-primary",    bg: "bg-accent",    border: "border-primary/25",    triggerColor: "text-primary",    triggerBg: "bg-accent"    },
+  sequence:          { icon: Zap,          color: "text-primary",  bg: "bg-accent",  border: "border-primary/25",  triggerColor: "text-primary",  triggerBg: "bg-accent"  },
 };
 
 // ─── Pre-built recipe templates specific to appointments ──────────────────────
@@ -169,7 +169,7 @@ function AutoCard({ auto, onToggle }: { auto: ApptAutomation; onToggle: (id: str
         </div>
         <button onClick={() => onToggle(auto.id)}
           className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${auto.isActive ? "bg-primary" : "bg-muted"}`}>
-          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${auto.isActive ? "left-6" : "left-1"}`} />
+          <span className={`absolute top-1 w-4 h-4 rounded-full bg-card shadow transition-all duration-300 ${auto.isActive ? "left-6" : "left-1"}`} />
         </button>
       </div>
 
@@ -183,10 +183,10 @@ function AutoCard({ auto, onToggle }: { auto: ApptAutomation; onToggle: (id: str
           </div>
         </div>
         <div className="flex justify-center"><div className="w-px h-3 bg-border" /></div>
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-emerald-400" />
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-success-soft border border-success/25">
+          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-success" />
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-400">Action</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-success">Action</p>
             <p className="text-xs font-medium">{auto.action}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">{auto.actionDetail}</p>
           </div>
@@ -195,7 +195,7 @@ function AutoCard({ auto, onToggle }: { auto: ApptAutomation; onToggle: (id: str
 
       {/* Stats */}
       <div className="flex items-center gap-3 text-xs text-muted-foreground border-t border-border/30 pt-3">
-        <span className={`font-medium px-2.5 py-1 rounded-full text-[10px] ${auto.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-muted/50 text-muted-foreground"}`}>
+        <span className={`font-medium px-2.5 py-1 rounded-full text-[10px] ${auto.isActive ? "bg-success-soft text-success" : "bg-muted/50 text-muted-foreground"}`}>
           {auto.isActive ? "● Active" : "⏸ Paused"}
         </span>
         <span>{auto.runCount} runs</span>
@@ -209,10 +209,10 @@ function AutoCard({ auto, onToggle }: { auto: ApptAutomation; onToggle: (id: str
       {showPreview && (
         <div className="mt-3 pt-3 border-t border-border/30 animate-fade-in">
           <p className="text-[10px] text-muted-foreground mb-2">WhatsApp Message Preview</p>
-          <div className="bg-[#0b141a] rounded-xl p-3">
-            <div className="bg-[#202c33] rounded-xl rounded-tl-none p-3 max-w-[90%]">
-              <p className="text-[11px] text-[#e9edef] leading-relaxed whitespace-pre-wrap">{WA_PREVIEWS[auto.type]}</p>
-              <p className="text-[9px] text-[#8696a0] text-right mt-1">Auto ✓✓</p>
+          <div className="bg-chat-ground rounded-xl p-3">
+            <div className="bg-chat-in border border-chat-inBorder rounded-xl rounded-tl-none p-3 max-w-[90%]">
+              <p className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap">{WA_PREVIEWS[auto.type]}</p>
+              <p className="text-[9px] text-muted-foreground text-right mt-1">Auto ✓✓</p>
             </div>
           </div>
         </div>
@@ -248,7 +248,7 @@ export default function AppointmentAutomationsPage() {
             <Link href="/appointments" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border hover:bg-accent text-sm font-medium transition-colors">
               <Calendar className="w-4 h-4" /> Appointments
             </Link>
-            <Link href="/appointments/book" className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
+            <Link href="/appointments/book" className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
               <Plus className="w-4 h-4" /> Book + Auto
             </Link>
           </div>
@@ -259,9 +259,9 @@ export default function AppointmentAutomationsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total Workflows",  value: automations.length, icon: Zap,         color: "text-primary",        bg: "bg-primary/10" },
-          { label: "Active",           value: activeCount,         icon: Play,        color: "text-emerald-400",    bg: "bg-emerald-500/10" },
-          { label: "Total Runs",       value: totalRuns,           icon: CheckCircle2,color: "text-violet-400",     bg: "bg-violet-500/10" },
-          { label: "Recipes Available",value: RECIPES.length,      icon: Star,        color: "text-amber-400",      bg: "bg-amber-500/10" },
+          { label: "Active",           value: activeCount,         icon: Play,        color: "text-success",    bg: "bg-success-soft" },
+          { label: "Total Runs",       value: totalRuns,           icon: CheckCircle2,color: "text-primary",     bg: "bg-accent" },
+          { label: "Recipes Available",value: RECIPES.length,      icon: Star,        color: "text-warning",      bg: "bg-warning-soft" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-card rounded-2xl border border-border/50 p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
@@ -280,13 +280,13 @@ export default function AppointmentAutomationsPage() {
         <p className="text-sm font-semibold mb-4">Appointment WhatsApp Journey</p>
         <div className="flex items-center gap-1 overflow-x-auto pb-2">
           {[
-            { label: "Booked",       color: "text-blue-400",    bg: "bg-blue-500/10",    icon: Calendar    },
-            { label: "Confirmation", color: "text-emerald-400", bg: "bg-emerald-500/10", icon: CheckCircle2 },
-            { label: "24h Reminder", color: "text-cyan-400",    bg: "bg-cyan-500/10",    icon: Bell         },
-            { label: "1h Reminder",  color: "text-violet-400",  bg: "bg-violet-500/10",  icon: Clock        },
-            { label: "Appointment",  color: "text-amber-400",   bg: "bg-amber-500/10",   icon: Calendar     },
-            { label: "Follow-up",    color: "text-pink-400",    bg: "bg-pink-500/10",    icon: MessageSquare},
-            { label: "Review Ask",   color: "text-orange-400",  bg: "bg-orange-500/10",  icon: Star         },
+            { label: "Booked",       color: "text-primary",    bg: "bg-accent",    icon: Calendar    },
+            { label: "Confirmation", color: "text-success", bg: "bg-success-soft", icon: CheckCircle2 },
+            { label: "24h Reminder", color: "text-primary",    bg: "bg-accent",    icon: Bell         },
+            { label: "1h Reminder",  color: "text-primary",  bg: "bg-accent",  icon: Clock        },
+            { label: "Appointment",  color: "text-warning",   bg: "bg-warning-soft",   icon: Calendar     },
+            { label: "Follow-up",    color: "text-primary",    bg: "bg-accent",    icon: MessageSquare},
+            { label: "Review Ask",   color: "text-warning",  bg: "bg-warning-soft",  icon: Star         },
           ].map(({ label, color, bg, icon: Icon }, i, arr) => (
             <div key={label} className="flex items-center gap-1 flex-shrink-0">
               <div className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl border ${bg} border-opacity-30`} style={{ borderColor: "currentColor", opacity: 0.8 }}>
@@ -298,8 +298,8 @@ export default function AppointmentAutomationsPage() {
           ))}
           {/* No-show branch */}
           <div className="flex items-center gap-1 flex-shrink-0 ml-2 pl-2 border-l border-dashed border-border">
-            <AlertCircle className="w-3.5 h-3.5 text-orange-400" />
-            <span className="text-[10px] text-orange-400 font-medium">No-show → Re-book</span>
+            <AlertCircle className="w-3.5 h-3.5 text-warning" />
+            <span className="text-[10px] text-warning font-medium">No-show → Re-book</span>
           </div>
         </div>
       </div>
@@ -366,7 +366,7 @@ export default function AppointmentAutomationsPage() {
                   ))}
                 </div>
                 <Link href="/automation/create"
-                  className="w-full flex items-center justify-center gap-2 wa-gradient text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all">
+                  className="w-full flex items-center justify-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all">
                   <Zap className="w-4 h-4" /> Activate Recipe
                 </Link>
               </div>

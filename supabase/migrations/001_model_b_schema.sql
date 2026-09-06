@@ -1,5 +1,5 @@
 -- =====================================================
--- WASend Model B — Core Schema Migration
+-- SendAnjal Model B — Core Schema Migration
 -- Model B: Platform provides WhatsApp API access via Embedded Signup
 -- Architecture: Organization-scoped multi-tenant
 -- Run in Supabase SQL Editor

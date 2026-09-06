@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sanitizeSearch } from "@/lib/validate";
+import { consentPolicyFor } from "@/lib/compliance/consent";
 
 export async function GET(request: NextRequest) {
   const supabase = createClient();
@@ -42,9 +43,24 @@ export async function GET(request: NextRequest) {
     tags: c.tags || [],
     addedDate: c.added_date,
     status: c.status,
+    // Consent travels with the contact so the list can show it without an
+    // extra round-trip per row.
+    consentGiven: c.sensitive_data_consent === true,
+    consentAt: c.consent_timestamp ?? null,
+    consentSource: c.consent_source ?? null,
   }));
 
-  return NextResponse.json({ contacts, total: count || 0 });
+  // Whether consent is REQUIRED is a property of the tenant's industry, not of
+  // any one contact — so it ships once, alongside the page. When false the UI
+  // hides the whole consent column rather than showing an irrelevant control.
+  const policy = await consentPolicyFor(user.id);
+
+  return NextResponse.json({
+    contacts,
+    total: count || 0,
+    consentRequired: policy.required,
+    consentRequiredBecause: policy.required ? policy.verticalName : null,
+  });
 }
 
 export async function POST(request: NextRequest) {

@@ -80,7 +80,7 @@ function downloadSampleCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "wasend_contacts_sample.csv";
+  a.download = "sendanjal_contacts_sample.csv";
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -316,7 +316,7 @@ export default function ImportContactsPage() {
               type="submit"
               disabled={loading || success}
               className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 ${
-                success ? "bg-emerald-500 text-white" : "wa-gradient text-white shadow-lg shadow-primary/25"
+                success ? "bg-success text-white" : "wa-gradient text-primary-foreground shadow-lg shadow-primary/25"
               }`}
             >
               {loading ? (
@@ -357,7 +357,7 @@ export default function ImportContactsPage() {
                 dragOver
                   ? "border-primary bg-primary/5"
                   : parsedRows.length > 0
-                  ? "border-emerald-500/50 bg-emerald-500/5"
+                  ? "border-success/25 bg-success-soft"
                   : "border-border/60 hover:border-primary/40 hover:bg-primary/5"
               }`}
             >
@@ -370,8 +370,8 @@ export default function ImportContactsPage() {
               />
               {parsedRows.length > 0 ? (
                 <>
-                  <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-                  <p className="font-medium text-emerald-400">{parsedRows.length} contacts ready</p>
+                  <CheckCircle2 className="w-10 h-10 text-success mx-auto mb-3" />
+                  <p className="font-medium text-success">{parsedRows.length} contacts ready</p>
                   <p className="text-sm text-muted-foreground mt-1">{fileName}</p>
                 </>
               ) : (
@@ -391,7 +391,7 @@ export default function ImportContactsPage() {
                   Preview ({parsedRows.length} contact{parsedRows.length !== 1 ? "s" : ""})
                 </h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">
+                  <span className="text-xs text-success bg-success-soft px-2 py-1 rounded-full">
                     Ready to import
                   </span>
                   <button
@@ -415,10 +415,10 @@ export default function ImportContactsPage() {
                     {parsedRows.map((row, i) => (
                       <tr key={i} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
                         <td className="px-4 py-2.5">
-                          {row.name || <span className="text-red-400 flex items-center gap-1 text-xs"><AlertCircle className="w-3 h-3" /> Missing</span>}
+                          {row.name || <span className="text-destructive flex items-center gap-1 text-xs"><AlertCircle className="w-3 h-3" /> Missing</span>}
                         </td>
                         <td className="px-4 py-2.5 text-muted-foreground">
-                          {row.phone || <span className="text-red-400 flex items-center gap-1 text-xs"><AlertCircle className="w-3 h-3" /> Missing</span>}
+                          {row.phone || <span className="text-destructive flex items-center gap-1 text-xs"><AlertCircle className="w-3 h-3" /> Missing</span>}
                         </td>
                         <td className="px-4 py-2.5 text-muted-foreground">{row.email || "—"}</td>
                         <td className="px-4 py-2.5">
@@ -438,7 +438,7 @@ export default function ImportContactsPage() {
                 <button
                   onClick={handleImport}
                   disabled={importing}
-                  className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
                 >
                   {importing ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Importing...</>
@@ -501,7 +501,7 @@ export default function ImportContactsPage() {
               <button
                 onClick={handleCreateGroup}
                 disabled={!newGroupName.trim()}
-                className="flex-1 flex items-center justify-center gap-2 wa-gradient text-white font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+                className="flex-1 flex items-center justify-center gap-2 wa-gradient text-primary-foreground font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
               >
                 <Plus className="w-4 h-4" />
                 Create Group

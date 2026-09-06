@@ -1,5 +1,5 @@
 /**
- * WASend motion tokens — single source of truth for animation.
+ * SendAnjal motion tokens — single source of truth for animation.
  *
  * Rules baked in (see design brief):
  *  - micro-interactions 120–200ms, content transitions 200–300ms, nothing > 400ms

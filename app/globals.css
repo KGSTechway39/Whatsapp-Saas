@@ -3,77 +3,214 @@
 @tailwind utilities;
 
 /*
- * WASend design tokens
- * Light-first (default) with a parallel dark set.
- * Brand: teal-blue (#0B7285) — deliberately NOT WhatsApp green.
- * Emerald is reserved for sent/delivered states only.
+ * SendAnjal design tokens — "v3 Inbox" design system.
+ * Light-first (default) with a DERIVED dark set (the source artboard is
+ * light-only; see the .dark block for how it was derived).
+ *
+ * Brand: terracotta (#C26A33) on warm cream (#F2F0EC), with a constant navy
+ * (#16222B) sidebar. Deliberately NOT WhatsApp green.
  * All values HSL so they compose with Tailwind's hsl(var(--token)) mapping.
+ *
+ * Status colours are ink + soft PAIRS (--success / --success-soft), because the
+ * design uses solid tinted pills rather than opacity overlays. Reach for
+ * bg-success-soft text-success, never bg-success/15.
  */
 @layer base {
   /* ---- Light (default / fallback) ---- */
   :root,
   .light {
-    --background: 178 44% 96%; /* cool mint tint — on-brand teal, fresh & light */
-    --foreground: 195 45% 12%; /* deep teal-slate headings (AA on mint) */
-    --card: 0 0% 100%; /* clean #FFFFFF cards pop on mint */
-    --card-foreground: 195 45% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 195 45% 12%;
+    --background: 40 19% 94%; /* warm cream ground #F2F0EC */
+    --foreground: 206 33% 13%; /* deep navy ink #16222B */
+    --card: 45 100% 99%; /* warm off-white card #FFFEFB — reads warmer than pure white */
+    --card-foreground: 206 33% 13%;
+    --popover: 45 100% 99%;
+    --popover-foreground: 206 33% 13%;
 
-    --primary: 189 85% 28%; /* teal-blue #0B7285 */
+    --primary: 23 58% 48%; /* terracotta #C26A33 */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 189 85% 23%; /* #095C6B */
+    --primary-hover: 23 59% 45%; /* #B5622F — also the link colour */
 
-    --secondary: 180 32% 93%; /* mint-tinted neutral */
-    --secondary-foreground: 195 45% 14%;
-    --muted: 180 30% 93%;
-    --muted-foreground: 196 22% 36%; /* teal-slate secondary text (AA on mint) */
-    --accent: 184 52% 90%; /* soft mint accent */
-    --accent-foreground: 189 85% 23%;
+    --secondary: 41 30% 92%; /* warm hairline-tinted neutral #F0ECE3 */
+    --secondary-foreground: 206 33% 13%;
+    --muted: 41 30% 92%;
+    --muted-foreground: 210 13% 41%; /* slate-blue body text #5B6875 */
+    --accent: 27 70% 82%; /* peach — avatar / highlight #F1CDB0 */
+    --accent-foreground: 23 74% 27%;
 
-    --destructive: 347 77% 50%; /* rose #E11D48 */
+    /* Status ink/soft pairs come straight from the design's pill palette.
+       Each is a FOREGROUND ink + a tinted SOFT ground, not an opacity ramp —
+       the design sets solid tinted pills, so /15 overlays would miss it. */
+    --destructive: 7 72% 28%; /* #7A1F14 */
     --destructive-foreground: 0 0% 100%;
-    --success: 160 84% 39%; /* emerald #10B981 */
+    --destructive-soft: 10 70% 88%; /* #F6D3CC */
+    --success: 153 67% 18%; /* #0F4D31 */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%; /* amber #F59E0B */
-    --warning-foreground: 38 92% 12%;
+    --success-soft: 143 35% 88%; /* #D7ECDF */
+    --warning: 23 74% 27%; /* #7A3A12 */
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 28 73% 87%; /* #F6DCC6 */
 
-    --border: 184 28% 86%; /* soft mint-tinted border */
-    --input: 184 28% 86%;
-    --ring: 189 85% 28%; /* teal focus ring */
-    --radius: 0.75rem;
+    --border: 42 18% 86%; /* warm hairline #E1DDD4 */
+    --input: 42 18% 86%;
+    --ring: 23 58% 48%; /* terracotta focus ring */
+    --radius: 0.8rem; /* 16px — the design's card radius */
+
+    /* ---- v3 chrome extras ----
+       The dark sidebar is a fixed navy in BOTH themes (it is the app's
+       constant), so it gets its own tokens rather than riding on --card. */
+    --rail: 206 33% 13%; /* #16222B sidebar ground */
+    --rail-foreground: 40 19% 94%; /* #F2F0EC */
+    --rail-muted: 206 14% 70%; /* #A8B4BD */
+    --rail-faint: 207 13% 63%; /* #93A1AC */
+    /* Destructive ON the navy rail. --destructive is a deep maroon tuned for
+       tinted pills on cream; at 28% lightness it is unreadable on navy, so the
+       rail carries its own lifted red. */
+    --rail-danger: 7 72% 68%;
+
+    --chat-ground: 40 37% 95%; /* #F7F4EE conversation pane */
+    --chat-in: 45 100% 99%; /* inbound bubble */
+    --chat-in-border: 42 18% 86%;
+    --chat-out: 206 33% 13%; /* outbound bubble = navy */
+    --chat-out-foreground: 40 19% 94%;
+
+    --hairline: 41 30% 92%; /* #F0ECE3 inner rules, lighter than --border */
+    --row-hover: 40 37% 95%;
+    --avatar: 205 28% 93%; /* #E8EEF2 default avatar */
+    --quality-high: 143 39% 64%; /* #7FC79B meter */
+    --quality-med: 38 72% 59%; /* #E2A94A meter */
+
+    /* ---- Industry vertical surfaces — "workbench" design language ----
+       A DELIBERATELY SEPARATE palette from the terracotta app chrome above, per the
+       supplied reference: warm paper, near-black headings, one forest-green
+       accent, hairline rules. Scoped to the vertical screens so the rest of the
+       product is untouched. Type pairing reuses the fonts already loaded —
+       Plus Jakarta Sans (tight tracking) for headings, JetBrains Mono for
+       eyebrows, chips and prompt text. */
+    --v-paper: 60 20% 98%;          /* page ground  #FAFAF8 */
+    --v-surface: 0 0% 100%;         /* cards        #FFFFFF */
+    --v-surface-2: 60 9% 97%;       /* code / inset #F7F7F5 */
+    --v-line: 45 10% 89%;           /* hairline     #E8E7E2 */
+    --v-ink: 0 0% 6%;               /* headings     #0F0F0F */
+    --v-ink-muted: 60 4% 34%;       /* body         #59594F */
+    --v-ink-faint: 60 4% 54%;       /* eyebrows     #8C8C85 */
+    --v-accent: 158 71% 29%;        /* forest green #157F5B */
+    --v-accent-soft: 155 33% 94%;   /* active pill  #E9F5EF */
+    /* Higher cost is INFORMATION, not an error — amber, deliberately not --destructive. */
+    --cost-note: 32 85% 44%;
+
+    /* ---- Platform super-admin console ----
+       A THIRD scoped palette (after the terracotta app chrome and the vertical
+       workbench): indigo on cool paper, per the supplied super-admin design.
+       Scoped to .admin-console so it can never bleed into client screens. */
+    --a-bg: 240 33% 97%;          /* page ground   #F6F6FB */
+    --a-card: 0 0% 100%;          /* cards         #FFFFFF */
+    --a-line: 240 26% 93%;        /* hairline      #E9E9F2 */
+    --a-ink: 234 21% 15%;         /* headings      #1F2130 */
+    --a-ink-muted: 234 7% 51%;    /* body          #7A7C8C */
+    --a-ink-faint: 233 10% 67%;   /* axis/eyebrow  #A3A5B4 */
+    --a-primary: 249 74% 63%;     /* indigo        #6C5CE7 */
+    --a-primary-soft: 249 83% 96%;/* tinted chip   #F0EEFE */
+    --a-green: 160 72% 39%;       /* #1CA97B */
+    --a-green-soft: 156 55% 94%;  /* #E8F8F1 */
+    --a-red: 358 75% 59%;         /* #E5484D */
+    --a-red-soft: 0 71% 95%;      /* #FCEAEA */
+    --a-amber: 37 92% 55%;        /* #F5A623 */
+    --a-amber-soft: 39 83% 94%;   /* #FDF3E1 */
+    --a-blue: 209 70% 55%;        /* #3A8DDE */
+    --a-blue-soft: 209 71% 94%;   /* #E6F1FB */
   }
 
   /* ---- Dark (parallel) ---- */
   .dark {
-    --background: 222 47% 7%; /* premium deep slate-navy (#0A0F1C-ish) */
-    --foreground: 210 40% 99%;
-    --card: 222 33% 13%; /* elevated card → clear separation from bg */
-    --card-foreground: 210 40% 99%;
-    --popover: 222 35% 12%;
-    --popover-foreground: 210 40% 99%;
+    /* Dark is DERIVED, not supplied — the v3 artboard is light-only. Method:
+       hold the navy hue, drop lightness for grounds, and lift the terracotta
+       so it still clears AA on a dark surface (a 48% accent goes muddy there). */
+    --background: 206 30% 8%; /* deep navy ground */
+    --foreground: 40 19% 94%;
+    --card: 206 26% 12%; /* elevated card — clear step off the ground */
+    --card-foreground: 40 19% 94%;
+    --popover: 206 28% 11%;
+    --popover-foreground: 40 19% 94%;
 
-    --primary: 187 78% 58%; /* lightened teal for dark surfaces */
-    --primary-foreground: 222 47% 8%;
-    --primary-hover: 187 78% 65%;
+    --primary: 23 72% 62%; /* lifted terracotta */
+    --primary-foreground: 206 33% 10%;
+    --primary-hover: 23 76% 68%;
 
-    --secondary: 222 38% 18%;
-    --secondary-foreground: 210 40% 99%;
-    --muted: 222 38% 17%;
-    --muted-foreground: 215 28% 78%; /* brighter secondary text (AA) */
-    --accent: 222 38% 20%;
-    --accent-foreground: 187 78% 72%;
+    --secondary: 206 22% 18%;
+    --secondary-foreground: 40 19% 94%;
+    --muted: 206 22% 17%;
+    --muted-foreground: 206 14% 70%; /* #A8B4BD reads as body text on navy */
+    --accent: 206 22% 20%;
+    --accent-foreground: 27 70% 82%;
 
-    --destructive: 347 77% 58%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 160 70% 48%;
-    --success-foreground: 144 100% 6%;
-    --warning: 38 92% 58%;
-    --warning-foreground: 38 92% 12%;
+    /* Ink/soft pairs invert: the SOFT becomes a deep tint, the INK the bright one. */
+    --destructive: 7 76% 72%;
+    --destructive-foreground: 7 60% 12%;
+    --destructive-soft: 7 40% 20%;
+    --success: 150 52% 62%;
+    --success-foreground: 153 60% 10%;
+    --success-soft: 153 34% 17%;
+    --warning: 33 82% 66%;
+    --warning-foreground: 23 70% 12%;
+    --warning-soft: 26 40% 20%;
 
-    --border: 222 38% 24%; /* clearer borders between surfaces */
-    --input: 222 38% 22%;
-    --ring: 187 78% 58%;
+    --border: 206 20% 23%;
+    --input: 206 20% 21%;
+    --ring: 23 72% 62%;
+
+    /* Sidebar stays navy in dark too — it only deepens so it still separates
+       from the (now also dark) page ground. */
+    --rail: 206 34% 10%;
+    --rail-foreground: 40 19% 94%;
+    --rail-muted: 206 14% 70%;
+    --rail-faint: 207 13% 55%;
+    --rail-danger: 7 76% 72%;
+
+    --chat-ground: 206 24% 10%;
+    --chat-in: 206 22% 16%;
+    --chat-in-border: 206 20% 23%;
+    --chat-out: 23 60% 42%; /* outbound goes terracotta — navy-on-navy would vanish */
+    --chat-out-foreground: 40 30% 96%;
+
+    --hairline: 206 20% 18%;
+    --row-hover: 206 24% 15%;
+    --avatar: 206 20% 22%;
+    --quality-high: 143 39% 55%;
+    --quality-med: 38 72% 55%;
+
+    /* ---- Industry vertical surfaces (parallel to light) ----
+       Ink-on-paper inverted: near-black ground, hairlines kept thin, the same
+       single green accent lifted for contrast. */
+    --v-paper: 40 6% 7%;
+    --v-surface: 40 6% 10%;
+    --v-surface-2: 40 5% 13%;
+    --v-line: 40 5% 19%;
+    --v-ink: 60 9% 98%;
+    --v-ink-muted: 45 6% 72%;
+    --v-ink-faint: 45 5% 52%;
+    --v-accent: 158 52% 58%;
+    --v-accent-soft: 158 28% 15%;
+    --cost-note: 38 90% 62%;
+
+    /* ---- Super-admin console (parallel to light) ----
+       Same indigo identity on a deep neutral ground; accents lifted so the
+       green/red/amber signals still read on a dark surface. */
+    --a-bg: 234 24% 9%;
+    --a-card: 234 20% 14%;
+    --a-line: 234 15% 23%;
+    --a-ink: 240 20% 98%;
+    --a-ink-muted: 234 12% 70%;
+    --a-ink-faint: 234 9% 54%;
+    --a-primary: 249 84% 74%;
+    --a-primary-soft: 249 36% 23%;
+    --a-green: 160 62% 50%;
+    --a-green-soft: 160 40% 17%;
+    --a-red: 358 82% 68%;
+    --a-red-soft: 358 38% 22%;
+    --a-amber: 37 92% 62%;
+    --a-amber-soft: 37 45% 19%;
+    --a-blue: 209 78% 64%;
+    --a-blue-soft: 209 45% 21%;
   }
 }
 
@@ -93,50 +230,28 @@
     }
   }
   body {
-    @apply bg-background text-foreground;
+    /* font-sans is applied EXPLICITLY here rather than relying on Tailwind
+       preflight's html rule — that rule was not winning, leaving the whole app
+       on the serif default. */
+    @apply bg-background text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
   }
-  /* Subtle atmospheric depth so the background reads as premium, not flat.
-     Fixed so it stays put while content scrolls. */
-  .dark body {
-    background-image: radial-gradient(
-        900px circle at 12% -10%,
-        hsl(189 85% 28% / 0.10),
-        transparent 45%
-      ),
-      radial-gradient(
-        1100px circle at 100% 0%,
-        hsl(210 80% 30% / 0.08),
-        transparent 50%
-      );
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-  }
-  .light body {
-    background-image: radial-gradient(
-        1000px circle at 8% -12%,
-        hsl(184 70% 55% / 0.12),
-        transparent 48%
-      ),
-      radial-gradient(
-        1100px circle at 100% 4%,
-        hsl(195 75% 60% / 0.08),
-        transparent 50%
-      );
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-  }
-  /* Accessible focus — visible teal ring, never on mouse */
+  /* The v3 design uses a FLAT warm ground — no atmospheric glow. The previous
+     teal radial gradients are removed rather than re-hued: a gradient behind
+     cream muddies it, and the warmth is already carried by the token itself. */
+  /* Accessible focus — visible terracotta ring, never on mouse */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
 @layer components {
-  /* ---- Type scale (one scale, reused everywhere) ---- */
+  /* ---- Type scale (one scale, reused everywhere) ----
+     The design sets headings in Manrope 700/800 with tight negative tracking,
+     and every NUMBER, eyebrow and timestamp in Space Mono. */
   .text-page-title {
     @apply font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground;
   }
@@ -144,7 +259,7 @@
     @apply font-display text-xl font-bold tracking-tight text-foreground;
   }
   .text-card-title {
-    @apply text-base font-semibold text-foreground;
+    @apply text-base font-bold text-foreground;
   }
   .text-body {
     @apply text-base text-muted-foreground;
@@ -153,20 +268,37 @@
     @apply text-sm text-muted-foreground;
   }
 
-  /* ---- Surfaces (24px card padding, 8px grid) ---- */
+  /* Eyebrow — the design's small uppercase mono label above every KPI and
+     panel heading. Used everywhere a section needs a quiet title. */
+  .text-eyebrow {
+    @apply font-mono text-[0.62rem] font-normal uppercase tracking-[0.12em] text-muted-foreground;
+  }
+
+  /* Numerals — the design sets every metric, count, currency and timestamp in
+     Space Mono so figures align in columns. */
+  .text-numeric {
+    @apply font-mono tabular-nums;
+  }
+
+  /* ---- Surfaces ---- */
   .card-surface {
-    @apply bg-card border border-border rounded-xl;
+    @apply bg-card border border-border rounded-2xl;
   }
   .card-pad {
     @apply p-6;
   }
 
-  /* Brand gradient — repointed from WhatsApp green to teal-blue */
+  /* Inner rules inside a card are lighter than the card's own border. */
+  .hairline {
+    border-color: hsl(var(--hairline));
+  }
+
+  /* Brand gradient — repointed from teal-blue to the terracotta accent. */
   .wa-gradient {
-    background: linear-gradient(135deg, #0b7285 0%, #095c6b 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
   }
   .wa-gradient-text {
-    background: linear-gradient(135deg, #0b7285 0%, #095c6b 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -180,26 +312,82 @@
     -webkit-backdrop-filter: none;
   }
 
-  /* ---- Sidebar nav items ---- */
+  /* ---- Sidebar nav items ----
+     The sidebar sits on the constant navy --rail in both themes, so these
+     items are coloured from the --rail-* tokens, NOT from --foreground /
+     --muted-foreground (which flip with the theme and would go invisible). */
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-    text-muted-foreground hover:text-foreground hover:bg-accent
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold
     transition-colors duration-150 cursor-pointer;
+    color: hsl(var(--rail-muted));
+  }
+  .sidebar-item:hover {
+    color: hsl(var(--rail-foreground));
+    background-color: hsl(var(--rail-foreground) / 0.08);
   }
   .sidebar-item-active {
-    @apply bg-accent text-primary font-semibold;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  .sidebar-item-active:hover {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  /* Group labels inside the navy rail. */
+  .sidebar-label {
+    @apply font-mono text-[0.6rem] uppercase tracking-[0.14em] px-3 pb-1.5;
+    color: hsl(var(--rail-faint));
   }
 
-  /* ---- Stat card ---- */
+  /* ---- Stat card ----
+     Flat in the design: a hairline border and no shadow. The hover lift is
+     dropped because these are read, not clicked. */
   .stat-card {
-    @apply rounded-xl p-6 bg-card border border-border
-    transition-shadow duration-200 hover:shadow-md hover:shadow-slate-200/60
-    dark:hover:shadow-black/30;
+    @apply rounded-2xl p-6 bg-card border border-border;
   }
 
-  /* ---- Skeleton (theme-aware, replaces bg-white/5) ---- */
+  /* ---- Pills ----
+     The design's single most repeated shape: a fully-rounded tinted chip used
+     for status, deltas, filters and tags. */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5
+    text-xs font-bold uppercase tracking-[0.03em];
+  }
+  .pill-neutral {
+    @apply bg-secondary text-muted-foreground;
+  }
+  .pill-success {
+    background-color: hsl(var(--success-soft));
+    color: hsl(var(--success));
+  }
+  .pill-warning {
+    background-color: hsl(var(--warning-soft));
+    color: hsl(var(--warning));
+  }
+  .pill-danger {
+    background-color: hsl(var(--destructive-soft));
+    color: hsl(var(--destructive));
+  }
+
+  /* ---- Buttons ----
+     Fully-rounded in the design, filled navy for primary actions. */
+  .btn-pill {
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+    px-4 h-9 text-sm font-bold transition-colors duration-150;
+  }
+  .btn-solid {
+    @apply btn-pill bg-foreground text-background hover:opacity-90;
+  }
+  .btn-accent {
+    @apply btn-pill bg-primary text-primary-foreground hover:bg-primary-hover;
+  }
+  .btn-outline {
+    @apply btn-pill border border-border bg-card text-foreground hover:border-primary hover:text-primary;
+  }
+
+  /* ---- Skeleton (theme-aware) ---- */
   .skeleton {
-    @apply rounded-lg bg-muted animate-pulse;
+    @apply rounded-xl bg-muted animate-pulse;
   }
 
   .scrollbar-thin {
@@ -235,7 +423,7 @@
     }
   }
 
-  /* Subtle dotted grid — neutral, low-contrast (was green) */
+  /* Subtle dotted grid — neutral, low-contrast */
   .grid-bg {
     background-image: radial-gradient(
       hsl(var(--border)) 1px,

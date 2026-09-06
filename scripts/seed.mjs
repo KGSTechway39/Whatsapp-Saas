@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run: node scripts/seed.mjs
 // Seeds the database with dummy data for testing.
-// Login: admin@wasend.demo / Test@12345
+// Login: admin@sendanjal.com / Test@12345
 
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -64,7 +64,7 @@ await supabase.from("users").delete().eq("id", USER_ID);
 console.log("👤 Creating test user...");
 const { error: userErr } = await supabase.from("users").insert({
   id: USER_ID,
-  email: "admin@wasend.demo",
+  email: "admin@sendanjal.com",
   password_hash: "$2b$12$nH2GwSd0w4dLDGK0ifh6EuJRzmB6wqpPSkCoYnDLIYbVT2Zaufcl.",
   full_name: "Arjun Sharma",
   company_name: "TechSell Solutions",
@@ -191,6 +191,6 @@ if (aErr) console.error("⚠️  Analytics:", aErr.message);
 
 console.log("\n✅ Seed complete!");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-console.log("  Email   : admin@wasend.demo");
+console.log("  Email   : admin@sendanjal.com");
 console.log("  Password: Test@12345");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

@@ -44,3 +44,30 @@ export async function markEventProcessed(
   // `ignoreDuplicates` → ON CONFLICT DO NOTHING; a conflict returns no rows.
   return (data?.length ?? 0) > 0;
 }
+
+/**
+ * Undo a `markEventProcessed` so Meta's next retry re-runs the work.
+ *
+ * WHY THIS EXISTS: the webhook marks an event processed BEFORE doing the work,
+ * which is correct for concurrency — only the DB unique constraint can reject
+ * two simultaneous retries. But it means that if the work then fails, the
+ * retry is skipped and the work never happens.
+ *
+ * For billing that is a money leak: a `failed` status whose release did not
+ * run leaves the tenant's credit held against a message that never sent, and
+ * nothing will ever try again. Un-marking restores Meta's retry as the safety
+ * net it is meant to be.
+ *
+ * Safe because the work behind it is idempotent (confirmOrReleaseBilling
+ * no-ops unless message_billing.status is still 'reserved').
+ */
+export async function unmarkEvent(
+  supabase: ReturnType<typeof createServiceClient>,
+  eventKey: string,
+): Promise<void> {
+  const { error } = await supabase.from("processed_events").delete().eq("event_id", eventKey);
+  if (error) {
+    // Nothing more we can do here; the reconciliation sweep is the backstop.
+    logger.warn("dedup: could not unmark event for retry", { eventKey, error: error.message });
+  }
+}

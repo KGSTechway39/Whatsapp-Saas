@@ -62,6 +62,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     endpoint: { ...data, signing_secret: secret },
-    warning: "Save this signing secret now — it won't be shown again. Use it to verify the X-WASend-Signature header on every event.",
+    warning: "Save this signing secret now — it won't be shown again. Use it to verify the X-SendAnjal-Signature header on every event.",
   }, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { getUserTier } from "@/lib/ai/config";
 import { runTask } from "@/lib/ai/service";
+import { buildVerticalPromptContext, withVerticalContext } from "@/lib/verticals/prompt-context";
 
 // Governed via AIProviderService (task: template_content) — model/provider come
 // from ai_model_config, and every call is usage-logged. This replaces the former
@@ -97,12 +98,13 @@ Make each variation meaningfully different:
   };
 
   const tier = await getUserTier(user.id);
+  const verticalContext = await buildVerticalPromptContext(user.id);
   const result = await runTask<GenTemplate[]>({
     userId:         user.id,
     tier,
     taskType:       "template_content",
     system:         systemPrompt,
-    prompt:         userPrompt,
+    prompt:         withVerticalContext(userPrompt, verticalContext),
     maxTokens:      1500,
     idempotencyKey: `tmpl:${user.id}:${Date.now()}`, // each generation is its own action
     parse,

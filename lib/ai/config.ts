@@ -12,7 +12,17 @@ export type TaskType =
   | "automation_runtime_intent"
   | "appointment_nl_parse"
   | "reminder_draft"
-  | "template_content";
+  | "template_content"
+  /**
+   * Flow-canvas "AI Reply" node, executed by automation-flows/[id]/execute.
+   *
+   * NOT YET ROUTABLE: `ai_model_config.task_type` carries a CHECK constraint listing
+   * only the six task types above, so no config row can exist for this one until a
+   * migration widens it. `loadModelConfig` therefore returns null and `runTask`
+   * degrades to a clean `not_configured` fallback — which is the intended behaviour
+   * (and strictly safer than the ungoverned direct SDK call it replaced).
+   */
+  | "automation_ai_reply";
 
 export type Tier = "starter" | "growth" | "enterprise";
 
@@ -43,6 +53,7 @@ const TIER_TASKS: Record<Tier, ReadonlySet<TaskType>> = {
     "appointment_nl_parse",
     "automation_flow_builder", // Growth+ gets full AI access (design-time flow builder)
     "automation_runtime_intent",
+    "automation_ai_reply",
     "reminder_draft",
     "template_content",
   ]),
@@ -51,6 +62,7 @@ const TIER_TASKS: Record<Tier, ReadonlySet<TaskType>> = {
     "appointment_nl_parse",
     "automation_flow_builder",
     "automation_runtime_intent",
+    "automation_ai_reply",
     "reminder_draft",
     "template_content",
   ]),

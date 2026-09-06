@@ -123,8 +123,8 @@ export default function AnalyticsPage() {
           icon={CheckCircle2}
           trend={data.deliveryRate}
           trendLabel="delivery rate"
-          iconColor="text-emerald-400"
-          iconBg="bg-emerald-500/10"
+          iconColor="text-success"
+          iconBg="bg-success-soft"
         />
         <StatsCard
           title="Failed"
@@ -132,8 +132,8 @@ export default function AnalyticsPage() {
           icon={XCircle}
           trend={-data.failedRate}
           trendLabel="failure rate"
-          iconColor="text-red-400"
-          iconBg="bg-red-500/10"
+          iconColor="text-destructive"
+          iconBg="bg-destructive-soft"
         />
         <StatsCard
           title="Replies Received"
@@ -141,8 +141,8 @@ export default function AnalyticsPage() {
           icon={Reply}
           trend={5.2}
           trendLabel="vs last period"
-          iconColor="text-blue-400"
-          iconBg="bg-blue-500/10"
+          iconColor="text-primary"
+          iconBg="bg-accent"
         />
       </div>
 
@@ -236,11 +236,11 @@ export default function AnalyticsPage() {
                   <td className="px-5 py-4 text-sm">{camp.sent.toLocaleString()}</td>
                   <td className="px-5 py-4">
                     <div>
-                      <span className="text-sm text-emerald-400">{camp.delivered.toLocaleString()}</span>
+                      <span className="text-sm text-success">{camp.delivered.toLocaleString()}</span>
                       <span className="text-xs text-muted-foreground ml-1">({calculatePercentage(camp.delivered, camp.sent)}%)</span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-sm text-red-400">{camp.failed}</td>
+                  <td className="px-5 py-4 text-sm text-destructive">{camp.failed}</td>
                   <td className="px-5 py-4 text-sm">{camp.read.toLocaleString()}</td>
                   <td className="px-5 py-4 text-sm font-medium">{formatCurrency(camp.cost)}</td>
                 </tr>
@@ -270,8 +270,8 @@ export default function AnalyticsPage() {
                 <tr key={num.numberId} className="border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="px-5 py-4 text-sm font-medium">{num.phoneNumber}</td>
                   <td className="px-5 py-4 text-sm">{num.sent.toLocaleString()}</td>
-                  <td className="px-5 py-4 text-sm text-emerald-400">{num.delivered.toLocaleString()}</td>
-                  <td className="px-5 py-4 text-sm text-red-400">{num.failed}</td>
+                  <td className="px-5 py-4 text-sm text-success">{num.delivered.toLocaleString()}</td>
+                  <td className="px-5 py-4 text-sm text-destructive">{num.failed}</td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
@@ -280,7 +280,7 @@ export default function AnalyticsPage() {
                           style={{ width: `${calculatePercentage(num.delivered, num.sent)}%` }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-emerald-400">
+                      <span className="text-xs font-medium text-success">
                         {calculatePercentage(num.delivered, num.sent)}%
                       </span>
                     </div>

@@ -16,6 +16,7 @@
 import { createHash } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/crypto";
+import { deriveNumberStatus } from "./number-status";
 import type { MetaPhoneNumber, MetaWaba } from "@/lib/meta-client";
 
 type SupabaseClient = ReturnType<typeof createServiceClient>;
@@ -77,7 +78,10 @@ export async function saveAccount(
   const displayPhone = args.phone.display_phone_number || args.phone.id;
   const displayName =
     args.phone.verified_name || args.waba.name || displayPhone;
-  const status = args.phone.status === "VERIFIED" ? "active" : "inactive";
+  // Meta's `status` (CONNECTED/PENDING/…) — NOT `code_verification_status`
+  // (VERIFIED/…). Conflating the two marked every connected number inactive.
+  // See lib/whatsapp/number-status.ts.
+  const status = deriveNumberStatus(args.phone.status, args.phone.code_verification_status);
 
   // Encrypt the token at rest. Send paths decrypt on read.
   const encryptedToken = await encrypt(args.accessToken);

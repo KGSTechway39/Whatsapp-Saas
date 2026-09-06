@@ -16,7 +16,7 @@ const PLANS = [
     id: "free",
     tier: "free",
     name: "Free",
-    description: "Try out WASend",
+    description: "Try out SendAnjal",
     monthlyPrice: 0,
     yearlyPrice: 0,
     badge: null as string | null,
@@ -44,7 +44,7 @@ const PLANS = [
     icon: Zap as React.ElementType | null,
     iconColor: "text-primary",
     borderClass: "border-primary/40 shadow-xl shadow-primary/10",
-    ctaClass: "wa-gradient text-white hover:opacity-90 shadow-lg shadow-primary/25",
+    ctaClass: "wa-gradient text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/25",
     ctaTextClass: "text-white",
     limits: {
       numbers: 1, messages: 5000, templates: 20,
@@ -71,9 +71,9 @@ const PLANS = [
     badge: "Best Value" as string | null,
     highlight: false,
     icon: Sparkles as React.ElementType | null,
-    iconColor: "text-violet-400",
-    borderClass: "border-violet-500/30",
-    ctaClass: "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-500/20",
+    iconColor: "text-primary",
+    borderClass: "border-primary/25",
+    ctaClass: "bg-primary text-primary-foreground hover:bg-primary shadow-lg shadow-primary",
     ctaTextClass: "text-white",
     limits: {
       numbers: 2, messages: 25000, templates: 50,
@@ -101,10 +101,10 @@ const PLANS = [
     badge: null as string | null,
     highlight: false,
     icon: Crown as React.ElementType | null,
-    iconColor: "text-amber-400",
-    borderClass: "border-amber-500/30",
-    ctaClass: "bg-amber-500 text-black hover:bg-amber-400 shadow-lg shadow-amber-500/20",
-    ctaTextClass: "text-black",
+    iconColor: "text-warning",
+    borderClass: "border-warning/25",
+    ctaClass: "bg-warning text-foreground hover:bg-warning shadow-lg shadow-warning",
+    ctaTextClass: "text-foreground",
     limits: {
       numbers: 5, messages: 100000, templates: -1,
       campaigns: -1, teamMembers: 10, apiAccess: true, whiteLabel: true,
@@ -182,7 +182,7 @@ function UsageBar({ label, used, limit, percent }: { label: string; used: number
       <div className="h-1.5 bg-muted/50 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
-            percent >= 90 ? "bg-red-500" : percent >= 70 ? "bg-amber-500" : "bg-gradient-to-r from-primary to-emerald-500"
+            percent >= 90 ? "bg-destructive" : percent >= 70 ? "bg-warning" : "bg-gradient-to-r from-primary to-success-soft"
           }`}
           style={{ width: isUnlimited ? "15%" : `${Math.max(2, percent)}%` }}
         />
@@ -266,9 +266,9 @@ export default function PlansPage() {
 
       {/* Cancellation alert */}
       {cancelAtEnd && periodEnd && (
-        <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-          <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-300">
+        <div className="flex items-start gap-3 bg-warning-soft border border-warning/25 rounded-xl p-4">
+          <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-warning">
             Your subscription is cancelled and will end on{" "}
             <strong>
               {new Date(periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
@@ -289,8 +289,8 @@ export default function PlansPage() {
                   {PLANS.find((p) => p.tier === currentTier)?.name} Plan
                 </p>
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                  planStatus === "active" ? "bg-emerald-500/15 text-emerald-400" :
-                  planStatus === "past_due" ? "bg-red-500/15 text-red-400" :
+                  planStatus === "active" ? "bg-success-soft text-success" :
+                  planStatus === "past_due" ? "bg-destructive-soft text-destructive" :
                   "bg-muted text-muted-foreground"
                 }`}>
                   {planStatus}
@@ -318,7 +318,7 @@ export default function PlansPage() {
           onClick={() => setYearly((v) => !v)}
           className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${yearly ? "bg-primary" : "bg-muted"}`}
         >
-          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-300 ${yearly ? "translate-x-7" : "translate-x-1"}`} />
+          <div className={`absolute top-1 w-4 h-4 bg-card rounded-full shadow-md transition-transform duration-300 ${yearly ? "translate-x-7" : "translate-x-1"}`} />
         </button>
         <span className={`text-sm font-medium ${yearly ? "text-foreground" : "text-muted-foreground"}`}>
           Yearly
@@ -345,9 +345,9 @@ export default function PlansPage() {
               {/* Badge */}
               {plan.badge && (
                 <div className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${
-                  plan.tier === "starter" ? "wa-gradient text-white shadow-lg shadow-primary/30" :
-                  plan.tier === "growth"  ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30" :
-                  "bg-amber-500 text-black"
+                  plan.tier === "starter" ? "wa-gradient text-primary-foreground shadow-lg shadow-primary/30" :
+                  plan.tier === "growth"  ? "bg-primary text-primary-foreground shadow-lg shadow-primary" :
+                  "bg-warning text-foreground"
                 }`}>
                   <Sparkles className="w-3 h-3" />
                   {plan.badge}

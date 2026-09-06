@@ -1,5 +1,5 @@
 -- =====================================================
--- WASend Model B — Row Level Security Policies
+-- SendAnjal Model B — Row Level Security Policies
 -- Run AFTER 001_model_b_schema.sql
 --
 -- PREREQUISITE: For auth.uid() to return your custom JWT user ID,

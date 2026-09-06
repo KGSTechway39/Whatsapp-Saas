@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { RecommendedFlows } from "@/components/verticals/Recommendations";
 
 // ─── Visual flows types ───────────────────────────────────────────────────────
 interface AutomationFlow {
@@ -28,39 +29,39 @@ interface AutomationFlow {
 }
 
 const FLOW_TRIGGER_META: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  keyword:       { label: "Keyword Match",    icon: MessageSquare, color: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/20" },
-  new_contact:   { label: "New Contact",      icon: UserCheck,     color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20"   },
-  webhook:       { label: "Webhook",          icon: Globe,         color: "text-slate-400",   bg: "bg-slate-500/10 border-slate-500/20"  },
-  schedule:      { label: "Schedule",         icon: Calendar,      color: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/20"    },
-  contact_tagged:{ label: "Contact Tagged",   icon: Tag,           color: "text-pink-400",    bg: "bg-pink-500/10 border-pink-500/20"    },
-  opt_in:        { label: "Contact Opt-in",   icon: Bell,          color: "text-teal-400",    bg: "bg-teal-500/10 border-teal-500/20"    },
+  keyword:       { label: "Keyword Match",    icon: MessageSquare, color: "text-primary",  bg: "bg-accent border-primary/25" },
+  new_contact:   { label: "New Contact",      icon: UserCheck,     color: "text-primary",    bg: "bg-accent border-primary/25"   },
+  webhook:       { label: "Webhook",          icon: Globe,         color: "text-muted-foreground",   bg: "bg-muted border-border"  },
+  schedule:      { label: "Schedule",         icon: Calendar,      color: "text-primary",    bg: "bg-accent border-primary/25"    },
+  contact_tagged:{ label: "Contact Tagged",   icon: Tag,           color: "text-primary",    bg: "bg-accent border-primary/25"    },
+  opt_in:        { label: "Contact Opt-in",   icon: Bell,          color: "text-success",    bg: "bg-success-soft border-success/25"    },
 };
 
 // ─── Trigger & action meta ─────────────────────────────────────────────────────
 const TRIGGER_META: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  new_contact:    { label: "New Contact Added",     icon: UserCheck,    color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20" },
-  keyword:        { label: "Keyword Received",       icon: MessageSquare,color: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/20" },
-  button_click:   { label: "Button / Quick Reply",   icon: Zap,          color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
-  inactivity:     { label: "Contact Inactivity",     icon: Clock,        color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/20" },
-  date_based:     { label: "Scheduled Date & Time",  icon: Calendar,     color: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/20" },
-  birthday:       { label: "Birthday / Anniversary", icon: Gift,         color: "text-pink-400",    bg: "bg-pink-500/10 border-pink-500/20" },
-  tag_applied:    { label: "Tag Applied",            icon: Tag,          color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-  payment:        { label: "Payment Received",       icon: CreditCard,   color: "text-green-400",   bg: "bg-green-500/10 border-green-500/20" },
-  order_placed:   { label: "Order Placed",           icon: ShoppingCart, color: "text-indigo-400",  bg: "bg-indigo-500/10 border-indigo-500/20" },
-  opt_in:         { label: "Contact Opt-in",         icon: Bell,         color: "text-teal-400",    bg: "bg-teal-500/10 border-teal-500/20" },
-  webhook:        { label: "Incoming Webhook",       icon: Globe,        color: "text-slate-400",   bg: "bg-slate-500/10 border-slate-500/20" },
+  new_contact:    { label: "New Contact Added",     icon: UserCheck,    color: "text-primary",    bg: "bg-accent border-primary/25" },
+  keyword:        { label: "Keyword Received",       icon: MessageSquare,color: "text-primary",  bg: "bg-accent border-primary/25" },
+  button_click:   { label: "Button / Quick Reply",   icon: Zap,          color: "text-warning",   bg: "bg-warning-soft border-warning/25" },
+  inactivity:     { label: "Contact Inactivity",     icon: Clock,        color: "text-warning",  bg: "bg-warning-soft border-warning/25" },
+  date_based:     { label: "Scheduled Date & Time",  icon: Calendar,     color: "text-primary",    bg: "bg-accent border-primary/25" },
+  birthday:       { label: "Birthday / Anniversary", icon: Gift,         color: "text-primary",    bg: "bg-accent border-primary/25" },
+  tag_applied:    { label: "Tag Applied",            icon: Tag,          color: "text-success", bg: "bg-success-soft border-success/25" },
+  payment:        { label: "Payment Received",       icon: CreditCard,   color: "text-success",   bg: "bg-success-soft border-success/25" },
+  order_placed:   { label: "Order Placed",           icon: ShoppingCart, color: "text-primary",  bg: "bg-accent border-primary/25" },
+  opt_in:         { label: "Contact Opt-in",         icon: Bell,         color: "text-success",    bg: "bg-success-soft border-success/25" },
+  webhook:        { label: "Incoming Webhook",       icon: Globe,        color: "text-muted-foreground",   bg: "bg-muted border-border" },
 };
 
 const ACTION_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  send_template:    { label: "Send Template",        icon: MessageSquare, color: "text-emerald-400" },
-  send_text:        { label: "Send Text Message",    icon: MessageSquare, color: "text-emerald-400" },
-  add_to_group:     { label: "Add to Group",         icon: Users,         color: "text-blue-400" },
-  remove_from_group:{ label: "Remove from Group",    icon: Users,         color: "text-red-400" },
-  apply_tag:        { label: "Apply Tag",            icon: Tag,           color: "text-violet-400" },
-  remove_tag:       { label: "Remove Tag",           icon: Tag,           color: "text-orange-400" },
-  wait_then_send:   { label: "Wait then Send",       icon: Clock,         color: "text-amber-400" },
-  follow_up_seq:    { label: "Follow-up Sequence",   icon: Repeat,        color: "text-cyan-400" },
-  send_webhook:     { label: "Send to Webhook",      icon: Globe,         color: "text-slate-400" },
+  send_template:    { label: "Send Template",        icon: MessageSquare, color: "text-success" },
+  send_text:        { label: "Send Text Message",    icon: MessageSquare, color: "text-success" },
+  add_to_group:     { label: "Add to Group",         icon: Users,         color: "text-primary" },
+  remove_from_group:{ label: "Remove from Group",    icon: Users,         color: "text-destructive" },
+  apply_tag:        { label: "Apply Tag",            icon: Tag,           color: "text-primary" },
+  remove_tag:       { label: "Remove Tag",           icon: Tag,           color: "text-warning" },
+  wait_then_send:   { label: "Wait then Send",       icon: Clock,         color: "text-warning" },
+  follow_up_seq:    { label: "Follow-up Sequence",   icon: Repeat,        color: "text-primary" },
+  send_webhook:     { label: "Send to Webhook",      icon: Globe,         color: "text-muted-foreground" },
 };
 
 // ─── Pre-built recipe templates ────────────────────────────────────────────────
@@ -140,12 +141,12 @@ const RECIPES = [
 ];
 
 const RECIPE_CATEGORY_COLORS: Record<string, string> = {
-  Engagement:     "bg-blue-500/10 text-blue-400",
-  Authentication: "bg-amber-500/10 text-amber-400",
-  "E-commerce":   "bg-emerald-500/10 text-emerald-400",
-  Support:        "bg-violet-500/10 text-violet-400",
-  Retention:      "bg-orange-500/10 text-orange-400",
-  Segmentation:   "bg-pink-500/10 text-pink-400",
+  Engagement:     "bg-accent text-primary",
+  Authentication: "bg-warning-soft text-warning",
+  "E-commerce":   "bg-success-soft text-success",
+  Support:        "bg-accent text-primary",
+  Retention:      "bg-warning-soft text-warning",
+  Segmentation:   "bg-accent text-primary",
 };
 
 export default function AutomationPage() {
@@ -219,20 +220,25 @@ export default function AutomationPage() {
         action={
           <Link
             href="/automation/create"
-            className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+            className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
           >
             <Plus className="w-4 h-4" /> New Flow
           </Link>
         }
       />
 
+      {/* Ready-made automations for this client's industry — ABOVE the blank
+          canvas, so the assisted path reads as the easy one. Renders nothing
+          when no industry is set. */}
+      <RecommendedFlows className="mb-6" />
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Visual Flows",     value: flows.length,   icon: GitBranch, color: "text-primary",      bg: "bg-primary/10"        },
-          { label: "Active Flows",     value: activeFlows,    icon: Play,      color: "text-emerald-400",  bg: "bg-emerald-500/10"    },
-          { label: "Total Triggered",  value: totalTriggers,  icon: BarChart3, color: "text-violet-400",   bg: "bg-violet-500/10"     },
-          { label: "Simple Rules",     value: automationList.length, icon: Zap, color: "text-amber-400",  bg: "bg-amber-500/10"      },
+          { label: "Active Flows",     value: activeFlows,    icon: Play,      color: "text-success",  bg: "bg-success-soft"    },
+          { label: "Total Triggered",  value: totalTriggers,  icon: BarChart3, color: "text-primary",   bg: "bg-accent"     },
+          { label: "Simple Rules",     value: automationList.length, icon: Zap, color: "text-warning",  bg: "bg-warning-soft"      },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-card rounded-2xl border border-border/50 p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
@@ -277,7 +283,7 @@ export default function AutomationPage() {
               <p className="text-sm text-muted-foreground mb-6">Build powerful multi-step automation flows with the visual editor</p>
               <Link
                 href="/automation/create"
-                className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+                className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
               >
                 <Plus className="w-4 h-4" /> Build Your First Flow
               </Link>
@@ -309,7 +315,7 @@ export default function AutomationPage() {
                       </div>
                       <button
                         onClick={() => toggleFlowActive(flow.id)}
-                        className={`flex-shrink-0 ml-2 ${flow.is_active ? "text-emerald-400" : "text-muted-foreground"}`}
+                        className={`flex-shrink-0 ml-2 ${flow.is_active ? "text-success" : "text-muted-foreground"}`}
                         title={flow.is_active ? "Pause flow" : "Activate flow"}
                       >
                         {flow.is_active
@@ -332,7 +338,7 @@ export default function AutomationPage() {
                       </div>
                       <div className="bg-muted/20 rounded-lg p-2.5 text-center">
                         <p className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block ${
-                          flow.is_active ? "bg-emerald-500/15 text-emerald-400" : "bg-muted text-muted-foreground"
+                          flow.is_active ? "bg-success-soft text-success" : "bg-muted text-muted-foreground"
                         }`}>
                           {flow.is_active ? "● Active" : "⏸ Paused"}
                         </p>
@@ -356,9 +362,9 @@ export default function AutomationPage() {
                       </Link>
                       <button
                         onClick={() => deleteFlow(flow.id)}
-                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors border border-border/50"
+                        className="p-2 rounded-lg hover:bg-destructive-soft transition-colors border border-border/50"
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </button>
                     </div>
                   </div>
@@ -419,7 +425,7 @@ export default function AutomationPage() {
                       auto.isActive ? "bg-primary" : "bg-muted"
                     }`}
                   >
-                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-card shadow transition-all duration-300 ${
                       auto.isActive ? "left-6" : "left-1"
                     }`} />
                   </button>
@@ -444,10 +450,10 @@ export default function AutomationPage() {
                     <div className="h-px flex-1 bg-border/50" />
                   </div>
 
-                  <div className="flex items-center gap-2.5 p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20">
+                  <div className="flex items-center gap-2.5 p-3 rounded-xl border bg-success-soft border-success/25">
                     <AIcon className={`w-3.5 h-3.5 flex-shrink-0 ${actionMeta.color}`} />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-400">Action</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-success">Action</p>
                       <p className="text-xs font-medium truncate">{actionMeta.label}</p>
                       {(auto.action as { delayHours?: number }).delayHours != null && (
                         <p className="text-[11px] text-muted-foreground">After {(auto.action as { delayHours?: number }).delayHours}h</p>
@@ -459,7 +465,7 @@ export default function AutomationPage() {
                 {/* Footer */}
                 <div className="flex items-center gap-2 pt-3 border-t border-border/30">
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    auto.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-muted/50 text-muted-foreground"
+                    auto.isActive ? "bg-success-soft text-success" : "bg-muted/50 text-muted-foreground"
                   }`}>
                     {auto.isActive ? "● Active" : "⏸ Paused"}
                   </span>
@@ -472,9 +478,9 @@ export default function AutomationPage() {
                     </Link>
                     <button
                       onClick={() => handleDelete(auto.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-destructive-soft transition-colors"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
                   </div>
                 </div>
@@ -542,7 +548,7 @@ export default function AutomationPage() {
                       {triggerMeta.label}
                     </div>
                     <ArrowRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/10 border border-emerald-500/20 ${actionMeta.color}`}>
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-success-soft border border-success/25 ${actionMeta.color}`}>
                       <AIcon className="w-3 h-3" />
                       {actionMeta.label}
                     </div>
@@ -551,7 +557,7 @@ export default function AutomationPage() {
                   <div className="mt-auto">
                     <Link
                       href={`/automation/create?recipe=${recipe.id}`}
-                      className="w-full flex items-center justify-center gap-2 wa-gradient text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all"
+                      className="w-full flex items-center justify-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all"
                     >
                       <Zap className="w-4 h-4" /> Use This Recipe
                     </Link>

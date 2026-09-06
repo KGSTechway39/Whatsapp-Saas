@@ -1,22 +1,22 @@
-# WASend — WhatsApp Business SaaS Platform
+# SendAnjal — WhatsApp Business SaaS Platform
 
 ## What is this project?
 
-WASend is a **multi-tenant WhatsApp Business API SaaS** for the Indian market. WASend
+SendAnjal is a **multi-tenant WhatsApp Business API SaaS** for the Indian market. SendAnjal
 operates as a **Meta Tech Provider / BSP**: it onboards small businesses onto the
 WhatsApp Business API, routes their messaging, and bills them — so clients never touch
-Meta's technical complexity. Think "Mailchimp for WhatsApp", but where WASend is also
+Meta's technical complexity. Think "Mailchimp for WhatsApp", but where SendAnjal is also
 the telecom-style intermediary that fronts Meta.
 
 > **Read the skills first.** Deep domain rules live in `.claude/skills/`. Always read
-> `wasend-core` before touching any code, plus the relevant skill for the area:
+> `sendanjal-core` before touching any code, plus the relevant skill for the area:
 > `messaging`, `billing-wallet`, `onboarding-signup`, `webhooks-automation`,
 > `integrations`. Those skills — not this file — are the source of truth for the
 > non-negotiable rules.
 
 ---
 
-## The Laws (from `wasend-core` — violating any is a bug even if tests pass)
+## The Laws (from `sendanjal-core` — violating any is a bug even if tests pass)
 
 1. **Multi-tenant isolation is sacred** — every client-data table is tenant-scoped;
    never query across tenants.
@@ -77,7 +77,7 @@ npm run dev          # http://localhost:3000
 npm run check        # production-readiness gate (tsc, lint, build, audit) — scripts/production-check.sh
 ```
 
-**Test login:** `admin@wasend.demo` / `Test@12345`
+**Test login:** `admin@sendanjal.com` / `Test@12345`
 (`DEV_AUTO_LOGIN=1` enables a dev bypass via `/api/auth/dev-login`.)
 
 ---
@@ -117,7 +117,7 @@ RAZORPAY_KEY_ID=... / RAZORPAY_KEY_SECRET=... / RAZORPAY_WEBHOOK_SECRET=...
 RAZORPAY_PLAN_STARTER_MONTHLY / _YEARLY, RAZORPAY_PLAN_GROWTH_MONTHLY / _YEARLY, RAZORPAY_PLAN_PRO_MONTHLY / _YEARLY
 
 # ── Email (optional) ──
-RESEND_API_KEY=re_... / EMAIL_FROM="WASend <noreply@yourdomain.com>"
+RESEND_API_KEY=re_... / EMAIL_FROM="SendAnjal <noreply@yourdomain.com>"
 ```
 
 ---

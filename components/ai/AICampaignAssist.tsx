@@ -12,6 +12,7 @@ import { Sparkles, ChevronDown, Loader2, Wand2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AICreditsIndicator } from "./AICreditsIndicator";
+import { RecommendedCampaignPrompts } from "@/components/verticals/Recommendations";
 
 export interface CampaignDraft {
   campaignName: string;
@@ -79,26 +80,30 @@ export function AICampaignAssist({ onApply }: { onApply: (draft: CampaignDraft) 
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/50 dark:border-violet-900/40 dark:bg-violet-950/20">
+    <div className="mb-6 rounded-xl border border-primary/25 bg-accent dark:border-primary/25 dark:bg-accent">
       {/* Header — secondary affordance, manual form remains the default below */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="inline-flex items-center gap-2 text-sm font-medium text-violet-800 dark:text-violet-200">
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-primary dark:text-primary">
           <Sparkles className="h-4 w-4" />
           Generate with AI
-          <span className="text-xs font-normal text-violet-500 dark:text-violet-400">optional — pre-fills the form below</span>
+          <span className="text-xs font-normal text-primary dark:text-primary">optional — pre-fills the form below</span>
         </span>
         <span className="inline-flex items-center gap-3">
           <AICreditsIndicator />
-          <ChevronDown className={cn("h-4 w-4 text-violet-500 transition-transform", open && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-primary transition-transform", open && "rotate-180")} />
         </span>
       </button>
 
       {open && (
-        <div className="space-y-3 border-t border-violet-200/70 px-4 py-4 dark:border-violet-900/40">
+        <div className="space-y-3 border-t border-primary/25 px-4 py-4 dark:border-primary/25">
+          {/* Industry suggestions. Renders nothing when the client has no
+              industry set — the manual box below is always the same. */}
+          <RecommendedCampaignPrompts onPick={setGoal} />
+
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="sm:col-span-2 block text-sm">
               <span className="mb-1 block text-xs font-medium text-muted-foreground">Campaign goal</span>
@@ -138,7 +143,7 @@ export function AICampaignAssist({ onApply }: { onApply: (draft: CampaignDraft) 
               type="button"
               onClick={() => generate(false)}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary disabled:opacity-60"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
               Generate draft <span className="text-xs opacity-80">(1 credit)</span>
@@ -146,9 +151,9 @@ export function AICampaignAssist({ onApply }: { onApply: (draft: CampaignDraft) 
           )}
 
           {draft && (
-            <div className="rounded-lg border border-violet-300 bg-white p-3 dark:border-violet-800 dark:bg-violet-950/30">
+            <div className="rounded-lg border border-primary/25 bg-card p-3 dark:border-primary/25 dark:bg-accent">
               {/* Draft label — reads as a suggestion until applied (rule) */}
-              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary dark:bg-accent dark:text-primary">
                 <Sparkles className="h-3 w-3" /> AI-generated — review before sending
               </div>
               <p className="text-xs font-medium text-muted-foreground">Name</p>
@@ -165,7 +170,7 @@ export function AICampaignAssist({ onApply }: { onApply: (draft: CampaignDraft) 
                 <button
                   type="button"
                   onClick={() => { onApply(draft); toast.success("Draft applied — review and edit below"); }}
-                  className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary"
                 >
                   Use this draft
                 </button>

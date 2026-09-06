@@ -21,7 +21,6 @@ import {
   UsersRound,
   LogOut,
   ChevronDown,
-  MessageCircle,
   X,
   Target,
   CalendarDays,
@@ -31,7 +30,14 @@ import {
   Facebook,
   Filter,
   ShoppingBag,
+  Package,
+  ShoppingCart,
   KeyRound,
+  ShieldCheck,
+  Building2,
+  Headset,
+  Layers,
+  ClipboardList,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -101,7 +107,15 @@ const navItems: NavItem[] = [
   },
   { label: "Analytics", href: "/analytics", icon: BarChart3   },
   { label: "Ads ROI",   href: "/ads",       icon: Facebook    },
-  { label: "Catalog",   href: "/catalog",   icon: ShoppingBag },
+  {
+    label: "Catalog",
+    icon: ShoppingBag,
+    children: [
+      { label: "Products",         href: "/catalog",         icon: Package },
+      { label: "Orders",           href: "/catalog/orders",  icon: ShoppingCart },
+      { label: "Catalog Settings", href: "/catalog/connect", icon: Settings },
+    ],
+  },
   {
     label: "Billing",
     icon: Wallet,
@@ -121,6 +135,30 @@ const navItems: NavItem[] = [
   },
 ];
 
+/**
+ * Platform-admin nav, appended only when /api/auth/me reports isAdmin.
+ *
+ * These pages already existed and worked — they were simply unreachable, because
+ * nothing in the nav linked to them. Hiding the section is presentation only:
+ * every /api/admin/* route independently enforces requireAdmin() server-side, so
+ * a non-admin who guesses the URL still gets nothing.
+ */
+const adminNavItem: NavItem = {
+  label: "Platform Admin",
+  icon: ShieldCheck,
+  children: [
+    { label: "Overview", href: "/admin", icon: LayoutDashboard },
+    { label: "Support & Ops", href: "/admin/ops", icon: Headset },
+    // Tenants is the directory (find anyone, assign their industry); Tier is the
+    // single-tenant billing switch. Directory first — it's the way in.
+    { label: "Tenants", href: "/admin/tenants", icon: Building2 },
+    { label: "Industries", href: "/admin/industries", icon: Layers },
+    { label: "Tier & Billing", href: "/admin/tier", icon: CreditCard },
+    { label: "Rates & Margin", href: "/admin/rates", icon: Wallet },
+    { label: "Audit Logs", href: "/admin/audit", icon: ClipboardList },
+  ],
+};
+
 interface SidebarProps {
   isOpen: boolean;
   onClose?: () => void;
@@ -133,12 +171,16 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
   const router = useRouter();
   const [openMenus, setOpenMenus] = useState<string[]>([
     "WhatsApp Numbers", "Contacts", "Templates", "Campaigns",
-    "Automation", "Appointments", "Billing", "Settings",
+    "Automation", "Appointments", "Catalog", "Billing", "Settings",
+    // Every other group is expanded by default; keep Platform Admin consistent so
+    // its links are visible rather than hidden behind an extra click.
+    "Platform Admin",
   ]);
   const [userName, setUserName] = useState("Account");
-  const [userCompany, setUserCompany] = useState("WASend");
+  const [userCompany, setUserCompany] = useState("SendAnjal");
   const [userInitials, setUserInitials] = useState("WA");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -147,14 +189,17 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
         if (data.id) {
           const name = data.name || data.email || "Account";
           setUserName(name);
-          setUserCompany(data.company || "WASend");
+          setUserCompany(data.company || "SendAnjal");
           setUserInitials(
             name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
           );
+          setIsAdmin(data.isAdmin === true);
         }
       })
       .catch(() => {});
   }, []);
+
+  const visibleNavItems = isAdmin ? [...navItems, adminNavItem] : navItems;
 
   const toggleMenu = (label: string) => {
     if (collapsed) { onCollapsedChange(false); return; }
@@ -169,9 +214,17 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
     router.push("/login");
   };
 
+  /**
+   * A link is active on its own page and on pages beneath it — EXCEPT where a
+   * sibling lives underneath it. "/catalog" (Products) has "/catalog/orders"
+   * and "/catalog/connect" as siblings, so a plain startsWith would light up
+   * Products while you're on Orders. Those parents match exactly.
+   */
+  const EXACT_ONLY = new Set(["/dashboard", "/catalog", "/admin", "/contacts", "/templates", "/campaigns"]);
+
   const isActive = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard";
-    return pathname.startsWith(href);
+    if (EXACT_ONLY.has(href)) return pathname === href;
+    return pathname === href || pathname.startsWith(href + "/");
   };
 
   const sidebarWidth = collapsed ? "w-[60px]" : "w-64";
@@ -189,17 +242,20 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
         animate={{ width: collapsed ? 60 : 256 }}
         transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
         className={cn(
-          "fixed top-0 left-0 h-full bg-card border-r border-border/50 z-40",
+          // The rail is a constant navy in BOTH themes — bg-rail, not bg-card.
+          "fixed top-0 left-0 h-full bg-rail z-40",
           "flex flex-col transition-transform duration-300 ease-in-out overflow-hidden",
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-3.5 border-b border-border/50 flex-shrink-0">
+        <div className="flex items-center justify-between h-16 px-3.5 border-b border-rail-foreground/10 flex-shrink-0">
           <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg wa-gradient flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-4 h-4 text-white" fill="white" />
+            {/* Solid terracotta tile with the wordmark's initial — the design's
+                logo lockup, replacing the old gradient + chat glyph. */}
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-primary-foreground font-extrabold text-base leading-none">S</span>
             </div>
             <AnimatePresence>
               {!collapsed && (
@@ -208,15 +264,15 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
                   animate={{ opacity: 1, width: "auto" }}
                   exit={{ opacity: 0, width: 0 }}
                   transition={{ duration: 0.18 }}
-                  className="font-bold text-lg tracking-tight overflow-hidden whitespace-nowrap"
+                  className="font-extrabold text-lg tracking-tight overflow-hidden whitespace-nowrap text-rail-foreground"
                 >
-                  WASend
+                  SendAnjal
                 </motion.span>
               )}
             </AnimatePresence>
           </Link>
           {onClose && (
-            <button onClick={onClose} className="lg:hidden p-1 rounded-md hover:bg-accent">
+            <button onClick={onClose} className="lg:hidden p-1 rounded-md text-rail-muted hover:bg-rail-foreground/10">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -224,7 +280,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin px-2 py-3 space-y-0.5">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             if (item.href) {
               const active = isActive(item.href);
               return (
@@ -243,7 +299,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
                     <div className="relative flex-shrink-0">
                       <item.icon className="w-4 h-4" />
                       {item.badge && item.badge > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full text-[9px] font-bold text-primary-foreground flex items-center justify-center">
                           {item.badge}
                         </span>
                       )}
@@ -264,7 +320,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
                   </Link>
                   {/* Collapsed tooltip */}
                   {collapsed && hoveredItem === item.label && (
-                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-popover border border-border rounded-lg text-xs font-medium whitespace-nowrap z-50 pointer-events-none shadow-xl">
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-popover text-popover-foreground border border-border rounded-xl text-xs font-bold whitespace-nowrap z-50 pointer-events-none shadow-xl">
                       {item.label}
                       {item.badge ? ` (${item.badge})` : ""}
                     </div>
@@ -284,7 +340,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
                   onMouseLeave={() => setHoveredItem(null)}
                   className={cn(
                     "sidebar-item w-full",
-                    hasActiveChild && "text-primary",
+                    hasActiveChild && "text-rail-foreground",
                     collapsed && "justify-center px-0"
                   )}
                 >
@@ -314,7 +370,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
 
                 {/* Collapsed tooltip */}
                 {collapsed && hoveredItem === item.label && (
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-popover border border-border rounded-lg text-xs font-medium whitespace-nowrap z-50 pointer-events-none shadow-xl">
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-popover text-popover-foreground border border-border rounded-xl text-xs font-bold whitespace-nowrap z-50 pointer-events-none shadow-xl">
                     {item.label}
                   </div>
                 )}
@@ -328,7 +384,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
                       transition={{ duration: 0.18, ease: "easeInOut" }}
                       className="overflow-hidden"
                     >
-                      <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border/40 pl-3">
+                      <div className="ml-4 mt-0.5 space-y-0.5 border-l border-rail-foreground/15 pl-3">
                         {item.children.map((child) => (
                           <Link
                             key={child.href}
@@ -353,11 +409,11 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
         </nav>
 
         {/* Footer */}
-        <div className="p-2 border-t border-border/50 flex-shrink-0 space-y-1">
+        <div className="p-2 border-t border-rail-foreground/10 flex-shrink-0 space-y-1">
           {/* Collapse toggle — desktop only */}
           <button
             onClick={() => onCollapsedChange(!collapsed)}
-            className="hidden lg:flex sidebar-item w-full text-muted-foreground hover:text-foreground"
+            className="hidden lg:flex sidebar-item w-full"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
@@ -378,10 +434,10 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
           </button>
 
           <div className={cn(
-            "flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-accent transition-colors",
+            "flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-rail-foreground/8 transition-colors",
             collapsed && "justify-center px-0"
           )}>
-            <div className="w-8 h-8 rounded-full wa-gradient flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-rail-foreground/15 flex items-center justify-center text-xs font-bold text-rail-foreground flex-shrink-0">
               {userInitials}
             </div>
             <AnimatePresence>
@@ -392,8 +448,8 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
                   exit={{ opacity: 0 }}
                   className="flex-1 min-w-0"
                 >
-                  <p className="text-sm font-medium truncate">{userName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{userCompany}</p>
+                  <p className="text-sm font-bold truncate text-rail-foreground">{userName}</p>
+                  <p className="text-xs text-rail-muted truncate">{userCompany}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -402,7 +458,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
           <button
             onClick={handleLogout}
             className={cn(
-              "sidebar-item w-full text-red-400 hover:text-red-300 hover:bg-red-500/10",
+              "sidebar-item w-full !text-rail-danger hover:!bg-rail-danger/15",
               collapsed && "justify-center px-0"
             )}
           >

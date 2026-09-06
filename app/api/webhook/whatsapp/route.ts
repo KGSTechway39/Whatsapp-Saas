@@ -4,8 +4,10 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { checkRateLimit, WEBHOOK_LIMIT, rateLimitHeaders } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { enqueueWebhookEvent } from "@/lib/whatsapp/queue";
+import { ingestCatalogOrder, findContactByPhone, type MetaOrderPayload } from "@/lib/whatsapp/orders";
+import { applyTemplateStatusEvent, type TemplateStatusValue } from "@/lib/whatsapp/template-events";
 import { dispatchEvent, type WebhookEventName } from "@/lib/webhooks-out";
-import { markEventProcessed } from "@/lib/whatsapp/dedup";
+import { markEventProcessed, unmarkEvent } from "@/lib/whatsapp/dedup";
 import { processStatusEvent, type StatusPayload } from "@/lib/whatsapp/status";
 import { confirmOrReleaseBilling } from "@/lib/billing/confirm";
 import { persistRawEvent, markInboxDone } from "@/lib/whatsapp/inbox";
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
   const inboxId = await persistRawEvent(body, "/api/webhook/whatsapp");
 
   // ── Audit log: persist every event for replay/debug, get duplicate flag ──
-  const entry0   = (body.entry as { id?: string; changes?: { value?: Record<string, unknown> }[] }[])?.[0];
+  const entry0   = (body.entry as { id?: string; changes?: { field?: string; value?: Record<string, unknown> }[] }[])?.[0];
   const change0  = entry0?.changes?.[0];
   const value0   = change0?.value ?? {};
   const meta0    = value0.metadata as { phone_number_id?: string; display_phone_number?: string } | undefined;
@@ -116,19 +118,27 @@ export async function POST(request: NextRequest) {
     statuses0[0]?.id ??
     `entry:${entry0?.id || ""}:${Date.now()}`;
 
-  // Resolve account/org from phone_number_id (best-effort)
+  // Resolve the receiving number from phone_number_id (best-effort, for the audit row).
+  // Reads `whatsapp_numbers` — the deployed legacy model. This previously read
+  // `whatsapp_accounts` (organization model, never deployed), so it was a guaranteed
+  // failing round-trip on every webhook event. There is no organization in the
+  // deployed schema, so organization_id stays null.
   let resolvedAccountId: string | null = null;
-  let resolvedOrgId: string | null = null;
+  const resolvedOrgId: string | null = null;
   if (meta0?.phone_number_id) {
     const { data: acct } = await supabase
-      .from("whatsapp_accounts")
-      .select("id, organization_id")
+      .from("whatsapp_numbers")
+      .select("id")
       .eq("phone_number_id", meta0.phone_number_id)
       .maybeSingle();
     resolvedAccountId = acct?.id ?? null;
-    resolvedOrgId     = acct?.organization_id ?? null;
   }
 
+  // NOTE: `webhook_logs` is NOT deployed (see docs/architecture/05-DATABASE.md drift
+  // register), so this insert is currently a no-op that logs a warning, and the
+  // 23505 duplicate branch below is unreachable. Per-event idempotency is carried by
+  // `processed_events` in the loops further down, which IS deployed — so dedup is
+  // sound today. Creating webhook_logs is tracked separately.
   let webhookLogId: string | null = null;
   let isDuplicate = false;
   try {
@@ -165,6 +175,28 @@ export async function POST(request: NextRequest) {
 
   if (isDuplicate) {
     return NextResponse.json({ status: "duplicate" });
+  }
+
+  // ── Template lifecycle (auto-receive) ──────────────────────────────────
+  // We subscribe to `message_template_status_update`, so Meta pushes an event
+  // whenever a template is created, approved, rejected or disabled — including
+  // templates made directly in Meta's UI. Handling it here is what makes
+  // templates arrive on their own instead of waiting for a manual Sync.
+  if (change0?.field === "message_template_status_update") {
+    const tv = value0 as TemplateStatusValue;
+    const key = `wa_tmpl:${tv.message_template_id ?? tv.message_template_name}:${tv.event}`;
+    if (await markEventProcessed(supabase, key, "template_status")) {
+      try {
+        const res = await applyTemplateStatusEvent(entry0?.id ?? null, tv);
+        logger.info("webhook: template status event", { applied: res.applied, reason: res.reason });
+        if (!res.applied) await unmarkEvent(supabase, key);
+      } catch (err) {
+        await unmarkEvent(supabase, key);
+        logger.warn("webhook: template status event failed", { error: (err as Error).message });
+      }
+    }
+    await markInboxDone(inboxId, true);
+    return NextResponse.json({ status: "ok" });
   }
 
   // ── ASYNC HAND-OFF ─────────────────────────────────────────────────────
@@ -216,7 +248,10 @@ export async function POST(request: NextRequest) {
       if (!mappedStatus) continue;
 
       // Dedup per (message_id, status) — Meta re-delivers status events.
-      if (!(await markEventProcessed(supabase, `wa_status:${metaMessageId}:${msgStatus}`, "status"))) {
+      // Marked BEFORE the work on purpose: only the DB unique constraint can
+      // reject two concurrent retries. The trade-off is handled below.
+      const statusKey = `wa_status:${metaMessageId}:${msgStatus}`;
+      if (!(await markEventProcessed(supabase, statusKey, "status"))) {
         continue;
       }
 
@@ -224,7 +259,20 @@ export async function POST(request: NextRequest) {
       const applied = await processStatusEvent(status);
 
       // Confirm (settle) or release the prepaid reservation for this message.
-      await confirmOrReleaseBilling(metaMessageId, msgStatus);
+      //
+      // MONEY-CRITICAL: if this does not complete, un-mark the event so Meta's
+      // retry runs it again. Marking-then-failing would strand the hold —
+      // a `failed` status whose release never ran leaves the tenant's credit
+      // reserved against a message that never sent, with nothing to retry it.
+      // Safe to re-run: confirmOrReleaseBilling no-ops unless the row is still
+      // 'reserved'.
+      const billingOk = await confirmOrReleaseBilling(metaMessageId, msgStatus);
+      if (!billingOk) {
+        await unmarkEvent(supabase, statusKey);
+        logger.warn("webhook: billing incomplete, event unmarked for retry", {
+          metaMessageId, msgStatus,
+        });
+      }
 
       // Emit an outbound webhook for terminal/progress statuses so external
       // apps (e-commerce, CRM) get delivery updates. message.sent is emitted
@@ -273,6 +321,49 @@ export async function POST(request: NextRequest) {
     const phoneNumberId = value.metadata as {phone_number_id:string}|undefined;
 
     for (const message of messages) {
+      // ── Catalog cart submission ──────────────────────────────────────────
+      // A customer sending a cart arrives as type "order". It is NOT a
+      // checkout — Meta takes no payment — so we record it as work for a human
+      // and move on. Handled before the text-only guard below, which would
+      // otherwise drop it silently.
+      if (message.type === "order") {
+        if (!(await markEventProcessed(supabase, `wa_msg:${message.id}`, "order"))) continue;
+
+        const orderOwner = resolvedAccountId
+          ? (await supabase
+              .from("whatsapp_numbers")
+              .select("user_id")
+              .eq("id", resolvedAccountId)
+              .maybeSingle<{ user_id: string }>()).data?.user_id ?? null
+          : null;
+
+        if (!orderOwner) {
+          // Without a tenant we cannot store the order against anyone. Log
+          // loudly: this means a number is receiving carts we can't attribute.
+          logger.warn("webhook: order received for an unresolved number", {
+            phoneNumberId: phoneNumberId?.phone_number_id, messageId: message.id,
+          });
+          continue;
+        }
+
+        try {
+          const contactId = await findContactByPhone(orderOwner, message.from);
+          await ingestCatalogOrder({
+            userId: orderOwner,
+            customerPhone: message.from,
+            contactId,
+            waMessageId: message.id,
+            order: (message as unknown as { order?: MetaOrderPayload }).order ?? {},
+            receivedAt: new Date(Number(message.timestamp) * 1000).toISOString(),
+          });
+        } catch (err) {
+          logger.warn("webhook: could not store catalog order", {
+            messageId: message.id, error: (err as Error).message,
+          });
+        }
+        continue;
+      }
+
       if (message.type !== "text") continue;
 
       // Dedup per Meta message id — Meta re-delivers inbound messages.
@@ -381,52 +472,105 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Update contact last_contacted + refresh the 24h customer-service window.
-      // last_inbound_at is what canSendFreeform() compares against (messaging skill).
-      await supabase
+      // ── Resolve the receiving number → owning tenant BEFORE any write ────
+      // Every write below is scoped to this tenant. `contacts` is UNIQUE(user_id,
+      // phone), so the same customer legitimately exists under many tenants — a
+      // write keyed on phone alone is a real, reachable cross-tenant write (Law #1).
+      const pnid = phoneNumberId?.phone_number_id;
+      if (!pnid) continue;
+
+      const { data: wn } = await supabase
+        .from("whatsapp_numbers")
+        .select("id, user_id")
+        .eq("phone_number_id", pnid)
+        .maybeSingle();
+
+      if (!wn) {
+        logger.warn("Inbound for unknown phone_number_id — cannot attribute to a tenant", {
+          route: "/api/webhook/whatsapp",
+          phoneNumberId: pnid,
+        });
+        continue;
+      }
+
+      // Refresh last_contacted + the 24h customer-service window, TENANT-SCOPED.
+      // last_inbound_at is what the window check compares against
+      // (lib/whatsapp/window.ts), so an unscoped write here would falsely open
+      // another tenant's free-form send window and earn them a Meta 131047.
+      const { data: touched } = await supabase
         .from("contacts")
         .update({ last_contacted: receivedAt, last_inbound_at: receivedAt })
-        .eq("phone", fromPhone);
+        .eq("user_id", wn.user_id)
+        .eq("phone", fromPhone)
+        .select("id")
+        .maybeSingle();
 
-      // Upsert into conversations if we track the inbox
-      if (phoneNumberId?.phone_number_id) {
-        const { data: wn } = await supabase
-          .from("whatsapp_numbers")
-          .select("id, user_id")
-          .eq("phone_number_id", phoneNumberId.phone_number_id)
-          .maybeSingle();
+      // Find or create the conversation (tenant-scoped).
+      const { data: conv } = await supabase
+        .from("conversations")
+        .select("id, contact_id")
+        .eq("user_id", wn.user_id)
+        .eq("contact_phone", fromPhone)
+        .eq("whatsapp_number_id", wn.id)
+        .maybeSingle();
 
-        if (wn) {
-          // Find or create conversation
-          const { data: conv } = await supabase
-            .from("conversations")
-            .select("id")
-            .eq("contact_phone", fromPhone)
-            .eq("whatsapp_number_id", wn.id)
-            .maybeSingle();
+      const convId = conv?.id ?? (await supabase
+        .from("conversations")
+        .insert({
+          user_id: wn.user_id,
+          contact_id: touched?.id ?? null,
+          contact_phone: fromPhone,
+          whatsapp_number_id: wn.id,
+          status: "open",
+        })
+        .select("id")
+        .single()
+      ).data?.id;
 
-          const convId = conv?.id ?? (await supabase
-            .from("conversations")
-            .insert({
-              user_id: wn.user_id,
-              contact_phone: fromPhone,
-              whatsapp_number_id: wn.id,
-              status: "open",
-            })
-            .select("id")
-            .single()
-          ).data?.id;
-
-          if (convId) {
-            await supabase.from("messages").insert({
-              conversation_id: convId,
-              content: text,
-              direction: "inbound",
-              meta_message_id: message.id,
-              created_at: receivedAt,
-            });
-          }
+      if (convId) {
+        // Column names must match the DEPLOYED schema: the column is
+        // `wa_message_id` (not `meta_message_id`), `user_id` is NOT NULL, and
+        // `content` is jsonb. The { body } shape mirrors what the outbound path
+        // writes (app/api/inbox/[id]/send) so the inbox renders both sides alike.
+        // Previously this insert referenced a non-existent column and omitted
+        // user_id, so NO inbound message was ever persisted.
+        const { error: msgErr } = await supabase.from("messages").insert({
+          conversation_id:    convId,
+          user_id:            wn.user_id,
+          contact_id:         conv?.contact_id ?? touched?.id ?? null,
+          whatsapp_number_id: wn.id,
+          wa_message_id:      message.id,
+          direction:          "inbound",
+          type:               message.type || "text",
+          content:            { body: text },
+          status:             "delivered",
+          delivered_at:       receivedAt,
+          created_at:         receivedAt,
+        });
+        if (msgErr) {
+          logger.error("Failed to persist inbound message", {
+            route: "/api/webhook/whatsapp",
+            waMessageId: message.id,
+            error: msgErr.message,
+          });
         }
+
+        // Keep the inbox list and its window state fresh. `is_within_24h_window` /
+        // `window_expires_at` are what the inbox reply path gates on
+        // (app/api/inbox/[id]/send), so without this an agent could not reply to a
+        // customer who had just messaged them.
+        await supabase
+          .from("conversations")
+          .update({
+            last_message_at: receivedAt,
+            last_message_preview: text.slice(0, 120),
+            is_within_24h_window: true,
+            window_expires_at: new Date(
+              new Date(receivedAt).getTime() + 24 * 60 * 60 * 1000,
+            ).toISOString(),
+          })
+          .eq("id", convId)
+          .eq("user_id", wn.user_id);
       }
     }
   } catch (err) {

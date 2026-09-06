@@ -145,7 +145,7 @@ export default function CatalogPage() {
             ) : null}
             <button
               onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 wa-gradient text-white font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+              className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
             >
               <Plus className="w-4 h-4" />
               Add Product
@@ -156,23 +156,23 @@ export default function CatalogPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KPICard label="Products" value={total.toString()} icon={Package} color="text-blue-400" bg="bg-blue-500/10" />
-        <KPICard label="In Stock" value={products.filter((p) => p.in_stock).length.toString()} icon={Check} color="text-emerald-400" bg="bg-emerald-500/10" />
+        <KPICard label="Products" value={total.toString()} icon={Package} color="text-primary" bg="bg-accent" />
+        <KPICard label="In Stock" value={products.filter((p) => p.in_stock).length.toString()} icon={Check} color="text-success" bg="bg-success-soft" />
         <KPICard
           label="Abandoned Carts"
           value={cartSummary?.abandoned.toString() || "0"}
           sub={cartSummary ? formatINR(cartSummary.abandoned_value) : undefined}
           icon={ShoppingCart}
-          color="text-amber-400"
-          bg="bg-amber-500/10"
+          color="text-warning"
+          bg="bg-warning-soft"
         />
         <KPICard
           label="Recovered"
           value={cartSummary?.recovered.toString() || "0"}
           sub={cartSummary ? formatINR(cartSummary.recovered_value) : undefined}
           icon={IndianRupee}
-          color="text-emerald-400"
-          bg="bg-emerald-500/10"
+          color="text-success"
+          bg="bg-success-soft"
         />
       </div>
 
@@ -185,10 +185,10 @@ export default function CatalogPage() {
               <div key={c.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                    c.provider === "shopify" ? "bg-emerald-500/10" : c.provider === "woocommerce" ? "bg-violet-500/10" : "bg-blue-500/10"
+                    c.provider === "shopify" ? "bg-success-soft" : c.provider === "woocommerce" ? "bg-accent" : "bg-accent"
                   }`}>
                     <Store className={`w-4 h-4 ${
-                      c.provider === "shopify" ? "text-emerald-400" : c.provider === "woocommerce" ? "text-violet-400" : "text-blue-400"
+                      c.provider === "shopify" ? "text-success" : c.provider === "woocommerce" ? "text-primary" : "text-primary"
                     }`} />
                   </div>
                   <div>
@@ -207,7 +207,7 @@ export default function CatalogPage() {
                   </button>
                   <button
                     onClick={() => handleDisconnect(c.id)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive-soft"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -259,7 +259,7 @@ export default function CatalogPage() {
               title="No products yet"
               description="Add a product manually or connect Shopify / WooCommerce to sync your catalog"
               action={
-                <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl">
+                <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl">
                   <Plus className="w-4 h-4" /> Add Product
                 </button>
               }
@@ -320,12 +320,12 @@ function ProductCard({ product, onDelete, onEdit, onSend }: { product: Product; 
           </div>
         )}
         {!product.in_stock && (
-          <div className="absolute top-2 left-2 bg-red-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          <div className="absolute top-2 left-2 bg-destructive-soft text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
             OUT OF STOCK
           </div>
         )}
         {isOnSale && product.in_stock && (
-          <div className="absolute top-2 left-2 bg-amber-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          <div className="absolute top-2 left-2 bg-warning-soft text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
             SALE
           </div>
         )}
@@ -333,7 +333,7 @@ function ProductCard({ product, onDelete, onEdit, onSend }: { product: Product; 
           <button onClick={onEdit} className="w-7 h-7 rounded-lg bg-card/95 backdrop-blur border border-border/40 flex items-center justify-center hover:bg-card">
             <Edit3 className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onDelete} className="w-7 h-7 rounded-lg bg-card/95 backdrop-blur border border-border/40 flex items-center justify-center hover:bg-red-500/20 hover:text-red-400">
+          <button onClick={onDelete} className="w-7 h-7 rounded-lg bg-card/95 backdrop-blur border border-border/40 flex items-center justify-center hover:bg-destructive-soft hover:text-destructive">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -477,9 +477,9 @@ function ProductModal({ product, onClose, onSaved }: { product?: Product; onClos
           <div className="md:col-span-2 flex items-center gap-3">
             <button
               onClick={() => setForm({ ...form, inStock: !form.inStock })}
-              className={`relative w-10 h-5 rounded-full transition-colors ${form.inStock ? "bg-emerald-500" : "bg-muted"}`}
+              className={`relative w-10 h-5 rounded-full transition-colors ${form.inStock ? "bg-success" : "bg-muted"}`}
             >
-              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.inStock ? "translate-x-5" : "translate-x-0.5"}`} />
+              <div className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${form.inStock ? "translate-x-5" : "translate-x-0.5"}`} />
             </button>
             <span className="text-sm">{form.inStock ? "In stock" : "Out of stock"}</span>
           </div>
@@ -487,7 +487,7 @@ function ProductModal({ product, onClose, onSaved }: { product?: Product; onClos
         <div className="flex justify-end gap-2 p-5 border-t border-border sticky bottom-0 bg-card">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border hover:bg-accent text-sm font-medium">Cancel</button>
           <button onClick={save} disabled={saving}
-            className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-40">
+            className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-40">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {saving ? "Saving…" : product ? "Update" : "Add Product"}
           </button>
@@ -531,8 +531,8 @@ function ConnectStoreModal({ onClose, onConnected }: { onClose: () => void; onCo
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Store className="w-4 h-4 text-emerald-400" />
+            <div className="w-9 h-9 rounded-xl bg-success-soft flex items-center justify-center">
+              <Store className="w-4 h-4 text-success" />
             </div>
             <div>
               <h3 className="font-semibold">Connect a Store</h3>
@@ -562,7 +562,7 @@ function ConnectStoreModal({ onClose, onConnected }: { onClose: () => void; onCo
           </div>
 
           {/* Help */}
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs text-muted-foreground">
+          <div className="bg-accent border border-primary/25 rounded-xl p-3 text-xs text-muted-foreground">
             {provider === "shopify" ? (
               <>
                 <p className="font-medium text-foreground mb-1">Shopify Admin API token</p>
@@ -615,7 +615,7 @@ function ConnectStoreModal({ onClose, onConnected }: { onClose: () => void; onCo
           <button
             onClick={submit}
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 wa-gradient text-white font-semibold py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 wa-gradient text-primary-foreground font-semibold py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {submitting ? "Connecting…" : "Connect Store"}
@@ -685,9 +685,9 @@ function CartList({ carts, onChanged }: { carts: CartRow[]; onChanged: () => voi
               <td className="px-4 py-3 text-right font-semibold">{formatINR(c.total)}</td>
               <td className="px-4 py-3">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                  c.status === "abandoned" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                  c.status === "recovered" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                  c.status === "converted" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
+                  c.status === "abandoned" ? "bg-warning-soft text-warning border border-warning/25" :
+                  c.status === "recovered" ? "bg-success-soft text-success border border-success/25" :
+                  c.status === "converted" ? "bg-accent text-primary border border-primary/25" :
                                               "bg-muted/40 text-muted-foreground"
                 }`}>
                   {c.status}
@@ -705,7 +705,7 @@ function CartList({ carts, onChanged }: { carts: CartRow[]; onChanged: () => voi
                   <button
                     onClick={() => recover(c.id)}
                     disabled={recoveringId === c.id}
-                    className="flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg wa-gradient text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                    className="flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg wa-gradient text-primary-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-50"
                   >
                     {recoveringId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                     Send Recovery

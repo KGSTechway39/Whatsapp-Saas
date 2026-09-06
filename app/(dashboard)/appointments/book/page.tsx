@@ -14,12 +14,12 @@ import { AIAppointmentAssist } from "@/components/ai/AIAppointmentAssist";
 type ServiceType = "consultation" | "follow_up" | "demo" | "checkup" | "meeting" | "callback";
 
 const SERVICES: { id: ServiceType; label: string; duration: number; desc: string; color: string; bg: string }[] = [
-  { id: "consultation", label: "Consultation",  duration: 30, desc: "Initial discussion & needs assessment",  color: "text-blue-400",    bg: "bg-blue-500/10"    },
-  { id: "demo",         label: "Product Demo",  duration: 45, desc: "Live product walkthrough",               color: "text-violet-400",  bg: "bg-violet-500/10"  },
-  { id: "follow_up",    label: "Follow-up",     duration: 15, desc: "Check-in after previous interaction",    color: "text-emerald-400", bg: "bg-emerald-500/10" },
-  { id: "checkup",      label: "Check-up",      duration: 30, desc: "Periodic review or health check",        color: "text-cyan-400",    bg: "bg-cyan-500/10"    },
-  { id: "meeting",      label: "Strategy Meet", duration: 60, desc: "In-depth strategy or planning session",  color: "text-amber-400",   bg: "bg-amber-500/10"   },
-  { id: "callback",     label: "Callback",      duration: 15, desc: "Quick call or price discussion",         color: "text-pink-400",    bg: "bg-pink-500/10"    },
+  { id: "consultation", label: "Consultation",  duration: 30, desc: "Initial discussion & needs assessment",  color: "text-primary",    bg: "bg-accent"    },
+  { id: "demo",         label: "Product Demo",  duration: 45, desc: "Live product walkthrough",               color: "text-primary",  bg: "bg-accent"  },
+  { id: "follow_up",    label: "Follow-up",     duration: 15, desc: "Check-in after previous interaction",    color: "text-success", bg: "bg-success-soft" },
+  { id: "checkup",      label: "Check-up",      duration: 30, desc: "Periodic review or health check",        color: "text-primary",    bg: "bg-accent"    },
+  { id: "meeting",      label: "Strategy Meet", duration: 60, desc: "In-depth strategy or planning session",  color: "text-warning",   bg: "bg-warning-soft"   },
+  { id: "callback",     label: "Callback",      duration: 15, desc: "Quick call or price discussion",         color: "text-primary",    bg: "bg-accent"    },
 ];
 
 const TIME_SLOTS = [
@@ -97,14 +97,22 @@ export default function BookAppointmentPage() {
         </div>
         <h2 className="text-2xl font-bold mb-2">Appointment Booked! 🎉</h2>
         <p className="text-muted-foreground mb-1">{contact.name} · {selectedDate} at {selectedTime}</p>
-        <p className="text-sm text-emerald-400 font-medium mb-1">{selectedService?.label} · {selectedService?.duration} mins</p>
+        <p className="text-sm text-success font-medium mb-1">{selectedService?.label} · {selectedService?.duration} mins</p>
+        {/* HONESTY FIX: this used to read "N automation(s) active — reminders
+            will be sent automatically". Nothing sends them. `automations` is
+            hardcoded local state (see useState above), there is no
+            `appointments` table, and no scheduler exists — so that banner
+            promised messages that would never arrive. Appointments are a UI
+            shell today (documented in CLAUDE.md); say so rather than imply a
+            reminder is on its way. */}
         {automations.length > 0 && (
-          <p className="text-xs text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-xl px-4 py-2 mb-6 inline-block">
-            ⚡ {automations.length} automation(s) active — reminders will be sent automatically
+          <p className="text-xs text-warning bg-warning-soft border border-warning/25 rounded-xl px-4 py-2 mb-6 inline-block max-w-md">
+            Reminders aren&apos;t set up yet — this booking isn&apos;t saved and no WhatsApp
+            message will be sent. Use Automations to build a reminder flow.
           </p>
         )}
         <div className="flex gap-3 justify-center">
-          <Link href="/appointments" className="wa-gradient text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
+          <Link href="/appointments" className="wa-gradient text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
             View Appointments
           </Link>
           <button onClick={() => { setBooked(false); setStep(1); setService(""); setSelDate(""); setSelTime(""); setContact({ name:"",phone:"",email:"",notes:"",assignedTo:"" }); }}
@@ -148,7 +156,7 @@ export default function BookAppointmentPage() {
             <div key={s} className="flex items-center gap-1.5 flex-shrink-0">
               <button onClick={() => num < step && setStep(num)} className="flex items-center gap-1.5">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  step > num ? "bg-primary text-white" : step === num ? "bg-primary/20 border-2 border-primary text-primary" : "bg-muted text-muted-foreground"
+                  step > num ? "bg-primary text-primary-foreground" : step === num ? "bg-primary/20 border-2 border-primary text-primary" : "bg-muted text-muted-foreground"
                 }`}>
                   {step > num ? <Check className="w-3 h-3" /> : num}
                 </div>
@@ -209,7 +217,7 @@ export default function BookAppointmentPage() {
                       return (
                         <button key={d} onClick={() => !isPast && setSelDate(ds)} disabled={isPast}
                           className={`h-8 w-full rounded-lg text-xs flex items-center justify-center transition-all ${
-                            isSel   ? "wa-gradient text-white font-bold shadow" :
+                            isSel   ? "wa-gradient text-primary-foreground font-bold shadow" :
                             isPast  ? "text-muted-foreground/30 cursor-not-allowed" :
                                       "hover:bg-muted/50"
                           }`}>{d}</button>
@@ -229,7 +237,7 @@ export default function BookAppointmentPage() {
                         return (
                           <button key={t} onClick={() => !booked && setSelTime(t)} disabled={booked}
                             className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-                              isSel  ? "wa-gradient text-white shadow" :
+                              isSel  ? "wa-gradient text-primary-foreground shadow" :
                               booked ? "bg-muted/30 text-muted-foreground/40 cursor-not-allowed line-through" :
                                        "bg-muted/50 hover:bg-primary/10 hover:text-primary border border-border"
                             }`}>{t}</button>
@@ -285,18 +293,18 @@ export default function BookAppointmentPage() {
                 <div className="space-y-2.5">
                   {AUTOMATION_OPTS.map(({ id, label, icon: Icon, desc }) => (
                     <button key={id} onClick={() => toggleAutomation(id)}
-                      className={`w-full text-left p-4 rounded-xl border transition-all ${automations.includes(id) ? "border-violet-500/50 bg-violet-500/5" : "border-border hover:bg-muted/30"}`}>
+                      className={`w-full text-left p-4 rounded-xl border transition-all ${automations.includes(id) ? "border-primary/25 bg-accent" : "border-border hover:bg-muted/30"}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${automations.includes(id) ? "bg-violet-500/20" : "bg-muted/50"}`}>
-                            <Icon className={`w-4 h-4 ${automations.includes(id) ? "text-violet-400" : "text-muted-foreground"}`} />
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${automations.includes(id) ? "bg-accent" : "bg-muted/50"}`}>
+                            <Icon className={`w-4 h-4 ${automations.includes(id) ? "text-primary" : "text-muted-foreground"}`} />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{label}</p>
                             <p className="text-xs text-muted-foreground">{desc}</p>
                           </div>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${automations.includes(id) ? "bg-violet-500 border-violet-500" : "border-muted-foreground/40"}`}>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${automations.includes(id) ? "bg-primary border-primary/25" : "border-muted-foreground/40"}`}>
                           {automations.includes(id) && <Check className="w-3 h-3 text-white" />}
                         </div>
                       </div>
@@ -336,8 +344,8 @@ export default function BookAppointmentPage() {
                   </div>
                 )}
                 {automations.length > 0 && (
-                  <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-xl">
-                    <p className="text-xs font-semibold text-violet-400 flex items-center gap-1.5 mb-2">
+                  <div className="p-4 bg-accent border border-primary/25 rounded-xl">
+                    <p className="text-xs font-semibold text-primary flex items-center gap-1.5 mb-2">
                       <Zap className="w-3.5 h-3.5" /> WhatsApp Automations Active
                     </p>
                     <div className="space-y-1">
@@ -345,7 +353,7 @@ export default function BookAppointmentPage() {
                         const a = AUTOMATION_OPTS.find((o) => o.id === id)!;
                         return (
                           <p key={id} className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Check className="w-3 h-3 text-violet-400 flex-shrink-0" />{a.label}
+                            <Check className="w-3 h-3 text-primary flex-shrink-0" />{a.label}
                           </p>
                         );
                       })}
@@ -353,7 +361,7 @@ export default function BookAppointmentPage() {
                   </div>
                 )}
                 <button onClick={handleBook} disabled={saving}
-                  className="flex items-center justify-center gap-2 w-full wa-gradient text-white font-semibold py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/25">
+                  className="flex items-center justify-center gap-2 w-full wa-gradient text-primary-foreground font-semibold py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/25">
                   {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Booking…</> : <><Calendar className="w-4 h-4" /> Confirm Booking</>}
                 </button>
               </div>
@@ -372,7 +380,7 @@ export default function BookAppointmentPage() {
               )}
               {step < STEPS.length && (
                 <button onClick={() => canProceed[step] && setStep((p) => p+1)} disabled={!canProceed[step]}
-                  className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto">
+                  className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto">
                   Next <ChevronRight className="w-4 h-4" />
                 </button>
               )}
@@ -415,14 +423,14 @@ export default function BookAppointmentPage() {
             {/* Automation badges */}
             {automations.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-violet-400 flex items-center gap-1 mb-2"><Zap className="w-3 h-3" /> Active Automations</p>
+                <p className="text-xs font-medium text-primary flex items-center gap-1 mb-2"><Zap className="w-3 h-3" /> Active Automations</p>
                 <div className="space-y-1.5">
                   {automations.map((id) => {
                     const a = AUTOMATION_OPTS.find((o) => o.id === id)!;
                     const AIcon = a.icon;
                     return (
-                      <div key={id} className="flex items-center gap-2 text-xs text-muted-foreground bg-violet-500/5 border border-violet-500/10 px-3 py-2 rounded-lg">
-                        <AIcon className="w-3 h-3 text-violet-400 flex-shrink-0" />{a.label}
+                      <div key={id} className="flex items-center gap-2 text-xs text-muted-foreground bg-accent border border-primary/25 px-3 py-2 rounded-lg">
+                        <AIcon className="w-3 h-3 text-primary flex-shrink-0" />{a.label}
                       </div>
                     );
                   })}
@@ -434,12 +442,12 @@ export default function BookAppointmentPage() {
             {selectedDate && selectedTime && contact.name && (
               <div>
                 <p className="text-xs text-muted-foreground mb-2">WhatsApp Confirmation Preview</p>
-                <div className="bg-[#0b141a] rounded-xl p-3">
-                  <div className="bg-[#202c33] rounded-xl rounded-tl-none p-3">
-                    <p className="text-xs text-[#e9edef] leading-relaxed">
+                <div className="bg-chat-ground rounded-xl p-3">
+                  <div className="bg-chat-in border border-chat-inBorder rounded-xl rounded-tl-none p-3">
+                    <p className="text-xs text-foreground leading-relaxed">
                       {`Hi ${contact.name || "[Name]"}! ✅ Your ${selectedService?.label || "appointment"} is confirmed.\n\n📅 ${selectedDate}\n⏰ ${selectedTime} (${selectedService?.duration} mins)\n\nReply YES to confirm or NO to reschedule.`}
                     </p>
-                    <p className="text-[9px] text-[#8696a0] text-right mt-1">Now ✓✓</p>
+                    <p className="text-[9px] text-muted-foreground text-right mt-1">Now ✓✓</p>
                   </div>
                 </div>
               </div>

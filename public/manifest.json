@@ -1,6 +1,6 @@
 {
-  "name": "WASend — WhatsApp Business Platform",
-  "short_name": "WASend",
+  "name": "SendAnjal — WhatsApp Business Platform",
+  "short_name": "SendAnjal",
   "description": "Professional WhatsApp Business messaging for Indian businesses",
   "start_url": "/dashboard",
   "display": "standalone",

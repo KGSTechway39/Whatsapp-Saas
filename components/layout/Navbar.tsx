@@ -14,7 +14,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -48,6 +48,14 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  /**
+   * next-themes cannot know the theme during SSR, so rendering Sun-vs-Moon
+   * straight from `theme` made the server and client markup disagree and threw
+   * the whole root into client rendering. Render a stable placeholder until
+   * mount, then swap in the real icon.
+   */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const title = pageTitles[pathname] || "Dashboard";
 
@@ -58,37 +66,50 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-20 flex items-center px-4 gap-4">
+    <header className="h-16 border-b border-border bg-background sticky top-0 z-20 flex items-center px-4 gap-4">
       <button
         onClick={onMenuClick}
-        className="lg:hidden p-2 rounded-lg hover:bg-accent transition-colors"
+        className="lg:hidden p-2 rounded-full hover:bg-secondary transition-colors"
       >
         <Menu className="w-5 h-5" />
       </button>
 
-      <div className="flex-1">
-        <h2 className="text-base font-semibold hidden sm:block">{title}</h2>
+      <div className="flex-1 min-w-0">
+        <div className="hidden sm:flex items-center gap-2.5 min-w-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0" />
+          <h2 className="text-base font-extrabold tracking-tight truncate">{title}</h2>
+        </div>
       </div>
 
-      <div className="hidden md:flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2 w-64 border border-border/50">
+      <div className="hidden md:flex items-center gap-2.5 bg-card rounded-full px-4 py-2 w-80 border border-border focus-within:border-primary transition-colors">
         <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         <input
           type="text"
-          placeholder="Search..."
-          className="bg-transparent text-sm outline-none flex-1 placeholder:text-muted-foreground/60"
+          placeholder="Search chats, contacts, templates"
+          className="bg-transparent text-sm outline-none flex-1 placeholder:text-muted-foreground"
         />
+        <kbd className="font-mono text-[0.6rem] text-muted-foreground flex-shrink-0">⌘K</kbd>
       </div>
+
+      {/* Primary CTA, per the design's header. Broadcast is what the design
+          calls a bulk send, which is this app's campaign-create flow. */}
+      <Link href="/campaigns/create" className="hidden sm:inline-flex btn-solid flex-shrink-0">
+        Broadcast
+      </Link>
 
       <div className="flex items-center gap-1">
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="p-2 rounded-xl hover:bg-accent transition-colors"
+          className="p-2 rounded-full hover:bg-secondary transition-colors"
           title="Toggle theme"
         >
-          {theme === "dark" ? (
+          {mounted && theme === "dark" ? (
             <Sun className="w-4.5 h-4.5 text-muted-foreground hover:text-foreground transition-colors" />
           ) : (
-            <Moon className="w-4.5 h-4.5 text-muted-foreground hover:text-foreground transition-colors" />
+            <Moon
+              className="w-4.5 h-4.5 text-muted-foreground hover:text-foreground transition-colors"
+              suppressHydrationWarning
+            />
           )}
         </button>
 
@@ -98,7 +119,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               setNotifOpen(!notifOpen);
               setDropdownOpen(false);
             }}
-            className="p-2 rounded-xl hover:bg-accent transition-colors relative"
+            className="p-2 rounded-full hover:bg-secondary transition-colors relative"
           >
             <Bell className="w-4.5 h-4.5 text-muted-foreground hover:text-foreground transition-colors" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
@@ -112,7 +133,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               />
               <div className="absolute right-0 top-12 w-80 bg-card border border-border rounded-2xl shadow-xl z-20 overflow-hidden">
                 <div className="p-4 border-b border-border">
-                  <h3 className="font-semibold text-sm">Notifications</h3>
+                  <h3 className="font-bold text-sm">Notifications</h3>
                 </div>
                 {[
                   {
@@ -133,7 +154,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                 ].map((n, i) => (
                   <div
                     key={i}
-                    className="p-4 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border/50 last:border-0"
+                    className="p-4 hover:bg-rowHover transition-colors cursor-pointer border-b border-hairline last:border-0"
                   >
                     <p className="text-sm font-medium">{n.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -155,9 +176,9 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               setDropdownOpen(!dropdownOpen);
               setNotifOpen(false);
             }}
-            className="flex items-center gap-2 p-1.5 pr-2.5 rounded-xl hover:bg-accent transition-colors"
+            className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full hover:bg-secondary transition-colors"
           >
-            <div className="w-7 h-7 rounded-full wa-gradient flex items-center justify-center text-xs font-bold text-white">
+            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
               VM
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
@@ -173,14 +194,14 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                 <div className="p-3 border-b border-border">
                   <p className="text-sm font-medium">Vikram Malhotra</p>
                   <p className="text-xs text-muted-foreground">
-                    admin@wasend.com
+                    admin@sendanjal.com
                   </p>
                 </div>
                 <div className="p-1">
                   <Link
                     href="/settings"
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold hover:bg-secondary transition-colors"
                   >
                     <User className="w-4 h-4" />
                     Profile
@@ -188,14 +209,14 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                   <Link
                     href="/settings"
                     onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold hover:bg-secondary transition-colors"
                   >
                     <Settings className="w-4 h-4" />
                     Settings
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-destructive hover:bg-destructive-soft transition-colors w-full text-left"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout

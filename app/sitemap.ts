@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://wasend.app";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://sendanjal.com";
 
   // Only public pages are in the sitemap
   return [

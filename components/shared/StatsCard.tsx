@@ -1,14 +1,21 @@
 import { cn } from "@/lib/utils";
-import { LucideIcon, TrendingDown, TrendingUp } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 import { ReactNode } from "react";
 
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  /**
+   * Kept for source compatibility with the ~20 call sites that pass one, but no
+   * longer rendered as a tile: the v3 KPI card carries no icon. Passing it is
+   * harmless; new call sites can omit it.
+   */
+  icon?: LucideIcon;
   trend?: number;
   trendLabel?: string;
+  /** @deprecated The v3 card has no icon tile — these are accepted and ignored. */
   iconColor?: string;
+  /** @deprecated The v3 card has no icon tile — these are accepted and ignored. */
   iconBg?: string;
   suffix?: string;
   prefix?: string;
@@ -16,14 +23,19 @@ interface StatsCardProps {
   className?: string;
 }
 
+/**
+ * The v3 KPI card: a mono eyebrow, an oversized figure, then a tinted delta
+ * pill sitting beside a plain-language note.
+ *
+ * The delta is a solid tinted pill (bg-success-soft / text-success), not an
+ * opacity overlay — that pairing is the design's status vocabulary and is what
+ * the pill-* helpers in globals.css encode.
+ */
 export function StatsCard({
   title,
   value,
-  icon: Icon,
   trend,
   trendLabel,
-  iconColor = "text-primary",
-  iconBg = "bg-primary/10",
   suffix,
   prefix,
   children,
@@ -32,63 +44,38 @@ export function StatsCard({
   const isPositive = trend !== undefined && trend >= 0;
 
   return (
-    <div
-      className={cn(
-        "stat-card group relative overflow-hidden",
-        className
-      )}
-    >
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+    <div className={cn("stat-card flex flex-col gap-3", className)}>
+      <p className="text-eyebrow">{title}</p>
+
+      <div className="flex items-baseline gap-1.5">
+        {prefix && (
+          <span className="text-xl font-bold text-muted-foreground">{prefix}</span>
+        )}
+        <span className="text-4xl font-extrabold tracking-tight leading-none">
+          {value}
+        </span>
+        {suffix && (
+          <span className="text-base font-bold text-muted-foreground">{suffix}</span>
+        )}
       </div>
 
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {title}
-          </p>
-          <div className="flex items-baseline gap-1 mt-1.5">
-            {prefix && (
-              <span className="text-xl font-semibold text-muted-foreground">
-                {prefix}
-              </span>
-            )}
-            <span className="text-3xl font-bold tracking-tight">{value}</span>
-            {suffix && (
-              <span className="text-lg font-semibold text-muted-foreground">
-                {suffix}
-              </span>
-            )}
-          </div>
-        </div>
-        <div
-          className={cn(
-            "w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0",
-            iconBg
+      {(trend !== undefined || trendLabel) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {trend !== undefined && (
+            <span
+              className={cn(
+                "pill font-mono normal-case tracking-normal",
+                isPositive ? "pill-success" : "pill-danger"
+              )}
+            >
+              {isPositive ? "+" : ""}
+              {trend}%
+            </span>
           )}
-        >
-          <Icon className={cn("w-5 h-5", iconColor)} />
-        </div>
-      </div>
-
-      {trend !== undefined && (
-        <div className="flex items-center gap-1.5">
-          {isPositive ? (
-            <TrendingUp className="w-3.5 h-3.5 text-success" />
-          ) : (
-            <TrendingDown className="w-3.5 h-3.5 text-destructive" />
-          )}
-          <span
-            className={cn(
-              "text-xs font-medium",
-              isPositive ? "text-success" : "text-destructive"
-            )}
-          >
-            {isPositive ? "+" : ""}
-            {trend}%
-          </span>
           {trendLabel && (
-            <span className="text-xs text-muted-foreground">{trendLabel}</span>
+            <span className="text-xs text-muted-foreground leading-snug">
+              {trendLabel}
+            </span>
           )}
         </div>
       )}

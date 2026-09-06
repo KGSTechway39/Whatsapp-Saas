@@ -1,7 +1,7 @@
 /**
  * GET /api/auth/dev-login?from=/dashboard
  *
- * **Dev-only** auto-login as the seeded test user (admin@wasend.demo).
+ * **Dev-only** auto-login as the seeded test user (admin@sendanjal.com).
  * Refuses to run in production. Used by the dev-mode middleware bypass so
  * you can land directly on the dashboard without a manual login.
  *
@@ -12,7 +12,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 
-const DEV_USER_EMAIL = "admin@wasend.demo";
+const DEV_USER_EMAIL = "admin@sendanjal.com";
 
 export async function GET(req: NextRequest) {
   // DEMO_AUTO_LOGIN is the explicit production opt-in for public demo deploys;

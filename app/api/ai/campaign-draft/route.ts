@@ -18,6 +18,7 @@ import { getSessionUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getUserTier, loadModelConfig } from "@/lib/ai/config";
 import { runTask } from "@/lib/ai/service";
+import { buildVerticalPromptContext, withVerticalContext } from "@/lib/verticals/prompt-context";
 
 interface CampaignDraft {
   campaignName: string;
@@ -98,12 +99,16 @@ Return exactly this JSON:
   "suggestedSendTime": "best day + time to send in IST, human-readable"
 }`;
 
+  // Industry context pre-fills the copy with the right vocabulary and situations.
+  // No vertical → prompt is unchanged (rule: vertical pre-fills, never gates).
+  const verticalContext = await buildVerticalPromptContext(user.id);
+
   const result = await runTask<CampaignDraft>({
     userId: user.id,
     tier,
     taskType: "campaign_content",
     system,
-    prompt,
+    prompt: withVerticalContext(prompt, verticalContext),
     maxTokens: 1200,
     idempotencyKey: draftId, // regens reuse it → charged once
     refId: draftId,

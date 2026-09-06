@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { templateSendability } from "@/lib/whatsapp/template-sendable";
 
 export async function GET() {
   const supabase = createClient();
@@ -25,6 +26,13 @@ export async function GET() {
     body: t.body,
     variables: t.variables || [],
     createdAt: t.created_at,
+    // APPROVED locally does NOT mean Meta has it. Expose the real answer so
+    // pickers can exclude what would fail with "(#132001) Template name does
+    // not exist in the translation".
+    ...(() => {
+      const s = templateSendability(t);
+      return { sendable: s.sendable, notSendableReason: s.reason, notSendableMessage: s.message };
+    })(),
   }));
 
   return NextResponse.json({ templates });

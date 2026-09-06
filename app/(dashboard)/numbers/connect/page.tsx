@@ -84,7 +84,7 @@ export default function ConnectNumberPage(): JSX.Element {
       />
 
       {justConnected && (
-        <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+        <section className="rounded-2xl border border-success/25 bg-success-soft p-5">
           <p className="text-sm font-semibold">
             ✓ Connected {justConnected.displayPhoneNumber}
             {justConnected.businessName ? ` — ${justConnected.businessName}` : ""}
@@ -135,7 +135,7 @@ export default function ConnectNumberPage(): JSX.Element {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {completed && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-500">
+              <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-3 py-1 text-xs font-medium text-success">
                 <CheckCircle2 className="w-3.5 h-3.5" /> All steps complete
               </span>
             )}
@@ -157,7 +157,7 @@ export default function ConnectNumberPage(): JSX.Element {
                 key={step.key}
                 className={`overflow-hidden rounded-2xl border ${
                   status === "active"
-                    ? "border-emerald-500/40 bg-emerald-500/5"
+                    ? "border-success/25 bg-success-soft"
                     : "border-border/60 bg-card"
                 }`}
               >
@@ -170,9 +170,9 @@ export default function ConnectNumberPage(): JSX.Element {
                   <span
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
                       status === "done"
-                        ? "bg-emerald-500 text-white"
+                        ? "bg-success text-white"
                         : status === "active"
-                        ? "bg-emerald-500/10 text-emerald-500"
+                        ? "bg-success-soft text-success"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -242,7 +242,7 @@ export default function ConnectNumberPage(): JSX.Element {
               href="https://developers.facebook.com/apps/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-emerald-500 hover:underline"
+              className="inline-flex items-center gap-1.5 text-success hover:underline"
             >
               Open Meta App Dashboard <ExternalLink className="w-3.5 h-3.5" />
             </a>

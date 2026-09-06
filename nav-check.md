@@ -1,0 +1,38 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - complementary [ref=f6e3]:
+      - link "SendAnjal" [ref=f6e5] [cursor=pointer]:
+        - /url: /dashboard
+      - navigation [ref=f6e9]:
+        - link "Dashboard" [ref=f6e11] [cursor=pointer]:
+          - /url: /dashboard
+        - link "3 Inbox" [ref=f6e20] [cursor=pointer]:
+          - /url: /inbox
+        - generic [ref=f6e27]
+        - generic [ref=f6e42]
+        - generic [ref=f6e69]
+        - generic [ref=f6e86]
+        - generic [ref=f6e110]
+        - generic [ref=f6e126]
+        - link "Analytics" [ref=f6e147] [cursor=pointer]:
+          - /url: /analytics
+        - link "Ads ROI" [ref=f6e153] [cursor=pointer]:
+          - /url: /ads
+        - link "Catalog" [ref=f6e159] [cursor=pointer]:
+          - /url: /catalog
+        - generic [ref=f6e165]
+        - generic [ref=f6e183]
+        - button "Platform Admin" [ref=f6e303] [cursor=pointer]
+      - generic [ref=f6e208]:
+        - button "Collapse" [ref=f6e209] [cursor=pointer]
+        - generic [ref=f6e214]
+        - button "Logout" [ref=f6e219] [cursor=pointer]
+    - generic [ref=f6e224]:
+      - banner [ref=f6e225]:
+        - heading "Dashboard" [level=2] [ref=f6e227]
+        - textbox "Search..." [ref=f6e232]
+        - generic [ref=f6e233]
+      - main [ref=f6e248]:
+        - generic [ref=f6e310]
+  - region "Notifications alt+T"
+  - alert [ref=f6e525]

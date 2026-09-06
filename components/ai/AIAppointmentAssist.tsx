@@ -68,11 +68,11 @@ export function AIAppointmentAssist({
   const serviceLabel = (id: string) => services.find((s) => s.id === id)?.label ?? id;
 
   return (
-    <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/20">
+    <div className="mb-6 rounded-xl border border-primary/25 bg-accent p-4 dark:border-primary/25 dark:bg-accent">
       <div className="mb-3 flex items-center justify-between">
-        <span className="inline-flex items-center gap-2 text-sm font-medium text-violet-800 dark:text-violet-200">
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-primary dark:text-primary">
           <Sparkles className="h-4 w-4" /> Quick book with AI
-          <span className="text-xs font-normal text-violet-500 dark:text-violet-400">optional — you confirm before booking</span>
+          <span className="text-xs font-normal text-primary dark:text-primary">optional — you confirm before booking</span>
         </span>
         <AICreditsIndicator />
       </div>
@@ -89,7 +89,7 @@ export function AIAppointmentAssist({
           type="button"
           onClick={run}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary disabled:opacity-60"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
           Parse <span className="text-xs opacity-80">(1 credit)</span>
@@ -97,8 +97,8 @@ export function AIAppointmentAssist({
       </div>
 
       {parsed && (
-        <div className="mt-3 rounded-lg border border-violet-300 bg-white p-3 dark:border-violet-800 dark:bg-violet-950/30">
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">
+        <div className="mt-3 rounded-lg border border-primary/25 bg-card p-3 dark:border-primary/25 dark:bg-accent">
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary dark:bg-accent dark:text-primary">
             <Sparkles className="h-3 w-3" /> AI-parsed — review before booking
           </div>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -111,7 +111,7 @@ export function AIAppointmentAssist({
           </dl>
 
           {parsed.missing.length > 0 && (
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+            <p className="mt-2 text-xs text-warning dark:text-warning">
               Couldn’t read: {parsed.missing.join(", ")}. Fill these in the form.
             </p>
           )}
@@ -127,7 +127,7 @@ export function AIAppointmentAssist({
                     : "Pre-filled — review and confirm to book",
                 );
               }}
-              className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary"
             >
               Review &amp; confirm →
             </button>

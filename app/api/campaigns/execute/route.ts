@@ -8,10 +8,12 @@ import { quoteSendCostPaise, toBillableCategory, type MessageCategory } from "@/
 import { deriveQuote, getWholesalePaise } from "@/lib/billing/rates";
 import { reserve, settle, release, InsufficientBalanceError } from "@/lib/billing/wallet";
 import { dispatchEvent } from "@/lib/webhooks-out";
+import { consentPolicyFor, splitByConsent } from "@/lib/compliance/consent";
+import { templateSendability } from "@/lib/whatsapp/template-sendable";
 
 const BATCH_SIZE = 50;
 
-// WASend's own per-message platform fee (paise). This is our margin, NOT a Meta
+// SendAnjal's own per-message platform fee (paise). This is our margin, NOT a Meta
 // rate — Meta wholesale rates are never hardcoded (Law #2); they come from the
 // `meta_rates` table via getWholesalePaise().
 const PLATFORM_FEE_PAISE = 30;
@@ -28,7 +30,7 @@ const FALLBACK_WHOLESALE_PAISE: Record<MessageCategory, number> = {
 
 /**
  * Resolve the BYO per-message cost in integer paise: Meta wholesale (from
- * `meta_rates`) + WASend's flat platform fee. Managed users price via
+ * `meta_rates`) + SendAnjal's flat platform fee. Managed users price via
  * quoteSendCostPaise instead (wholesale × tier markup).
  */
 async function byoUnitCostPaise(category: MessageCategory): Promise<number> {
@@ -297,14 +299,22 @@ export async function POST(request: NextRequest) {
   // Load template
   const { data: template, error: tmplErr } = await supabase
     .from("templates")
-    .select("id, name, display_name, body, variables, language, category, status")
+    .select("id, name, display_name, body, variables, language, category, status, meta_template_id")
     .eq("id", templateId)
     .eq("user_id", user.id)
     .single();
 
   if (tmplErr || !template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
-  if (template.status !== "APPROVED") {
-    return NextResponse.json({ error: "Template is not approved. Only APPROVED templates can be sent." }, { status: 400 });
+  // APPROVED alone is not enough: a row can be APPROVED locally while
+  // `meta_template_id` is null, meaning Meta never received it. Sending that
+  // fails with a misleading "(#132001) Template name does not exist in the
+  // translation". Check both. See lib/whatsapp/template-sendable.ts.
+  const sendability = templateSendability(template);
+  if (!sendability.sendable) {
+    return NextResponse.json(
+      { error: sendability.message, code: sendability.reason },
+      { status: 400 },
+    );
   }
 
   // Resolve contacts
@@ -352,8 +362,45 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ── Consent gate ──────────────────────────────────────────────────────────
+  // For verticals flagged `requires_explicit_consent` (Hospital: DPDP health
+  // data; School: minors' data), drop contacts who have not explicitly
+  // consented. Filtering rather than refusing the whole campaign is deliberate:
+  // blocking a send to 797 consenting patients because 3 have not consented
+  // would be the wrong trade. The blocked count is reported, never silent.
+  //
+  // CSV audiences are pseudo-contacts with no row to carry consent, so under a
+  // consent-required vertical they cannot be verified and are refused outright.
+  let consentBlocked = 0;
+  const consentPolicy = await consentPolicyFor(user.id);
+  if (consentPolicy.required) {
+    if (audienceType === "csv") {
+      return NextResponse.json(
+        {
+          error:
+            `${consentPolicy.verticalName} accounts can't send to an uploaded list — ` +
+            `consent has to be recorded against a saved contact first.`,
+        },
+        { status: 422 },
+      );
+    }
+    const split = await splitByConsent(user.id, contacts.map((c) => c.id));
+    const allowed = new Set(split.allowed);
+    consentBlocked = split.blocked.length;
+    contacts = contacts.filter((c) => allowed.has(c.id));
+  }
+
   if (contacts.length === 0) {
-    return NextResponse.json({ error: "No contacts found for the selected audience" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: consentBlocked > 0
+          ? `None of the ${consentBlocked} contacts in this audience have given consent yet, ` +
+            `so there's no one to send to.`
+          : "No contacts found for the selected audience",
+        consentBlocked: consentBlocked || undefined,
+      },
+      { status: consentBlocked > 0 ? 422 : 400 },
+    );
   }
 
   // Resolve the per-message cost in integer paise from the rate tables — Meta
@@ -493,7 +540,22 @@ export async function POST(request: NextRequest) {
   }).catch((err) => console.error("Campaign execution error:", err));
 
   return NextResponse.json(
-    { campaignId: campaign.id, status: "running", recipients: contacts.length },
+    {
+      campaignId: campaign.id,
+      status: "running",
+      recipients: contacts.length,
+      // Reported on the SUCCESS path too. A campaign that quietly went to 797
+      // of 800 people, with no mention of the 3 it skipped, is a lie about what
+      // happened — and the tenant needs to know who to collect consent from.
+      ...(consentBlocked > 0
+        ? {
+            consentBlocked,
+            consentNote:
+              `${consentBlocked} contact${consentBlocked === 1 ? "" : "s"} skipped — ` +
+              `no consent on record yet.`,
+          }
+        : {}),
+    },
     { status: 201 }
   );
 }

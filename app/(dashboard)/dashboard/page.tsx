@@ -18,11 +18,16 @@ import {
   ResponsiveContainer, Legend,
 } from "recharts";
 
+/**
+ * The v3 palette carries exactly one accent, so these lost their per-action
+ * pastel gradients: they are flat cards that pick up terracotta on hover. The
+ * hint line comes from the design's quick-action row.
+ */
 const quickActions = [
-  { label: "Send Message",   icon: Send,      href: "/templates/send",    color: "from-green-500/20 to-emerald-500/10 border-green-500/25 hover:border-green-500/50"  },
-  { label: "New Campaign",   icon: Megaphone,  href: "/campaigns/create",  color: "from-blue-500/20 to-sky-500/10 border-blue-500/25 hover:border-blue-500/50"       },
-  { label: "Add Contact",    icon: UserPlus,   href: "/contacts/import",   color: "from-purple-500/20 to-violet-500/10 border-purple-500/25 hover:border-purple-500/50" },
-  { label: "Recharge Wallet",icon: CreditCard, href: "/billing",           color: "from-amber-500/20 to-orange-500/10 border-amber-500/25 hover:border-amber-500/50"  },
+  { label: "Send Message",    hint: "One-off to a single contact", icon: Send,       href: "/templates/send"   },
+  { label: "New Campaign",    hint: "Bulk send from a template",   icon: Megaphone,  href: "/campaigns/create" },
+  { label: "Add Contact",     hint: "Manual or CSV import",        icon: UserPlus,   href: "/contacts/import"  },
+  { label: "Recharge Wallet", hint: "Top up your prepaid balance", icon: CreditCard, href: "/billing"          },
 ];
 
 const CHECKLIST_KEY = "wa_checklist_dismissed";
@@ -69,11 +74,11 @@ function DashboardSkeleton() {
         {[0,1,2,3].map(i => <Skeleton key={i} className="h-[68px] rounded-2xl" />)}
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-card rounded-2xl border border-border/50 p-6">
+        <div className="xl:col-span-2 card-surface p-6">
           <Skeleton className="h-5 w-32 mb-6" />
           <Skeleton className="h-[240px] w-full" />
         </div>
-        <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-3">
+        <div className="card-surface p-6 space-y-3">
           <Skeleton className="h-5 w-40 mb-4" />
           {[0,1].map(i => <Skeleton key={i} className="h-[72px] rounded-xl" />)}
         </div>
@@ -129,8 +134,8 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
-          <AlertCircle className="w-7 h-7 text-red-400" />
+        <div className="w-14 h-14 rounded-2xl bg-destructive-soft flex items-center justify-center">
+          <AlertCircle className="w-7 h-7 text-destructive" />
         </div>
         <div className="text-center">
           <p className="font-semibold">Failed to load dashboard</p>
@@ -138,7 +143,7 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={load}
-          className="wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all"
+          className="wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all"
         >
           Retry
         </button>
@@ -160,7 +165,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/campaigns/create"
-          className="hidden sm:flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+          className="hidden sm:flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
         >
           <Megaphone className="w-4 h-4" />
           New Campaign
@@ -170,7 +175,7 @@ export default function DashboardPage() {
       {/* Getting Started checklist */}
       {!checklistDismissed && (
         <div className="bg-card border border-border/50 rounded-2xl p-5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
+          
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-sm">
@@ -191,7 +196,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Progress bar */}
-          <div className="h-1.5 bg-white/5 rounded-full mb-4 overflow-hidden">
+          <div className="h-1.5 bg-secondary rounded-full mb-4 overflow-hidden">
             <div
               className="h-full wa-gradient rounded-full transition-all duration-500"
               style={{ width: `${(checklistProgress / checklistTotal) * 100}%` }}
@@ -242,8 +247,6 @@ export default function DashboardPage() {
           icon={CheckCircle2}
           trend={stats?.deliveryRateTrend}
           trendLabel="vs last week"
-          iconColor="text-blue-400"
-          iconBg="bg-blue-500/10"
         />
         <StatsCard
           title="Failed Messages"
@@ -251,16 +254,14 @@ export default function DashboardPage() {
           icon={XCircle}
           trend={stats?.failedMessagesTrend ? -stats.failedMessagesTrend : undefined}
           trendLabel="vs last week"
-          iconColor="text-red-400"
-          iconBg="bg-red-500/10"
+          iconColor="text-destructive"
+          iconBg="bg-destructive-soft"
         />
         <StatsCard
           title="Wallet Balance"
           value={stats?.walletBalance.toLocaleString() || "0"}
           prefix="₹"
           icon={Wallet}
-          iconColor="text-amber-400"
-          iconBg="bg-amber-500/10"
         >
           <div className="mt-2">
             <Link href="/billing" className="text-xs text-primary hover:underline font-medium">
@@ -275,22 +276,25 @@ export default function DashboardPage() {
           <Link
             key={action.label}
             href={action.href}
-            className={`flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br border transition-all duration-200 hover:scale-[1.02] group ${action.color}`}
+            className="flex items-center gap-3 p-4 card-surface hover:border-primary transition-colors duration-150 group"
           >
-            <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-              <action.icon className="w-4.5 h-4.5 text-foreground" />
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <action.icon className="w-4 h-4 text-primary" />
             </div>
-            <span className="text-sm font-medium">{action.label}</span>
-            <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight">{action.label}</p>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{action.hint}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 flex-shrink-0 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
           </Link>
         ))}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-card rounded-2xl border border-border/50 p-6">
+        <div className="xl:col-span-2 card-surface p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="font-semibold">Message Activity</h3>
+              <h3 className="text-card-title">Message Activity</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Last 7 days</p>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg">
@@ -312,9 +316,9 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border/50 p-6">
+        <div className="card-surface p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Connected Numbers</h3>
+            <h3 className="text-card-title">Connected Numbers</h3>
             <Link href="/numbers" className="text-xs text-primary hover:underline">Manage →</Link>
           </div>
           <div className="space-y-3">
@@ -346,10 +350,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-border/50">
+      <div className="card-surface overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-hairline">
           <div>
-            <h3 className="font-semibold">Recent Campaigns</h3>
+            <h3 className="text-card-title">Recent Campaigns</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Your latest campaign activity</p>
           </div>
           <Link href="/campaigns" className="text-xs text-primary hover:underline">View all →</Link>
@@ -357,15 +361,15 @@ export default function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border/50">
+              <tr className="border-b border-hairline">
                 {["Campaign", "Status", "Recipients", "Delivered", "Failed", "Date"].map((h) => (
-                  <th key={h} className="text-left text-xs font-medium text-muted-foreground px-6 py-3">{h}</th>
+                  <th key={h} className="text-left text-eyebrow px-6 py-3">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {(data?.recentCampaigns || []).map((campaign) => (
-                <tr key={campaign.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors">
+                <tr key={campaign.id} className="border-b border-hairline last:border-0 hover:bg-rowHover transition-colors">
                   <td className="px-6 py-4">
                     <p className="text-sm font-medium">{campaign.name}</p>
                     <p className="text-xs text-muted-foreground">{campaign.templateName}</p>
@@ -373,9 +377,9 @@ export default function DashboardPage() {
                   <td className="px-6 py-4">
                     <StatusBadge status={campaign.status as Parameters<typeof StatusBadge>[0]["status"]} />
                   </td>
-                  <td className="px-6 py-4 text-sm">{campaign.recipients.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-emerald-400">{campaign.delivered.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-sm text-red-400">{campaign.failed}</td>
+                  <td className="px-6 py-4 text-sm text-numeric">{campaign.recipients.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-sm text-numeric text-success">{campaign.delivered.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-sm text-numeric text-destructive">{campaign.failed}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">{formatDate(campaign.createdAt)}</td>
                 </tr>
               ))}

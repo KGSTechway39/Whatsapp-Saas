@@ -31,11 +31,12 @@ export function EmptyState({
         className
       )}
     >
-      <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-        <Icon className="w-8 h-8 text-muted-foreground" />
+      {/* Circular, per the design's avatar/'icon-in-a-round-well' motif. */}
+      <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
+        <Icon className="w-7 h-7 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-sm mb-6">
+      <h3 className="text-lg font-extrabold tracking-tight mb-1.5">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-6 leading-relaxed">
         {description}
       </p>
       {action}

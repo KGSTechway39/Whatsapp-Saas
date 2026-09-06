@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// WASend — Prisma schema (REFERENCE / DOCUMENTATION)
+// SendAnjal — Prisma schema (REFERENCE / DOCUMENTATION)
 // ─────────────────────────────────────────────────────────────────────────────
 // The runtime database is Postgres on Supabase. The application talks to it
 // via the @supabase/supabase-js client (see lib/supabase/server.ts), not via
@@ -164,9 +164,20 @@ model User {
   createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
+  // Industry track this tenant was provisioned into (migration 026). Nullable and
+  // never backfilled — NULL means "no industry track", a fully supported state
+  // (the "Skip / not sure" path), not an unconfigured one.
+  //
+  // In the LEGACY user_id model that production actually runs, each user IS the
+  // tenant, so this is the tenant-level vertical. Deliberately independent of
+  // plan/tier/billing_mode: nothing reads both.
+  verticalId   String?             @map("vertical_id") @db.Uuid
+  vertical     IndustryVertical?   @relation(fields: [verticalId], references: [id], onDelete: SetNull)
+
   memberships  OrganizationMember[]
   auditEvents  AuditLog[]
 
+  @@index([verticalId])
   @@map("users")
 }
 
@@ -577,4 +588,84 @@ model CrmDeal {
   contact         Contact?     @relation(fields: [contactId],      references: [id], onDelete: SetNull)
 
   @@map("crm_deals")
+}
+
+// ─── Industry verticals (migration 026_verticals.sql) ───────────────────────
+//
+// Reference mirror of 026. The runtime source of truth is the SQL migration —
+// as with everything else in this file, the app reads these tables through
+// @supabase/supabase-js, not Prisma.
+//
+// One representation difference worth knowing: `VerticalTemplateKind` and the
+// meta-category below are Prisma enums here, but the migration models them as
+// TEXT + CHECK, matching how every other constrained column in this schema is
+// done (users.tier, ai_model_config.task_type, …). Same allowed values, no
+// Postgres enum type is created.
+
+enum VerticalTemplateKind {
+  CAMPAIGN_PROMPT
+  FLOW_JSON
+  MESSAGE_TEMPLATE
+}
+
+/// Meta's template billing category. MARKETING costs more per message than
+/// UTILITY — surfaced to the client in plain language before they activate one.
+/// Never a price source: send-time pricing always reads meta_rates.
+enum MetaTemplateCategory {
+  UTILITY
+  MARKETING
+  AUTHENTICATION
+}
+
+model IndustryVertical {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  displayName String   @map("display_name")
+  /// One plain-language line for the picker card — what the business does,
+  /// not what the software does.
+  description String   @default("")
+  icon        String?
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0)    @map("sort_order")
+  /// True for tracks SendAnjal ships; false for ones an admin built with the
+  /// seed-kit form. Informational only — no behaviour branches on it.
+  isBuiltin   Boolean  @default(false) @map("is_builtin")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  templates   VerticalTemplateLibrary[]
+  users       User[]
+
+  @@index([isActive, sortOrder])
+  @@map("industry_verticals")
+}
+
+model VerticalTemplateLibrary {
+  id           String               @id @default(uuid()) @db.Uuid
+  verticalId   String               @map("vertical_id") @db.Uuid
+  vertical     IndustryVertical     @relation(fields: [verticalId], references: [id], onDelete: Cascade)
+  kind         VerticalTemplateKind
+  title        String
+  /// Plain language, one sentence, shown to a non-technical owner. No jargon.
+  description  String
+  /// The business benefit in the owner's words.
+  outcome      String
+  /// Kind-specific:
+  ///   FLOW_JSON        → { flow: { nodes, edges }, triggerType, bookingContext? }
+  ///                      `flow` must pass lib/automation/flow-schema.ts#sanitizeFlowGraph
+  ///                      using only the 9 canvas node types.
+  ///   CAMPAIGN_PROMPT  → { prompt, goal?, audienceHint? }
+  ///   MESSAGE_TEMPLATE → { body, footer?, variableNames, language }
+  payload      Json
+  /// Required when kind = MESSAGE_TEMPLATE, forbidden otherwise (DB CHECK).
+  metaCategory MetaTemplateCategory? @map("meta_category")
+  /// Shown to the ADMIN on the preview panel only — never to the client.
+  adminNote    String?               @map("admin_note")
+  isActive     Boolean               @default(true) @map("is_active")
+  sortOrder    Int                   @default(0)    @map("sort_order")
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([verticalId, kind, isActive, sortOrder])
+  @@map("vertical_template_library")
 }

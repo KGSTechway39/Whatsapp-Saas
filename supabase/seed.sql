@@ -1,24 +1,24 @@
 -- =====================================================
--- WASend — Seed Data for Testing
--- Test login: admin@wasend.demo / Test@12345
+-- SendAnjal — Seed Data for Testing
+-- Test login: admin@sendanjal.com / Test@12345
 -- Run in Supabase SQL Editor AFTER schema.sql
 -- =====================================================
 
 -- Clean up any existing seed data
-DELETE FROM crm_activities   WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM crm_deals        WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM daily_analytics  WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM transactions     WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM team_members     WHERE owner_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM subscriptions    WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM campaign_messages WHERE campaign_id IN (SELECT id FROM campaigns WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo'));
-DELETE FROM campaigns        WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM automations      WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM templates        WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM contacts         WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM whatsapp_numbers WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM wallet           WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@wasend.demo');
-DELETE FROM users            WHERE email = 'admin@wasend.demo';
+DELETE FROM crm_activities   WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM crm_deals        WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM daily_analytics  WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM transactions     WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM team_members     WHERE owner_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM subscriptions    WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM campaign_messages WHERE campaign_id IN (SELECT id FROM campaigns WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com'));
+DELETE FROM campaigns        WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM automations      WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM templates        WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM contacts         WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM whatsapp_numbers WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM wallet           WHERE user_id IN (SELECT id FROM users WHERE email = 'admin@sendanjal.com');
+DELETE FROM users            WHERE email = 'admin@sendanjal.com';
 
 -- =====================================================
 -- USER
@@ -26,7 +26,7 @@ DELETE FROM users            WHERE email = 'admin@wasend.demo';
 INSERT INTO users (id, email, password_hash, full_name, company_name, phone, timezone)
 VALUES (
   'a1b2c3d4-0000-0000-0000-000000000001',
-  'admin@wasend.demo',
+  'admin@sendanjal.com',
   '$2b$12$nH2GwSd0w4dLDGK0ifh6EuJRzmB6wqpPSkCoYnDLIYbVT2Zaufcl.',  -- Test@12345
   'Arjun Sharma',
   'TechSell Solutions',

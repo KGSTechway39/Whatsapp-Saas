@@ -1,4 +1,4 @@
-# WASend — Founder Operating Guide
+# SendAnjal — Founder Operating Guide
 
 Practical runbook for you, the **platform owner / Meta Tech Provider (BSP)**: how the
 admin page works, how *you* set up Embedded Signup once, and the exact order to get

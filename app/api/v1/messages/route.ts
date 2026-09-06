@@ -8,7 +8,7 @@ import { guardedSingleSend, resolveTemplateCategory } from "@/lib/billing/guarde
 import { InsufficientBalanceError } from "@/lib/billing/wallet";
 
 // POST /api/v1/messages
-// Auth: Bearer wasend_… with scope `messages:write`
+// Auth: Bearer sendanjal_… with scope `messages:write`
 //
 // Body:
 // {

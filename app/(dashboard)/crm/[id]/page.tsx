@@ -12,12 +12,12 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 const STAGES = [
-  { id: "new_lead",    label: "New Lead",   dot: "bg-slate-400",   color: "text-slate-400",   bg: "bg-slate-500/10",  border: "border-slate-500/30" },
-  { id: "qualified",  label: "Qualified",  dot: "bg-blue-400",    color: "text-blue-400",    bg: "bg-blue-500/10",   border: "border-blue-500/30" },
-  { id: "contacted",  label: "Contacted",  dot: "bg-violet-400",  color: "text-violet-400",  bg: "bg-violet-500/10", border: "border-violet-500/30" },
-  { id: "interested", label: "Interested", dot: "bg-amber-400",   color: "text-amber-400",   bg: "bg-amber-500/10",  border: "border-amber-500/30" },
-  { id: "converted",  label: "Converted",  dot: "bg-emerald-400", color: "text-emerald-400", bg: "bg-emerald-500/10",border: "border-emerald-500/30" },
-  { id: "lost",       label: "Lost",       dot: "bg-red-400",     color: "text-red-400",     bg: "bg-red-500/10",    border: "border-red-500/30" },
+  { id: "new_lead",    label: "New Lead",   dot: "bg-muted",   color: "text-muted-foreground",   bg: "bg-muted",  border: "border-border" },
+  { id: "qualified",  label: "Qualified",  dot: "bg-primary",    color: "text-primary",    bg: "bg-accent",   border: "border-primary/25" },
+  { id: "contacted",  label: "Contacted",  dot: "bg-primary",  color: "text-primary",  bg: "bg-accent", border: "border-primary/25" },
+  { id: "interested", label: "Interested", dot: "bg-warning",   color: "text-warning",   bg: "bg-warning-soft",  border: "border-warning/25" },
+  { id: "converted",  label: "Converted",  dot: "bg-success", color: "text-success", bg: "bg-success-soft",border: "border-success/25" },
+  { id: "lost",       label: "Lost",       dot: "bg-destructive",     color: "text-destructive",     bg: "bg-destructive-soft",    border: "border-destructive/25" },
 ];
 
 const DEAL_STAGES = [
@@ -30,12 +30,12 @@ const DEAL_STAGES = [
 ];
 
 const ACTIVITY_META: Record<string, { icon: typeof FileText; color: string; label: string }> = {
-  note:         { icon: FileText,     color: "text-blue-400 bg-blue-500/10",   label: "Note" },
-  call:         { icon: PhoneCall,    color: "text-violet-400 bg-violet-500/10", label: "Call" },
-  whatsapp:     { icon: MessageSquare,color: "text-emerald-400 bg-emerald-500/10", label: "WhatsApp" },
-  email:        { icon: Mail,         color: "text-amber-400 bg-amber-500/10", label: "Email" },
+  note:         { icon: FileText,     color: "text-primary bg-accent",   label: "Note" },
+  call:         { icon: PhoneCall,    color: "text-primary bg-accent", label: "Call" },
+  whatsapp:     { icon: MessageSquare,color: "text-success bg-success-soft", label: "WhatsApp" },
+  email:        { icon: Mail,         color: "text-warning bg-warning-soft", label: "Email" },
   stage_change: { icon: Zap,          color: "text-primary bg-primary/10",     label: "Stage Change" },
-  deal:         { icon: DollarSign,   color: "text-amber-400 bg-amber-500/10", label: "Deal" },
+  deal:         { icon: DollarSign,   color: "text-warning bg-warning-soft", label: "Deal" },
 };
 
 interface Activity { id: string; type: string; content: string; metadata: Record<string,string>; createdAt: string; }
@@ -191,7 +191,7 @@ export default function CRMContactDetailPage() {
   );
 
   const currentStage = STAGES.find((s) => s.id === contact.stage) || STAGES[0];
-  const scoreColor = contact.score >= 75 ? "text-emerald-400" : contact.score >= 50 ? "text-amber-400" : "text-red-400";
+  const scoreColor = contact.score >= 75 ? "text-success" : contact.score >= 50 ? "text-warning" : "text-destructive";
   const openDeals = deals.filter((d) => !["closed_won", "closed_lost"].includes(d.stage));
   const wonDeals  = deals.filter((d) => d.stage === "closed_won");
   const totalWon  = wonDeals.reduce((s, d) => s + d.value, 0);
@@ -215,7 +215,7 @@ export default function CRMContactDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/templates/send" className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
+              <Link href="/templates/send" className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
                 <Send className="w-4 h-4" /> Send Message
               </Link>
             </div>
@@ -267,7 +267,7 @@ export default function CRMContactDetailPage() {
               <div className="flex gap-2">
                 <input type="number" min="0" max="100" value={scoreInput} onChange={(e) => setScoreInput(e.target.value)}
                   className="flex-1 bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60" />
-                <button onClick={saveScore} className="p-2 rounded-xl bg-primary text-white hover:opacity-90"><CheckCircle2 className="w-4 h-4" /></button>
+                <button onClick={saveScore} className="p-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90"><CheckCircle2 className="w-4 h-4" /></button>
                 <button onClick={() => setEditScore(false)} className="p-2 rounded-xl hover:bg-muted/50"><X className="w-4 h-4" /></button>
               </div>
             ) : (
@@ -275,7 +275,7 @@ export default function CRMContactDetailPage() {
                 <div className={`text-4xl font-black mb-1 ${scoreColor}`}>{contact.score}</div>
                 <div className="flex items-center gap-1 justify-center">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`w-4 h-4 ${i < Math.round(contact.score / 20) ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
+                    <Star key={i} className={`w-4 h-4 ${i < Math.round(contact.score / 20) ? "text-warning fill-warning" : "text-muted-foreground"}`} />
                   ))}
                 </div>
                 <div className="w-full bg-muted/30 rounded-full h-2 mt-3 overflow-hidden">
@@ -287,9 +287,9 @@ export default function CRMContactDetailPage() {
 
           {/* Deal value */}
           {contact.value != null && contact.value > 0 && (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5">
+            <div className="bg-success-soft border border-success/25 rounded-2xl p-5">
               <p className="text-xs text-muted-foreground mb-1">Deal Value</p>
-              <p className="text-2xl font-black text-emerald-400">₹{contact.value.toLocaleString()}</p>
+              <p className="text-2xl font-black text-success">₹{contact.value.toLocaleString()}</p>
             </div>
           )}
         </div>
@@ -300,7 +300,7 @@ export default function CRMContactDetailPage() {
           <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-border/50">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center"><DollarSign className="w-4 h-4 text-amber-400" /></div>
+                <div className="w-8 h-8 rounded-lg bg-warning-soft flex items-center justify-center"><DollarSign className="w-4 h-4 text-warning" /></div>
                 <div>
                   <p className="font-semibold text-sm">Deals</p>
                   <p className="text-xs text-muted-foreground">{openDeals.length} open · ₹{totalWon.toLocaleString()} won</p>
@@ -345,7 +345,7 @@ export default function CRMContactDetailPage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => setShowDealForm(false)} className="flex-1 py-2 rounded-xl border border-border text-sm hover:bg-accent">Cancel</button>
-                  <button onClick={addDeal} disabled={savingDeal} className="flex-1 flex items-center justify-center gap-2 wa-gradient text-white text-sm font-semibold py-2 rounded-xl hover:opacity-90 disabled:opacity-50">
+                  <button onClick={addDeal} disabled={savingDeal} className="flex-1 flex items-center justify-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold py-2 rounded-xl hover:opacity-90 disabled:opacity-50">
                     {savingDeal ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Create Deal
                   </button>
                 </div>
@@ -365,7 +365,7 @@ export default function CRMContactDetailPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">{deal.title}</p>
-                          <p className={`text-xl font-bold mt-0.5 ${isWon ? "text-emerald-400" : isLost ? "text-red-400 line-through opacity-50" : "text-foreground"}`}>
+                          <p className={`text-xl font-bold mt-0.5 ${isWon ? "text-success" : isLost ? "text-destructive line-through opacity-50" : "text-foreground"}`}>
                             ₹{deal.value.toLocaleString()}
                           </p>
                           {deal.expectedClose && (
@@ -375,7 +375,7 @@ export default function CRMContactDetailPage() {
                           )}
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${isWon ? "bg-emerald-500/10 text-emerald-400" : isLost ? "bg-red-500/10 text-red-400" : "bg-muted text-muted-foreground"}`}>
+                          <div className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${isWon ? "bg-success-soft text-success" : isLost ? "bg-destructive-soft text-destructive" : "bg-muted text-muted-foreground"}`}>
                             {isWon ? <CheckCircle2 className="w-3 h-3" /> : isLost ? <XCircle className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
                             {ds?.label}
                           </div>
@@ -385,9 +385,9 @@ export default function CRMContactDetailPage() {
                           {!isWon && !isLost && (
                             <div className="flex gap-1 mt-2 justify-end">
                               <button onClick={() => updateDeal(deal.id, { stage: "closed_won" })}
-                                className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20">Won</button>
+                                className="text-[10px] px-2 py-0.5 rounded bg-success-soft text-success hover:bg-success-soft">Won</button>
                               <button onClick={() => updateDeal(deal.id, { stage: "closed_lost" })}
-                                className="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20">Lost</button>
+                                className="text-[10px] px-2 py-0.5 rounded bg-destructive-soft text-destructive hover:bg-destructive-soft">Lost</button>
                             </div>
                           )}
                         </div>
@@ -422,7 +422,7 @@ export default function CRMContactDetailPage() {
                   className="w-full bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60 resize-none" />
                 <div className="flex gap-2">
                   <button onClick={() => setEditNotes(false)} className="flex-1 py-2 rounded-xl border border-border text-sm hover:bg-accent">Cancel</button>
-                  <button onClick={saveNotes} className="flex-1 py-2 rounded-xl wa-gradient text-white text-sm font-semibold hover:opacity-90">Save</button>
+                  <button onClick={saveNotes} className="flex-1 py-2 rounded-xl wa-gradient text-primary-foreground text-sm font-semibold hover:opacity-90">Save</button>
                 </div>
               </div>
             ) : (
@@ -456,7 +456,7 @@ export default function CRMContactDetailPage() {
                   placeholder={`Log a ${ACTIVITY_META[noteType].label.toLowerCase()}…`}
                   className="flex-1 bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60 resize-none" />
                 <button onClick={addActivity} disabled={savingNote || !noteContent.trim()}
-                  className="flex-shrink-0 flex items-center justify-center gap-1.5 wa-gradient text-white text-sm font-semibold px-4 rounded-xl hover:opacity-90 disabled:opacity-40">
+                  className="flex-shrink-0 flex items-center justify-center gap-1.5 wa-gradient text-primary-foreground text-sm font-semibold px-4 rounded-xl hover:opacity-90 disabled:opacity-40">
                   {savingNote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 </button>
               </div>

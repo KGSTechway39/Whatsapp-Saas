@@ -117,8 +117,8 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   if (error || !campaign) {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
-        <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-8 h-8 text-red-400" />
+        <div className="w-16 h-16 rounded-2xl bg-destructive-soft flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-8 h-8 text-destructive" />
         </div>
         <h2 className="text-lg font-semibold mb-2">{error || "Campaign not found"}</h2>
         <Link href="/campaigns" className="text-sm text-primary hover:underline flex items-center justify-center gap-1.5">
@@ -205,40 +205,40 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
             value: sentCount.toLocaleString(),
             sub: `${audienceRate}% of audience`,
             icon: Send,
-            color: "text-blue-400",
-            bg: "bg-blue-500/10",
+            color: "text-primary",
+            bg: "bg-accent",
           },
           {
             label: "Delivered",
             value: deliveredCount.toLocaleString(),
             sub: `${deliveryRate}% delivery rate`,
             icon: CheckCircle2,
-            color: "text-emerald-400",
-            bg: "bg-emerald-500/10",
+            color: "text-success",
+            bg: "bg-success-soft",
           },
           {
             label: "Read",
             value: readCount.toLocaleString(),
             sub: `${readRate}% read rate`,
             icon: BookOpen,
-            color: "text-green-400",
-            bg: "bg-green-500/10",
+            color: "text-success",
+            bg: "bg-success-soft",
           },
           {
             label: "Failed",
             value: failedCount.toLocaleString(),
             sub: `${failRate}% fail rate`,
             icon: XCircle,
-            color: failedCount > 0 ? "text-red-400" : "text-muted-foreground",
-            bg: failedCount > 0 ? "bg-red-500/10" : "bg-muted/30",
+            color: failedCount > 0 ? "text-destructive" : "text-muted-foreground",
+            bg: failedCount > 0 ? "bg-destructive-soft" : "bg-muted/30",
           },
           {
             label: "Replied",
             value: repliedCount > 0 ? repliedCount.toLocaleString() : "N/A",
             sub: repliedCount > 0 ? `${((repliedCount / deliveredCount) * 100).toFixed(1)}% reply rate` : "Not tracked",
             icon: MessageSquare,
-            color: repliedCount > 0 ? "text-violet-400" : "text-muted-foreground",
-            bg: repliedCount > 0 ? "bg-violet-500/10" : "bg-muted/30",
+            color: repliedCount > 0 ? "text-primary" : "text-muted-foreground",
+            bg: repliedCount > 0 ? "bg-accent" : "bg-muted/30",
           },
         ].map(({ label, value, sub, icon: Icon, color, bg }) => (
           <div key={label} className="bg-card border border-border/50 rounded-2xl p-4">
@@ -287,7 +287,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
               </ResponsiveContainer>
               {/* Centered delivery rate */}
               <div className="text-center -mt-2 mb-3">
-                <p className="text-2xl font-bold text-emerald-400">{deliveryRate}%</p>
+                <p className="text-2xl font-bold text-success">{deliveryRate}%</p>
                 <p className="text-xs text-muted-foreground">Delivery Rate</p>
               </div>
               {/* Legend */}
@@ -373,7 +373,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
         <div className="bg-card border border-border/50 rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <XCircle className="w-4 h-4 text-red-400" />
+              <XCircle className="w-4 h-4 text-destructive" />
               <h3 className="font-semibold text-sm">Failed Messages ({failedMessages.length})</h3>
             </div>
           </div>
@@ -392,7 +392,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                     <td className="px-3 py-3 font-medium">{msg.contactName}</td>
                     <td className="px-3 py-3 text-muted-foreground">{msg.phone}</td>
                     <td className="px-3 py-3">
-                      <span className="text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded-lg line-clamp-1 max-w-xs block">
+                      <span className="text-xs bg-destructive-soft text-destructive px-2 py-0.5 rounded-lg line-clamp-1 max-w-xs block">
                         {msg.error}
                       </span>
                     </td>
@@ -423,7 +423,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
         {costBreakdown && (
           <div className="bg-card border border-border/50 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Wallet className="w-4 h-4 text-amber-400" />
+              <Wallet className="w-4 h-4 text-warning" />
               <h3 className="font-semibold text-sm">Cost Summary</h3>
             </div>
             <div className="space-y-3">
@@ -438,7 +438,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
               ))}
               <div className="flex justify-between text-sm pt-3 border-t border-border/40">
                 <span className="font-semibold">Total Spent</span>
-                <span className="font-bold text-amber-400">₹{costBreakdown.total.toFixed(2)}</span>
+                <span className="font-bold text-warning">₹{costBreakdown.total.toFixed(2)}</span>
               </div>
               {costPerDelivered && (
                 <div className="flex justify-between text-sm">

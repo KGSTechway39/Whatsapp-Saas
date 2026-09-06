@@ -152,7 +152,7 @@ export default function ApiDocsPage() {
     <div className="max-w-7xl">
       <PageHeader
         title="API Documentation"
-        subtitle="Complete reference for the WASend public API"
+        subtitle="Complete reference for the SendAnjal public API"
       />
 
       <div className="grid grid-cols-12 gap-6">
@@ -199,7 +199,7 @@ export default function ApiDocsPage() {
           <section id="intro" className="space-y-3">
             <h2 className="text-2xl font-bold">Introduction</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The WASend API is a JSON-over-HTTPS interface for sending WhatsApp messages, managing contacts,
+              The SendAnjal API is a JSON-over-HTTPS interface for sending WhatsApp messages, managing contacts,
               and receiving real-time events. All requests are authenticated with an API key (Bearer token).
             </p>
             <div className="bg-card border border-border/50 rounded-2xl p-4">
@@ -235,8 +235,8 @@ res = requests.get(
   headers={"Authorization": "Bearer wsk_live_••••••••••••••••"},
 )`,
             }} />
-            <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-muted-foreground">
-              <p className="font-semibold text-amber-400 mb-1">⚠ Never expose your key in client-side code</p>
+            <div className="bg-warning-soft border border-warning/25 rounded-xl p-3 text-xs text-muted-foreground">
+              <p className="font-semibold text-warning mb-1">⚠ Never expose your key in client-side code</p>
               <p>Use <code className="bg-muted/40 px-1 rounded">test</code> environment keys for development; switch to <code className="bg-muted/40 px-1 rounded">live</code> in production. Test keys never charge your wallet.</p>
             </div>
           </section>
@@ -307,14 +307,14 @@ res = requests.get(
 
             <h3 className="text-base font-semibold mt-4">Verifying signatures</h3>
             <p className="text-sm text-muted-foreground">
-              Every request includes <code className="bg-muted/40 px-1 rounded text-xs">X-WASend-Signature: t={`{ts}`},v1={`{hmac}`}</code>.
+              Every request includes <code className="bg-muted/40 px-1 rounded text-xs">X-SendAnjal-Signature: t={`{ts}`},v1={`{hmac}`}</code>.
               Compute <code className="bg-muted/40 px-1 rounded text-xs">HMAC-SHA256(secret, &quot;{`{ts}`}.{`{rawBody}`}&quot;)</code> and compare with constant-time equality.
             </p>
             <CodeBlock lang={lang} setLang={setLang} samples={{
-              curl: `# Headers WASend sends:
-X-WASend-Signature: t=1715164800,v1=abc123…
-X-WASend-Event:     message.delivered
-X-WASend-Delivery-Id: dlv_xxx`,
+              curl: `# Headers SendAnjal sends:
+X-SendAnjal-Signature: t=1715164800,v1=abc123…
+X-SendAnjal-Event:     message.delivered
+X-SendAnjal-Delivery-Id: dlv_xxx`,
               node: `import { createHmac, timingSafeEqual } from "crypto";
 
 function verify(rawBody, signatureHeader, secret) {
@@ -349,10 +349,10 @@ def verify(raw_body: bytes, signature_header: str, secret: str) -> bool:
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 function methodColor(m: string) {
-  return m === "GET"    ? "bg-emerald-500/15 text-emerald-400"
-       : m === "POST"   ? "bg-blue-500/15 text-blue-400"
-       : m === "PATCH"  ? "bg-amber-500/15 text-amber-400"
-       : m === "DELETE" ? "bg-red-500/15 text-red-400"
+  return m === "GET"    ? "bg-success-soft text-success"
+       : m === "POST"   ? "bg-accent text-primary"
+       : m === "PATCH"  ? "bg-warning-soft text-warning"
+       : m === "DELETE" ? "bg-destructive-soft text-destructive"
        : "bg-muted/40 text-muted-foreground";
 }
 
@@ -368,8 +368,8 @@ function CodeBlock({ lang, setLang, samples }: {
   };
 
   return (
-    <div className="bg-[#0d1117] border border-border/50 rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-[#161b22]">
+    <div className="bg-rail border border-border/50 rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-rail">
         <div className="flex gap-1">
           {(["curl", "node", "python"] as Lang[]).map((l) => (
             <button
@@ -384,10 +384,10 @@ function CodeBlock({ lang, setLang, samples }: {
           ))}
         </div>
         <button onClick={copy} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
         </button>
       </div>
-      <pre className="p-4 text-xs overflow-x-auto"><code className="text-[#c9d1d9]">{samples[lang]}</code></pre>
+      <pre className="p-4 text-xs overflow-x-auto"><code className="text-rail-foreground">{samples[lang]}</code></pre>
     </div>
   );
 }
@@ -451,7 +451,7 @@ function EndpointCard({ endpoint, lang, setLang, tryKey, setTryKey }: {
                 <tr key={p.name} className="border-b border-border/20 last:border-0">
                   <td className="py-1.5 pr-3">
                     <code className="font-mono">{p.name}</code>
-                    {p.required && <span className="text-red-400 ml-1">*</span>}
+                    {p.required && <span className="text-destructive ml-1">*</span>}
                   </td>
                   <td className="py-1.5 pr-3 text-muted-foreground">{p.type}</td>
                   <td className="py-1.5 text-muted-foreground">{p.desc}</td>
@@ -472,7 +472,7 @@ function EndpointCard({ endpoint, lang, setLang, tryKey, setTryKey }: {
         <div>
           <p className="px-5 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Response</p>
           <div className="px-5 pb-5">
-            <pre className="bg-[#0d1117] border border-border/50 rounded-2xl p-4 text-xs overflow-x-auto text-[#c9d1d9]">
+            <pre className="bg-rail border border-border/50 rounded-2xl p-4 text-xs overflow-x-auto text-rail-foreground">
               <code>{JSON.stringify(endpoint.example_response, null, 2)}</code>
             </pre>
           </div>
@@ -482,7 +482,7 @@ function EndpointCard({ endpoint, lang, setLang, tryKey, setTryKey }: {
       {/* Try it */}
       <div className="p-5 border-t border-border/40 bg-muted/10">
         <div className="flex items-center gap-2 mb-2">
-          <Play className="w-3.5 h-3.5 text-emerald-400" />
+          <Play className="w-3.5 h-3.5 text-success" />
           <p className="text-xs font-semibold">Try it</p>
         </div>
         <div className="flex gap-2">
@@ -495,14 +495,14 @@ function EndpointCard({ endpoint, lang, setLang, tryKey, setTryKey }: {
           <button
             onClick={tryIt}
             disabled={running || !tryKey.trim()}
-            className="flex items-center gap-1.5 wa-gradient text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-40"
+            className="flex items-center gap-1.5 wa-gradient text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-40"
           >
             {running ? <Loader2 className="w-3 h-3 animate-spin" /> : <ChevronRight className="w-3 h-3" />}
             Send
           </button>
         </div>
         {response && (
-          <pre className="bg-[#0d1117] border border-border/50 rounded-xl p-3 text-[11px] overflow-x-auto mt-2 text-[#c9d1d9] max-h-48"><code>{response}</code></pre>
+          <pre className="bg-rail border border-border/50 rounded-xl p-3 text-[11px] overflow-x-auto mt-2 text-rail-foreground max-h-48"><code>{response}</code></pre>
         )}
       </div>
     </div>

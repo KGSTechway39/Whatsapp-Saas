@@ -13,12 +13,12 @@ import { toast } from "sonner";
 import { contacts as contactsApi } from "@/lib/api";
 
 const STAGES = [
-  { id: "new_lead",    label: "New Lead",   color: "text-slate-400",   bg: "bg-slate-500/10",  border: "border-slate-500/30",  dot: "bg-slate-400" },
-  { id: "qualified",  label: "Qualified",  color: "text-blue-400",    bg: "bg-blue-500/10",   border: "border-blue-500/30",   dot: "bg-blue-400" },
-  { id: "contacted",  label: "Contacted",  color: "text-violet-400",  bg: "bg-violet-500/10", border: "border-violet-500/30", dot: "bg-violet-400" },
-  { id: "interested", label: "Interested", color: "text-amber-400",   bg: "bg-amber-500/10",  border: "border-amber-500/30",  dot: "bg-amber-400" },
-  { id: "converted",  label: "Converted",  color: "text-emerald-400", bg: "bg-emerald-500/10",border: "border-emerald-500/30",dot: "bg-emerald-400" },
-  { id: "lost",       label: "Lost",       color: "text-red-400",     bg: "bg-red-500/10",    border: "border-red-500/30",    dot: "bg-red-400" },
+  { id: "new_lead",    label: "New Lead",   color: "text-muted-foreground",   bg: "bg-muted",  border: "border-border",  dot: "bg-muted" },
+  { id: "qualified",  label: "Qualified",  color: "text-primary",    bg: "bg-accent",   border: "border-primary/25",   dot: "bg-primary" },
+  { id: "contacted",  label: "Contacted",  color: "text-primary",  bg: "bg-accent", border: "border-primary/25", dot: "bg-primary" },
+  { id: "interested", label: "Interested", color: "text-warning",   bg: "bg-warning-soft",  border: "border-warning/25",  dot: "bg-warning" },
+  { id: "converted",  label: "Converted",  color: "text-success", bg: "bg-success-soft",border: "border-success/25",dot: "bg-success" },
+  { id: "lost",       label: "Lost",       color: "text-destructive",     bg: "bg-destructive-soft",    border: "border-destructive/25",    dot: "bg-destructive" },
 ] as const;
 type StageId = typeof STAGES[number]["id"];
 
@@ -34,12 +34,12 @@ interface PipelineSummary {
 interface PipelineStage { stage: string; count: number; totalValue: number; avgScore: number; }
 
 const SOURCE_BADGE: Record<string, string> = {
-  whatsapp: "bg-green-500/10 text-green-400", import: "bg-blue-500/10 text-blue-400",
-  campaign: "bg-purple-500/10 text-purple-400", manual: "bg-muted/50 text-muted-foreground",
+  whatsapp: "bg-success-soft text-success", import: "bg-accent text-primary",
+  campaign: "bg-accent text-primary", manual: "bg-muted/50 text-muted-foreground",
 };
 
 function ScoreRing({ score }: { score: number }) {
-  const color = score >= 75 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400";
+  const color = score >= 75 ? "text-success" : score >= 50 ? "text-warning" : "text-destructive";
   return <span className={`flex items-center gap-1 text-xs font-bold ${color}`}><Star className="w-3 h-3" />{score}</span>;
 }
 
@@ -90,7 +90,7 @@ function KanbanCard({ contact, onMove, onMessage }: { contact: CRMContact; onMov
       </div>
       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2"><Phone className="w-3 h-3" />{contact.phone}</p>
       {(contact.value != null && contact.value > 0) && (
-        <p className="text-[10px] font-bold text-emerald-400 mb-2">₹{contact.value.toLocaleString()}</p>
+        <p className="text-[10px] font-bold text-success mb-2">₹{contact.value.toLocaleString()}</p>
       )}
       <div className="flex items-center gap-2 pt-2 border-t border-border/30" onClick={(e) => e.preventDefault()}>
         <button onClick={(e) => { e.preventDefault(); onMessage(contact); }} className="flex items-center gap-1 text-[10px] font-medium text-primary hover:underline">
@@ -165,7 +165,7 @@ function AddContactModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: C
         </div>
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm hover:bg-accent transition-colors">Cancel</button>
-          <button onClick={handleAdd} disabled={saving} className="flex-1 flex items-center justify-center gap-2 wa-gradient text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50">
+          <button onClick={handleAdd} disabled={saving} className="flex-1 flex items-center justify-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add Contact
           </button>
         </div>
@@ -268,16 +268,16 @@ CREATE TABLE IF NOT EXISTS crm_deals (
     return (
       <div className="max-w-2xl">
         <PageHeader title="CRM" subtitle="Pipeline & contact management" />
-        <div className="bg-card border border-amber-500/20 rounded-2xl p-8">
+        <div className="bg-card border border-warning/25 rounded-2xl p-8">
           <div className="flex items-start gap-3 mb-6">
-            <AlertCircle className="w-6 h-6 text-amber-400 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-6 h-6 text-warning flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-semibold mb-1">Database migration required</h3>
               <p className="text-sm text-muted-foreground">Run the SQL below in your <a href="https://supabase.com/dashboard/project/tbqfsudapxfqakzqbkgb/sql" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Supabase SQL Editor</a>, then click Retry.</p>
             </div>
           </div>
           <pre className="bg-muted/40 rounded-xl p-4 text-xs overflow-x-auto mb-6 text-muted-foreground leading-relaxed">{MIGRATION_SQL}</pre>
-          <button onClick={() => { setMigrationNeeded(false); load(); }} className="flex items-center gap-2 wa-gradient text-white font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
+          <button onClick={() => { setMigrationNeeded(false); load(); }} className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-all">
             <RefreshCw className="w-4 h-4" /> Retry
           </button>
         </div>
@@ -299,7 +299,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
           <button onClick={() => setView("table")} className={`p-2 rounded-xl border transition-colors ${view === "table" ? "border-primary/40 bg-primary/10 text-primary" : "border-border hover:bg-accent"}`}>
             <List className="w-4 h-4" />
           </button>
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
             <Plus className="w-4 h-4" /> Add Contact
           </button>
         </div>
@@ -309,9 +309,9 @@ CREATE TABLE IF NOT EXISTS crm_deals (
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total Contacts", value: summary.totalContacts, icon: Users, color: "text-blue-400", bg: "bg-blue-500/10", fmt: (v: number) => v.toString() },
-            { label: "Conversion Rate", value: summary.conversionRate, icon: Target, color: "text-emerald-400", bg: "bg-emerald-500/10", fmt: (v: number) => `${v}%` },
-            { label: "Pipeline Value", value: summary.totalPipelineValue, icon: DollarSign, color: "text-amber-400", bg: "bg-amber-500/10", fmt: (v: number) => `₹${(v/1000).toFixed(0)}K` },
+            { label: "Total Contacts", value: summary.totalContacts, icon: Users, color: "text-primary", bg: "bg-accent", fmt: (v: number) => v.toString() },
+            { label: "Conversion Rate", value: summary.conversionRate, icon: Target, color: "text-success", bg: "bg-success-soft", fmt: (v: number) => `${v}%` },
+            { label: "Pipeline Value", value: summary.totalPipelineValue, icon: DollarSign, color: "text-warning", bg: "bg-warning-soft", fmt: (v: number) => `₹${(v/1000).toFixed(0)}K` },
             { label: "Won Revenue", value: summary.wonValue, icon: TrendingUp, color: "text-primary", bg: "bg-primary/10", fmt: (v: number) => `₹${(v/1000).toFixed(0)}K` },
           ].map(({ label, value, icon: Icon, color, bg, fmt }) => (
             <div key={label} className="bg-card border border-border/50 rounded-xl p-4 flex items-center gap-3">
@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
             const count = id === "all" ? contacts.length : (pipeline.find((p) => p.stage === id)?.count ?? 0);
             return (
               <button key={id} onClick={() => setStageFilter(id as StageId | "all")}
-                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${stageFilter === id ? (s ? `${s.bg} ${s.color} ${s.border}` : "wa-gradient text-white border-primary") : "border-border hover:bg-accent"}`}>
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${stageFilter === id ? (s ? `${s.bg} ${s.color} ${s.border}` : "wa-gradient text-primary-foreground border-primary") : "border-border hover:bg-accent"}`}>
                 {s && <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />}{id === "all" ? "All" : s?.label} ({count})
               </button>
             );
@@ -354,7 +354,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
         <div className="text-center py-24 text-muted-foreground">
           <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="font-medium">No contacts in pipeline</p>
-          <button onClick={() => setShowAdd(true)} className="mt-4 flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 mx-auto">
+          <button onClick={() => setShowAdd(true)} className="mt-4 flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 mx-auto">
             <Plus className="w-4 h-4" /> Add First Contact
           </button>
         </div>
@@ -371,7 +371,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
                     <span className={`text-xs font-semibold ${stage.color}`}>{stage.label}</span>
                     <span className="text-xs text-muted-foreground">({stageContacts.length})</span>
                   </div>
-                  {stageValue > 0 && <span className="text-[10px] font-bold text-emerald-400">₹{(stageValue/1000).toFixed(0)}K</span>}
+                  {stageValue > 0 && <span className="text-[10px] font-bold text-success">₹{(stageValue/1000).toFixed(0)}K</span>}
                 </div>
                 <div className={`border border-t-0 ${stage.border} rounded-b-xl p-2 min-h-32 space-y-2 bg-muted/5`}>
                   {stageContacts.map((c) => (
@@ -413,7 +413,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
                     <td className="px-4 py-3 text-sm text-muted-foreground">{c.company || "—"}</td>
                     <td className="px-4 py-3"><StageMenu contactId={c.id} current={c.stage} onMove={moveContact} /></td>
                     <td className="px-4 py-3"><ScoreRing score={c.score} /></td>
-                    <td className="px-4 py-3 text-sm font-semibold text-emerald-400">{c.value ? `₹${c.value.toLocaleString()}` : "—"}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-success">{c.value ? `₹${c.value.toLocaleString()}` : "—"}</td>
                     <td className="px-4 py-3"><div className="flex gap-1">{c.tags.slice(0,2).map((t) => <span key={t} className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded text-muted-foreground">{t}</span>)}</div></td>
                     <td className="px-4 py-3"><span className={`text-[10px] px-2 py-0.5 rounded capitalize ${SOURCE_BADGE[c.source] || SOURCE_BADGE.manual}`}>{c.source}</span></td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{c.lastContact ? new Date(c.lastContact).toLocaleDateString("en-IN",{day:"numeric",month:"short"}) : "—"}</td>
@@ -435,7 +435,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card border border-border/50 rounded-2xl p-5">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center"><Zap className="w-4 h-4 text-violet-400" /></div>
+            <div className="w-8 h-8 rounded-lg bg-accent border border-primary/25 flex items-center justify-center"><Zap className="w-4 h-4 text-primary" /></div>
             <p className="text-sm font-semibold">CRM Automations</p>
           </div>
           <p className="text-xs text-muted-foreground mb-4 leading-relaxed">Auto-send messages when a lead changes stage or a tag is applied.</p>
@@ -445,7 +445,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
         </div>
         <div className="bg-card border border-border/50 rounded-2xl p-5">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><Megaphone className="w-4 h-4 text-emerald-400" /></div>
+            <div className="w-8 h-8 rounded-lg bg-success-soft border border-success/25 flex items-center justify-center"><Megaphone className="w-4 h-4 text-success" /></div>
             <p className="text-sm font-semibold">Campaign by Stage</p>
           </div>
           <div className="space-y-1.5 mb-4">
@@ -462,7 +462,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
         </div>
         <div className="bg-card border border-border/50 rounded-2xl p-5">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center"><BarChart3 className="w-4 h-4 text-blue-400" /></div>
+            <div className="w-8 h-8 rounded-lg bg-accent border border-primary/25 flex items-center justify-center"><BarChart3 className="w-4 h-4 text-primary" /></div>
             <p className="text-sm font-semibold">Stage Breakdown</p>
           </div>
           <div className="space-y-2">
@@ -504,7 +504,7 @@ CREATE TABLE IF NOT EXISTS crm_deals (
               </div>
             </div>
             <div className="flex gap-2">
-              <Link href="/templates/send" onClick={() => setMessagingContact(null)} className="flex-1 flex items-center justify-center gap-2 wa-gradient text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90">
+              <Link href="/templates/send" onClick={() => setMessagingContact(null)} className="flex-1 flex items-center justify-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold py-2.5 rounded-xl hover:opacity-90">
                 <Send className="w-4 h-4" /> Template
               </Link>
               <Link href="/campaigns/create" onClick={() => setMessagingContact(null)} className="flex-1 flex items-center justify-center gap-2 border border-border text-sm font-medium py-2.5 rounded-xl hover:bg-accent">

@@ -13,6 +13,7 @@ import {
   MoreVertical,
   CheckCircle2,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -49,7 +50,7 @@ export default function NumbersPage() {
         action={
           <Link
             href="/numbers/connect"
-            className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+            className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
           >
             <Plus className="w-4 h-4" />
             Connect Number
@@ -95,7 +96,7 @@ export default function NumbersPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(num.id)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive-soft transition-colors w-full text-left"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Remove
                       </button>
@@ -119,12 +120,7 @@ export default function NumbersPage() {
               ))}
             </div>
 
-            {num.status === "active" && (
-              <div className="mt-4 flex items-center gap-1.5 text-xs text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Connected and sending
-              </div>
-            )}
+            <TokenNotice expiresAt={num.tokenExpiresAt} status={num.status} />
           </div>
         ))}
 
@@ -181,10 +177,10 @@ export default function NumbersPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(num.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-destructive-soft transition-colors"
                         title="Delete"
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
                       </button>
                     </div>
                   </td>
@@ -196,4 +192,73 @@ export default function NumbersPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Access-token expiry notice.
+ *
+ * A Meta access token has a life (24h for a test token, ~60 days for a
+ * long-lived one). When it dies the number stops sending and every error
+ * downstream is a confusing "invalid OAuth" — nowhere near the actual cause.
+ * `token_expires_at` was already stored by every connect path and read by
+ * nothing, so this is the first place it becomes visible.
+ *
+ * A null expiry is a permanent system-user token (or an unknown one) — say
+ * nothing rather than invent reassurance.
+ */
+function TokenNotice({ expiresAt, status }: { expiresAt?: string | null; status: string }) {
+  if (!expiresAt) {
+    return status === "active" ? (
+      <div className="mt-4 flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle2 className="w-3.5 h-3.5" />
+        Connected and sending
+      </div>
+    ) : null;
+  }
+
+  const ms = Date.parse(expiresAt) - Date.now();
+  const days = Math.floor(ms / 86_400_000);
+
+  if (ms <= 0) {
+    return (
+      <div className="mt-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+        <AlertTriangle className="mt-0.5 w-4 h-4 flex-shrink-0 text-destructive" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">This number&apos;s access has expired</p>
+          <p className="text-xs text-muted-foreground">
+            It stopped working on {new Date(expiresAt).toLocaleDateString("en-IN")}. Reconnect it
+            with a new token to start sending again.
+          </p>
+          <Link href="/numbers/connect" className="mt-1.5 inline-block text-xs font-semibold text-primary hover:underline">
+            Reconnect now
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Warn a week out — enough time to generate a new token without a rush.
+  if (days <= 7) {
+    return (
+      <div className="mt-4 flex items-start gap-2 rounded-xl border border-warning/25 bg-warning-soft p-3">
+        <AlertTriangle className="mt-0.5 w-4 h-4 flex-shrink-0 text-warning" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">
+            Access expires in {days === 0 ? "less than a day" : `${days} day${days === 1 ? "" : "s"}`}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Reconnect before {new Date(expiresAt).toLocaleDateString("en-IN")} or this number will
+            stop sending.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return status === "active" ? (
+    <div className="mt-4 flex items-center gap-1.5 text-xs text-success">
+      <CheckCircle2 className="w-3.5 h-3.5" />
+      Connected and sending · access valid for {days} more days
+    </div>
+  ) : null;
 }

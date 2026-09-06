@@ -18,4 +18,4 @@ Disallow: /api/
 Allow: /login
 Allow: /register
 
-Sitemap: https://wasend.app/sitemap.xml
+Sitemap: https://sendanjal.com/sitemap.xml

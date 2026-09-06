@@ -57,6 +57,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // The two IDs sit next to each other on Meta's API Setup page and look
+  // identical (long numbers), so pasting one into the other's box is the most
+  // common mistake here. Meta's own answer is
+  //   "(#100) Tried accessing nonexisting field (display_phone_number)"
+  // which names neither field and sends people hunting in the wrong place.
+  // Catch it before the round-trip and say what actually happened.
+  if (wabaId === phoneNumberId) {
+    return NextResponse.json(
+      {
+        error:
+          "Those two IDs are the same. The WhatsApp Business Account ID and the Phone Number ID " +
+          "are different values — check you haven't pasted the same one twice.",
+        code: "IDS_IDENTICAL",
+      },
+      { status: 400 },
+    );
+  }
+
   // 1) Verify the token actually has access to the WABA and phone.
   let phoneInfo: MetaPhoneNumber;
   let wabaInfo: MetaWaba;
@@ -68,9 +86,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }),
     ]);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Verification failed";
+    let msg = err instanceof Error ? err.message : "Verification failed";
     const status = err instanceof MetaApiError ? err.httpStatus : 400;
-    const code = err instanceof MetaApiError ? err.code : "GRAPH_VERIFY_FAILED";
+    let code = err instanceof MetaApiError ? err.code : "GRAPH_VERIFY_FAILED";
+
+    // Meta reports a swapped/incorrect Phone Number ID as "(#100) Tried
+    // accessing nonexisting field (display_phone_number)" — that field only
+    // exists on a phone number, so being asked for it means the id given is
+    // not a phone number (usually the WABA ID pasted into the wrong box).
+    if (/nonexisting field \(display_phone_number\)/i.test(msg)) {
+      msg =
+        "That Phone Number ID doesn't look like a phone number — it may be your " +
+        "WhatsApp Business Account ID pasted into the wrong box. In Meta for Developers → " +
+        "WhatsApp → API Setup, the Phone Number ID sits under the phone number itself.";
+      code = "PHONE_ID_LOOKS_LIKE_WABA";
+    }
     logger.warn("[api/meta/manual-connect] verify failed", {
       userId: user.id, wabaId, phoneNumberId, msg,
     });

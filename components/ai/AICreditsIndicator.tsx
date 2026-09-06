@@ -38,8 +38,8 @@ export function AICreditsIndicator({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700",
-        "dark:border-violet-900/50 dark:bg-violet-950/40 dark:text-violet-300",
+        "inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary px-2.5 py-1 text-xs font-medium text-primary",
+        "dark:border-primary/25 dark:bg-accent dark:text-primary",
         className,
       )}
       title="AI Credits remaining"

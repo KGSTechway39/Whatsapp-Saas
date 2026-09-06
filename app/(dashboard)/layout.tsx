@@ -13,8 +13,9 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Flat warm ground — the v3 design carries no dotted grid or gradient.
   return (
-    <div className="min-h-screen bg-background grid-bg">
+    <div className="min-h-screen bg-background">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

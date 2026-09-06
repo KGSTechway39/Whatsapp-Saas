@@ -10,18 +10,18 @@ const SEGMENT_ICONS: Record<string, React.ElementType> = {
   "user-plus": UserPlus, star: Star,
 };
 const SEGMENT_COLORS: Record<string, string> = {
-  emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  blue:    "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  amber:   "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  red:     "bg-red-500/10 text-red-400 border-red-500/20",
-  violet:  "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  yellow:  "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  emerald: "bg-success-soft text-success border-success/25",
+  blue:    "bg-accent text-primary border-primary/25",
+  amber:   "bg-warning-soft text-warning border-warning/25",
+  red:     "bg-destructive-soft text-destructive border-destructive/25",
+  violet:  "bg-accent text-primary border-primary/25",
+  yellow:  "bg-warning-soft text-warning border-warning/25",
 };
 const TIER_COLORS: Record<string, string> = {
-  Champions: "bg-yellow-500/10 text-yellow-400",
-  Loyal:     "bg-emerald-500/10 text-emerald-400",
-  Potential: "bg-blue-500/10 text-blue-400",
-  "At Risk": "bg-red-500/10 text-red-400",
+  Champions: "bg-warning-soft text-warning",
+  Loyal:     "bg-success-soft text-success",
+  Potential: "bg-accent text-primary",
+  "At Risk": "bg-destructive-soft text-destructive",
 };
 
 interface Segment {
@@ -99,7 +99,7 @@ export default function ContactSegmentsPage() {
                   <p className="text-2xl font-bold">{seg.count.toLocaleString()}</p>
                   <p className="text-sm font-semibold mt-0.5">{seg.name}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">{seg.description}</p>
-                  <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
                     <div className="h-full wa-gradient rounded-full" style={{ width: `${seg.percentage}%` }} />
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1">{seg.percentage}% of contacts</p>
@@ -123,7 +123,7 @@ export default function ContactSegmentsPage() {
             {activeSegment && (
               <Link
                 href={`/campaigns/create?segment=${activeSegment}`}
-                className="text-xs wa-gradient text-white px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition-all"
+                className="text-xs wa-gradient text-primary-foreground px-3 py-1.5 rounded-lg font-medium hover:opacity-90 transition-all"
               >
                 Campaign →
               </Link>
@@ -167,7 +167,7 @@ export default function ContactSegmentsPage() {
         {/* RFM Leaderboard */}
         <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
           <div className="p-4 border-b border-border/50 flex items-center gap-2">
-            <Crown className="w-4 h-4 text-yellow-400" />
+            <Crown className="w-4 h-4 text-warning" />
             <h3 className="font-semibold text-sm">RFM Champions</h3>
             <span className="ml-auto text-xs text-muted-foreground">Recency · Frequency · Monetary</span>
           </div>
@@ -200,7 +200,7 @@ export default function ContactSegmentsPage() {
                       </td>
                       {[c.r, c.f, c.m].map((v, j) => (
                         <td key={j} className="px-3 py-2.5">
-                          <span className={`text-xs font-bold ${v >= 4 ? "text-emerald-400" : v >= 3 ? "text-amber-400" : "text-red-400"}`}>{v}</span>
+                          <span className={`text-xs font-bold ${v >= 4 ? "text-success" : v >= 3 ? "text-warning" : "text-destructive"}`}>{v}</span>
                         </td>
                       ))}
                       <td className="px-3 py-2.5">
@@ -225,9 +225,9 @@ export default function ContactSegmentsPage() {
         <h3 className="font-semibold text-sm mb-3">Understanding RFM Scoring</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           {[
-            { letter: "R", name: "Recency", desc: "How recently they were contacted. Score 5 = contacted in last 7 days.", color: "text-emerald-400" },
-            { letter: "F", name: "Frequency", desc: "How often they engage. Score 5 = very frequent interactions.", color: "text-blue-400" },
-            { letter: "M", name: "Monetary", desc: "Deal value. Score 5 = top 10% by deal value.", color: "text-yellow-400" },
+            { letter: "R", name: "Recency", desc: "How recently they were contacted. Score 5 = contacted in last 7 days.", color: "text-success" },
+            { letter: "F", name: "Frequency", desc: "How often they engage. Score 5 = very frequent interactions.", color: "text-primary" },
+            { letter: "M", name: "Monetary", desc: "Deal value. Score 5 = top 10% by deal value.", color: "text-warning" },
           ].map((item) => (
             <div key={item.letter} className="flex gap-3">
               <span className={`text-2xl font-black ${item.color} flex-shrink-0`}>{item.letter}</span>

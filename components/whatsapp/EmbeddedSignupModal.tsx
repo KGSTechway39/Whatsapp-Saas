@@ -594,7 +594,7 @@ export function EmbeddedSignupModal({
         <div className="relative bg-gradient-to-br from-[#25D366]/15 via-[#128C7E]/10 to-transparent p-6 pb-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#25D366] text-white shadow-md shadow-emerald-500/30">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#25D366] text-white shadow-md shadow-success">
                 <WhatsAppLogo className="h-6 w-6" />
               </span>
               <div>
@@ -718,7 +718,7 @@ export function EmbeddedSignupModal({
             <button
               type="button"
               onClick={() => completeSave(transfer, chosen.waba, chosen.phone)}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 font-semibold text-white shadow-sm shadow-emerald-500/20 transition-colors hover:bg-[#1DA851]"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 font-semibold text-white shadow-sm shadow-success transition-colors hover:bg-[#1DA851]"
             >
               Confirm &amp; Connect <ChevronRight className="h-4 w-4" />
             </button>
@@ -736,7 +736,7 @@ export function EmbeddedSignupModal({
                 type="button"
                 disabled={!embeddedConfigured || !sdkReady}
                 onClick={launchSignup}
-                className="inline-flex w-full items-center justify-center gap-3 rounded-xl bg-[#1877F2] px-5 py-3 font-semibold text-white shadow-sm shadow-blue-500/20 transition-colors hover:bg-[#1464D2] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-3 rounded-xl bg-[#1877F2] px-5 py-3 font-semibold text-white shadow-sm shadow-primary transition-colors hover:bg-[#1464D2] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Facebook className="h-5 w-5" />
                 {path === "A" ? "Continue — connect my existing number" : "Continue With Facebook"}
@@ -815,9 +815,9 @@ function ChoiceCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-4 text-left transition-colors hover:border-emerald-500/50 hover:bg-emerald-500/5"
+      className="flex w-full items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-4 text-left transition-colors hover:border-success/25 hover:bg-success-soft"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
         <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0 flex-1">
@@ -837,7 +837,7 @@ function VideoSlot({ label }: { label: string }): JSX.Element {
       onClick={() => toast.info("Walkthrough video coming soon")}
       className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/40 p-3 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
     >
-      <PlayCircle className="h-4 w-4 shrink-0 text-emerald-500" />
+      <PlayCircle className="h-4 w-4 shrink-0 text-success" />
       <span className="leading-tight">{label}</span>
     </button>
   );
@@ -846,7 +846,7 @@ function VideoSlot({ label }: { label: string }): JSX.Element {
 /** Path A — what coexistence onboarding will do, in plain language. */
 function CoexistenceNote(): JSX.Element {
   return (
-    <div className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
+    <div className="mb-4 rounded-xl border border-success/25 bg-success-soft p-3 text-xs">
       <p className="font-medium">We&apos;ll connect your existing number</p>
       <p className="mt-1 text-muted-foreground">
         You keep your number and chat history. During setup you&apos;ll scan a QR code and enter a
@@ -860,7 +860,7 @@ function CoexistenceNote(): JSX.Element {
 function ManagedBlock({ helpHref }: { helpHref: string }): JSX.Element {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+      <div className="rounded-xl border border-success/25 bg-success-soft p-4">
         <h3 className="text-sm font-semibold">We&apos;ll run WhatsApp for you</h3>
         <p className="mt-1 text-xs text-muted-foreground">
           On the <strong>Starter</strong> plan your messages go out under our verified WhatsApp
@@ -919,7 +919,7 @@ function DetailsBlock({
 
       <label className="block">
         <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Category</span>
-        <div className="rounded-xl border border-border bg-background px-3 py-2.5 focus-within:border-emerald-500/60">
+        <div className="rounded-xl border border-border bg-background px-3 py-2.5 focus-within:border-success/25">
           <select
             value={vertical}
             onChange={(e) => setVertical(e.target.value)}
@@ -986,7 +986,7 @@ function ManualForm({
       }}
       className="space-y-4"
     >
-      <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
+      <div className="flex items-start gap-3 rounded-xl border border-warning/25 bg-warning-soft p-3 text-xs text-warning dark:text-warning">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <div className="space-y-1">
           <p className="font-medium">Use this if you already have credentials.</p>
@@ -1062,7 +1062,7 @@ function Field({ label, placeholder, value, onChange, required, type = "text", s
         {label}
         {required && <span className="ml-0.5 text-destructive">*</span>}
       </span>
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 focus-within:border-emerald-500/60 focus-within:ring-2 focus-within:ring-emerald-500/20">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 focus-within:border-success/25 focus-within:ring-2 focus-within:ring-success">
         <input
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
           placeholder={placeholder}
@@ -1089,7 +1089,7 @@ function RequirementsBlock(): JSX.Element {
               key={label}
               className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/40 p-3"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
                 <Icon className="h-4 w-4" />
               </span>
               <div>
@@ -1101,7 +1101,7 @@ function RequirementsBlock(): JSX.Element {
         </ul>
       </div>
 
-      <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-700 dark:text-blue-300">
+      <div className="rounded-xl border border-primary/25 bg-accent p-3 text-xs text-primary dark:text-primary">
         <p className="flex items-start gap-2">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
@@ -1117,9 +1117,9 @@ function RequirementsBlock(): JSX.Element {
 function MisconfiguredBlock(): JSX.Element {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="rounded-xl border border-warning/25 bg-warning-soft p-4">
         <div className="flex items-start gap-3">
-          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
           <div className="text-sm">
             <p className="font-semibold">Embedded Signup is not configured</p>
             <p className="mt-1 text-muted-foreground">
@@ -1139,7 +1139,7 @@ META_APP_SECRET=<your Meta App Secret>`}
       </pre>
 
       <p className="text-xs text-muted-foreground">
-        Need help? Open <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" className="text-emerald-500 hover:underline">Meta App Dashboard</a> and follow the 5-step wizard on this page.
+        Need help? Open <a href="https://developers.facebook.com/apps/" target="_blank" rel="noreferrer" className="text-success hover:underline">Meta App Dashboard</a> and follow the 5-step wizard on this page.
       </p>
     </div>
   );
@@ -1149,8 +1149,8 @@ function LoadingBlock({ label }: { label: string }): JSX.Element {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="relative">
-        <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500/20" />
-        <Loader2 className="relative h-10 w-10 animate-spin text-emerald-500" />
+        <span className="absolute inset-0 animate-ping rounded-full bg-success-soft" />
+        <Loader2 className="relative h-10 w-10 animate-spin text-success" />
       </div>
       <p className="mt-5 text-sm font-medium">{label}</p>
       <p className="mt-1 text-xs text-muted-foreground">This usually takes a few seconds.</p>
@@ -1180,7 +1180,7 @@ function ChooseBlock({ options, chosen, onChoose }: ChooseProps): JSX.Element {
               onClick={() => onChoose({ waba, phone })}
               className={`flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors ${
                 selected
-                  ? "border-emerald-500/60 bg-emerald-500/5"
+                  ? "border-success/25 bg-success-soft"
                   : "border-border/60 hover:bg-muted"
               }`}
             >
@@ -1209,8 +1209,8 @@ function SuccessBlock({
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center">
       <span className="relative flex h-16 w-16 items-center justify-center">
-        <span className="absolute inset-0 animate-pulse rounded-full bg-emerald-500/15" />
-        <CheckCircle2 className="relative h-10 w-10 text-emerald-500" />
+        <span className="absolute inset-0 animate-pulse rounded-full bg-success-soft" />
+        <CheckCircle2 className="relative h-10 w-10 text-success" />
       </span>
       <h3 className="mt-4 text-base font-semibold">✅ Your WhatsApp is connected!</h3>
       <p className="mt-1 text-sm text-muted-foreground">
@@ -1223,7 +1223,7 @@ function SuccessBlock({
 
       {/* Inbound won't work until the webhook is subscribed — make that fixable, not silent. */}
       {!summary.webhookOk && (
-        <div className="mt-4 w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-left text-xs text-amber-700 dark:text-amber-300">
+        <div className="mt-4 w-full rounded-xl border border-warning/25 bg-warning-soft p-3 text-left text-xs text-warning dark:text-warning">
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="flex-1">
@@ -1235,7 +1235,7 @@ function SuccessBlock({
               <button
                 type="button"
                 onClick={onRetrySubscribe}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-3 py-1.5 font-medium text-amber-700 transition-colors hover:bg-amber-500/25 dark:text-amber-200"
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-warning-soft px-3 py-1.5 font-medium text-warning transition-colors hover:bg-warning-soft dark:text-warning"
               >
                 Enable incoming messages
               </button>
@@ -1246,7 +1246,7 @@ function SuccessBlock({
 
       {/* Manual tokens from API Setup are typically temporary (24h) — say so loudly. */}
       {summary.viaManual && (
-        <div className="mt-3 w-full rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-left text-xs text-blue-700 dark:text-blue-300">
+        <div className="mt-3 w-full rounded-xl border border-primary/25 bg-accent p-3 text-left text-xs text-primary dark:text-primary">
           <div className="flex items-start gap-2">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
@@ -1265,9 +1265,9 @@ function SuccessBlock({
 function QualityBadge({ rating }: { rating: string }): JSX.Element {
   const r = rating?.toUpperCase?.() ?? "UNKNOWN";
   const cls =
-    r === "GREEN"  ? "bg-emerald-500/10 text-emerald-500"
-    : r === "YELLOW" ? "bg-amber-500/10   text-amber-500"
-    : r === "RED"    ? "bg-red-500/10     text-red-500"
+    r === "GREEN"  ? "bg-success-soft text-success"
+    : r === "YELLOW" ? "bg-warning-soft   text-warning"
+    : r === "RED"    ? "bg-destructive-soft     text-destructive"
                      : "bg-muted          text-muted-foreground";
   return (
     <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${cls}`}>

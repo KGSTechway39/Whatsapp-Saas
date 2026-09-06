@@ -7,6 +7,11 @@ export interface Contact {
   tags: string[];
   addedDate: string;
   status: "active" | "inactive";
+  /** Consent for sensitive-data messaging. Only meaningful when the tenant's
+   *  industry requires it — see `consentRequired` on the list response. */
+  consentGiven?: boolean;
+  consentAt?: string | null;
+  consentSource?: string | null;
 }
 
 export interface Template {
@@ -19,6 +24,10 @@ export interface Template {
   body: string;
   variables: string[];
   createdAt: string;
+  /** True only when APPROVED *and* actually present at Meta. */
+  sendable?: boolean;
+  notSendableReason?: "NOT_APPROVED" | "NOT_AT_META" | null;
+  notSendableMessage?: string | null;
 }
 
 export interface Campaign {
@@ -68,6 +77,8 @@ export interface WhatsAppNumber {
   connectedDate: string;
   metaAccountId?: string;
   phoneNumberId?: string;
+  /** When the stored Meta access token stops working. null = permanent/unknown. */
+  tokenExpiresAt?: string | null;
 }
 
 export interface Transaction {

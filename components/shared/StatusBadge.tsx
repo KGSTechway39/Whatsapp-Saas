@@ -1,56 +1,28 @@
 import { cn } from "@/lib/utils";
 import { StatusType } from "@/types";
 
-const statusConfig: Record<
-  StatusType,
-  { label: string; className: string }
-> = {
-  // Semantic tokens (theme-aware). Emerald (success) is reserved for
-  // sent/delivered-style states only; pending→warning, rejected→destructive.
-  active: {
-    label: "Active",
-    className: "bg-success/15 text-success border border-success/25",
-  },
-  inactive: {
-    label: "Inactive",
-    className: "bg-muted text-muted-foreground border border-border",
-  },
-  approved: {
-    label: "Approved",
-    className: "bg-success/15 text-success border border-success/25",
-  },
-  pending: {
-    label: "Pending",
-    className: "bg-warning/15 text-warning border border-warning/25",
-  },
-  rejected: {
-    label: "Rejected",
-    className: "bg-destructive/15 text-destructive border border-destructive/25",
-  },
-  running: {
-    label: "Running",
-    className: "bg-blue-500/15 text-blue-400 border border-blue-500/25",
-  },
-  completed: {
-    label: "Completed",
-    className: "bg-success/15 text-success border border-success/25",
-  },
-  failed: {
-    label: "Failed",
-    className: "bg-destructive/15 text-destructive border border-destructive/25",
-  },
-  scheduled: {
-    label: "Scheduled",
-    className: "bg-purple-500/15 text-purple-400 border border-purple-500/25",
-  },
-  draft: {
-    label: "Draft",
-    className: "bg-muted text-muted-foreground border border-border",
-  },
-  invited: {
-    label: "Invited",
-    className: "bg-warning/15 text-warning border border-warning/25",
-  },
+/**
+ * v3 status vocabulary: every state is a solid tinted PILL — an ink paired with
+ * its own soft ground (--success / --success-soft), never an opacity overlay.
+ *
+ * The design only ever shows three signal colours plus neutral, so states
+ * collapse onto them: anything settled/healthy is green, anything in-flight or
+ * awaiting a human is amber, anything broken is red, and anything inert (draft,
+ * inactive, scheduled) is neutral. "running" and "scheduled" lose their old
+ * blue/purple, which had no counterpart in the palette.
+ */
+const statusConfig: Record<StatusType, { label: string; className: string }> = {
+  active:    { label: "Active",    className: "pill-success" },
+  inactive:  { label: "Inactive",  className: "pill-neutral" },
+  approved:  { label: "Approved",  className: "pill-success" },
+  pending:   { label: "Pending",   className: "pill-warning" },
+  rejected:  { label: "Rejected",  className: "pill-danger"  },
+  running:   { label: "Running",   className: "pill-success" },
+  completed: { label: "Completed", className: "pill-success" },
+  failed:    { label: "Failed",    className: "pill-danger"  },
+  scheduled: { label: "Scheduled", className: "pill-neutral" },
+  draft:     { label: "Draft",     className: "pill-neutral" },
+  invited:   { label: "Invited",   className: "pill-warning" },
 };
 
 interface StatusBadgeProps {
@@ -62,31 +34,17 @@ interface StatusBadgeProps {
 export function StatusBadge({
   status,
   className,
-  showDot = true,
+  showDot = false,
 }: StatusBadgeProps) {
   const config = statusConfig[status] || statusConfig.inactive;
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium",
-        config.className,
-        className
-      )}
-    >
+    <span className={cn("pill", config.className, className)}>
       {showDot && (
         <span
           className={cn(
-            "w-1.5 h-1.5 rounded-full",
-            status === "active" || status === "approved" || status === "completed"
-              ? "bg-success"
-              : status === "pending" || status === "invited"
-              ? "bg-warning"
-              : status === "running"
-              ? "bg-blue-400 animate-pulse"
-              : status === "scheduled"
-              ? "bg-purple-400"
-              : "bg-current"
+            "w-1.5 h-1.5 rounded-full bg-current",
+            status === "running" && "animate-pulse"
           )}
         />
       )}

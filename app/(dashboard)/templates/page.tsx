@@ -14,21 +14,22 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Template } from "@/types";
+import { RecommendedTemplates } from "@/components/verticals/Recommendations";
 
 
 const CATEGORY_CONFIG = {
   ALL: { label: "All Templates", icon: MessageSquare, color: "text-foreground" },
-  MARKETING: { label: "Marketing", icon: Megaphone, color: "text-purple-400" },
-  UTILITY: { label: "Utility", icon: Zap, color: "text-blue-400" },
-  AUTHENTICATION: { label: "Authentication", icon: ShieldCheck, color: "text-amber-400" },
+  MARKETING: { label: "Marketing", icon: Megaphone, color: "text-primary" },
+  UTILITY: { label: "Utility", icon: Zap, color: "text-primary" },
+  AUTHENTICATION: { label: "Authentication", icon: ShieldCheck, color: "text-warning" },
 } as const;
 
 type CategoryFilter = keyof typeof CATEGORY_CONFIG;
 
 const categoryBadge: Record<string, string> = {
-  MARKETING: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  UTILITY: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  AUTHENTICATION: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  MARKETING: "bg-accent text-primary border-primary/25",
+  UTILITY: "bg-accent text-primary border-primary/25",
+  AUTHENTICATION: "bg-warning-soft text-warning border-warning/25",
 };
 
 // ─── AI Template Generator ────────────────────────────────────────────────────
@@ -83,10 +84,27 @@ function AIGeneratePanel({
 
   return (
     <div className="p-5 space-y-5">
+      {/* Ready-written messages for this client's industry. Renders nothing when
+          no industry is set — the manual box below is unchanged either way.
+          Picking one drops it straight into the editor, exactly like an AI
+          result does, so the person still reviews and submits it themselves. */}
+      <RecommendedTemplates
+        onPick={(t) =>
+          onUse({
+            displayName: t.title.slice(0, 50),
+            name: t.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 30),
+            body: t.body,
+            footer: t.footer ?? "",
+            category: t.metaCategory,
+            language: "en",
+          })
+        }
+      />
+
       {/* Description input */}
       <div>
         <label className="text-sm font-medium block mb-1.5 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
           Describe your template
         </label>
         <textarea
@@ -146,7 +164,7 @@ function AIGeneratePanel({
       <button
         onClick={generate}
         disabled={loading || !description.trim()}
-        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-accent to-accent text-white font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
       >
         {loading ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> Generating 3 variations…</>
@@ -167,33 +185,33 @@ function AIGeneratePanel({
               onClick={() => setSelected(selected === i ? null : i)}
               className={`p-4 rounded-xl border cursor-pointer transition-all ${
                 selected === i
-                  ? "border-purple-500/60 bg-purple-500/5 ring-1 ring-purple-500/30"
-                  : "border-border hover:border-purple-500/30 hover:bg-purple-500/5"
+                  ? "border-primary/25 bg-accent ring-1 ring-primary"
+                  : "border-border hover:border-primary/25 hover:bg-accent"
               }`}
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div>
                   <p className="text-sm font-semibold">{tmpl.displayName}</p>
-                  <p className="text-xs text-purple-400 mt-0.5">{tmpl.whyItWorks}</p>
+                  <p className="text-xs text-primary mt-0.5">{tmpl.whyItWorks}</p>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors ${
-                  selected === i ? "border-purple-500 bg-purple-500" : "border-border"
+                  selected === i ? "border-primary/25 bg-primary" : "border-border"
                 }`}>
                   {selected === i && <Check className="w-3 h-3 text-white" />}
                 </div>
               </div>
               {/* WhatsApp bubble preview */}
-              <div className="bg-[#111b21] rounded-xl p-3 mt-2">
-                <div className="bg-[#202c33] rounded-2xl rounded-tl-none p-3 max-w-[95%]">
-                  <p className="text-xs text-[#e9edef] whitespace-pre-wrap leading-relaxed">{tmpl.body}</p>
-                  {tmpl.footer && <p className="text-[10px] text-[#8696a0] mt-1.5 border-t border-white/10 pt-1">{tmpl.footer}</p>}
-                  <p className="text-[10px] text-[#8696a0] text-right mt-1">12:30 ✓✓</p>
+              <div className="bg-chat-ground rounded-xl p-3 mt-2">
+                <div className="bg-chat-in border border-chat-inBorder rounded-2xl rounded-tl-none p-3 max-w-[95%]">
+                  <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">{tmpl.body}</p>
+                  {tmpl.footer && <p className="text-[10px] text-muted-foreground mt-1.5 border-t border-border pt-1">{tmpl.footer}</p>}
+                  <p className="text-[10px] text-muted-foreground text-right mt-1">12:30 ✓✓</p>
                 </div>
               </div>
               {tmpl.variableNames.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {tmpl.variableNames.map((v, j) => (
-                    <span key={j} className="text-[10px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded font-mono">{`{{${j+1}}}`} {v}</span>
+                    <span key={j} className="text-[10px] bg-accent text-primary px-1.5 py-0.5 rounded font-mono">{`{{${j+1}}}`} {v}</span>
                   ))}
                 </div>
               )}
@@ -203,7 +221,7 @@ function AIGeneratePanel({
           {selected !== null && (
             <button
               onClick={() => onUse(results[selected])}
-              className="w-full flex items-center justify-center gap-2 wa-gradient text-white font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all"
+              className="w-full flex items-center justify-center gap-2 wa-gradient text-primary-foreground font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all"
             >
               Use This Template <ArrowRight className="w-4 h-4" />
             </button>
@@ -259,34 +277,42 @@ function MetaLibraryPanel({
   useEffect(() => {
     setLoading(true);
     setWarning(null);
-    const q = new URLSearchParams({ category });
-    if (topic) q.set("topic", topic);
-    if (search.trim()) q.set("search", search.trim());
-
-    fetch(`/api/templates/library?${q}`)
+    // Starter templates SendAnjal creates on YOUR WhatsApp account. This used to
+    // read /api/templates/library, which hit a Graph path that doesn't exist
+    // and silently served ten hardcoded entries as if they were Meta's.
+    fetch("/api/templates/starters")
       .then((r) => r.json())
       .then((d) => {
-        setItems(d.templates || []);
-        if (d.warning) setWarning(d.warning);
-        if (d.message) setWarning(d.message);
+        const all = (d.starters || []) as MetaLibraryItem[];
+        const q = search.trim().toLowerCase();
+        setItems(
+          all.filter(
+            (t) =>
+              (!q || t.name.toLowerCase().includes(q) || (t.body || "").toLowerCase().includes(q)),
+          ),
+        );
       })
-      .catch(() => toast.error("Library fetch failed"))
+      .catch(() => toast.error("Couldn't load starter templates"))
       .finally(() => setLoading(false));
   }, [category, topic, search]);
 
   const submitToMeta = async (item: MetaLibraryItem) => {
     setSubmittingId(item.id);
     try {
-      const res = await fetch("/api/templates/use-library", {
+      const res = await fetch("/api/templates/starters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          library_template_name: item.name,
-          language: item.language,
-        }),
+        body: JSON.stringify({ names: [item.name] }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      const r = data.results?.[0];
+      if (r?.status === "failed") throw new Error(r.error || "Submit failed");
+      toast.success(
+        r?.status === "exists"
+          ? "That template is already on your account."
+          : "Sent to WhatsApp for approval — it'll appear here once approved.",
+      );
       onSubmittedToMeta(item.name);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Submit failed");
@@ -359,7 +385,7 @@ function MetaLibraryPanel({
       </div>
 
       {warning && (
-        <div className="mb-3 p-2.5 bg-amber-500/5 border border-amber-500/20 rounded-lg text-[11px] text-amber-400 flex items-start gap-2">
+        <div className="mb-3 p-2.5 bg-warning-soft border border-warning/25 rounded-lg text-[11px] text-warning flex items-start gap-2">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           <span>{warning}</span>
         </div>
@@ -397,12 +423,12 @@ function MetaLibraryPanel({
                         </div>
                       </div>
 
-                      <div className="bg-[#0b141a] rounded-lg p-2.5 mb-2">
-                        <p className="text-[11px] text-[#e9edef] whitespace-pre-wrap leading-relaxed line-clamp-4">
+                      <div className="bg-chat-ground rounded-lg p-2.5 mb-2">
+                        <p className="text-[11px] text-foreground whitespace-pre-wrap leading-relaxed line-clamp-4">
                           {tmpl.body}
                         </p>
                         {tmpl.footer && (
-                          <p className="text-[9px] text-[#8696a0] mt-1.5 border-t border-white/10 pt-1">{tmpl.footer}</p>
+                          <p className="text-[9px] text-muted-foreground mt-1.5 border-t border-border pt-1">{tmpl.footer}</p>
                         )}
                       </div>
 
@@ -431,7 +457,7 @@ function MetaLibraryPanel({
                         <button
                           onClick={() => submitToMeta(tmpl)}
                           disabled={submittingId === tmpl.id}
-                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg wa-gradient text-white text-[11px] font-semibold disabled:opacity-50 transition-all"
+                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg wa-gradient text-primary-foreground text-[11px] font-semibold disabled:opacity-50 transition-all"
                           title="Submit this library template directly to Meta for approval (no edits)"
                         >
                           {submittingId === tmpl.id
@@ -572,10 +598,10 @@ function CreateTemplateModal({
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 step === id
                   ? highlight
-                    ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow"
+                    ? "bg-gradient-to-r from-accent to-accent text-white shadow"
                     : "bg-card shadow text-foreground"
                   : highlight
-                  ? "text-purple-400 hover:bg-purple-500/10"
+                  ? "text-primary hover:bg-accent"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -692,25 +718,25 @@ function CreateTemplateModal({
               {/* Right: Live preview */}
               <div>
                 <p className="text-sm font-medium mb-3">Preview</p>
-                <div className="bg-[#0b141a] rounded-2xl p-4 min-h-64">
-                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/10">
+                <div className="bg-chat-ground rounded-2xl p-4 min-h-64">
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border">
                     <div className="w-8 h-8 rounded-full wa-gradient flex items-center justify-center text-xs font-bold text-white">W</div>
                     <div>
-                      <p className="text-xs font-medium text-white">WASend Business</p>
-                      <p className="text-[10px] text-green-400">Online</p>
+                      <p className="text-xs font-medium text-white">SendAnjal Business</p>
+                      <p className="text-[10px] text-success">Online</p>
                     </div>
                   </div>
                   {form.body ? (
-                    <div className="bg-[#202c33] rounded-2xl rounded-tl-none p-3.5 max-w-[90%]">
-                      <p className="text-sm text-[#e9edef] leading-relaxed whitespace-pre-wrap">
+                    <div className="bg-chat-in border border-chat-inBorder rounded-2xl rounded-tl-none p-3.5 max-w-[90%]">
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                         {form.body}
                       </p>
                       {form.footer && (
-                        <p className="text-[11px] text-[#8696a0] mt-2 border-t border-white/10 pt-2">
+                        <p className="text-[11px] text-muted-foreground mt-2 border-t border-border pt-2">
                           {form.footer}
                         </p>
                       )}
-                      <p className="text-[10px] text-[#8696a0] text-right mt-1">12:30 ✓✓</p>
+                      <p className="text-[10px] text-muted-foreground text-right mt-1">12:30 ✓✓</p>
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground text-center mt-8 opacity-50">
@@ -729,7 +755,7 @@ function CreateTemplateModal({
                       "Authentication templates must include OTP/code",
                     ].map((tip) => (
                       <li key={tip} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
-                        <Check className="w-3 h-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                        <Check className="w-3 h-3 text-success mt-0.5 flex-shrink-0" />
                         {tip}
                       </li>
                     ))}
@@ -752,7 +778,7 @@ function CreateTemplateModal({
             <button
               onClick={handleSave}
               disabled={saving || !form.displayName || !form.body}
-              className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+              className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
             >
               {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</> : "Submit for Review"}
             </button>
@@ -788,17 +814,17 @@ function PreviewModal({ template, onClose }: { template: Template; onClose: () =
           </div>
           <div className="p-5">
             <p className="text-xs text-muted-foreground mb-3">WhatsApp Preview</p>
-            <div className="bg-[#0b141a] rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/10">
+            <div className="bg-chat-ground rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border">
                 <div className="w-7 h-7 rounded-full wa-gradient flex items-center justify-center text-xs font-bold text-white">W</div>
                 <div>
-                  <p className="text-xs font-medium text-white">WASend Business</p>
-                  <p className="text-[10px] text-green-400">Online</p>
+                  <p className="text-xs font-medium text-white">SendAnjal Business</p>
+                  <p className="text-[10px] text-success">Online</p>
                 </div>
               </div>
-              <div className="bg-[#202c33] rounded-2xl rounded-tl-none p-3.5 max-w-[90%]">
-                <p className="text-sm text-[#e9edef] leading-relaxed whitespace-pre-wrap">{template.body}</p>
-                <p className="text-[10px] text-[#8696a0] text-right mt-2">12:30 ✓✓</p>
+              <div className="bg-chat-in border border-chat-inBorder rounded-2xl rounded-tl-none p-3.5 max-w-[90%]">
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{template.body}</p>
+                <p className="text-[10px] text-muted-foreground text-right mt-2">12:30 ✓✓</p>
               </div>
             </div>
             {template.variables.length > 0 && (
@@ -822,7 +848,7 @@ function PreviewModal({ template, onClose }: { template: Template; onClose: () =
               <Link
                 href="/templates/send"
                 onClick={onClose}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl wa-gradient text-white text-sm font-medium"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl wa-gradient text-primary-foreground text-sm font-medium"
               >
                 <Send className="w-3.5 h-3.5" /> Use Template
               </Link>
@@ -909,7 +935,7 @@ export default function TemplatesPage() {
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 wa-gradient text-white font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+              className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
             >
               <Plus className="w-4 h-4" />
               New Template
@@ -968,7 +994,7 @@ export default function TemplatesPage() {
           {!search && categoryFilter === "ALL" && (
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-4 flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all mx-auto"
+              className="mt-4 flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all mx-auto"
             >
               <Plus className="w-4 h-4" /> Create Template
             </button>
@@ -996,6 +1022,19 @@ export default function TemplatesPage() {
                   status={tmpl.status === "APPROVED" ? "approved" : tmpl.status === "PENDING" ? "pending" : "rejected"}
                 />
               </div>
+
+              {/* A template can read APPROVED here while WhatsApp has never
+                  received it (no meta_template_id) — sending it fails with a
+                  misleading "(#132001) does not exist". Say so plainly. */}
+              {tmpl.status === "APPROVED" && tmpl.sendable === false && (
+                <div className="mb-3 flex items-start gap-1.5 rounded-lg border border-warning/25 bg-warning-soft px-2.5 py-2">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-warning" />
+                  <p className="text-[11px] leading-snug text-muted-foreground">
+                    Not on WhatsApp yet — this can&apos;t be sent. Add it from the Meta Library
+                    below, or create and submit it.
+                  </p>
+                </div>
+              )}
 
               {/* Body preview */}
               <div className="flex-1 mb-3">
@@ -1031,7 +1070,7 @@ export default function TemplatesPage() {
                 {tmpl.status === "APPROVED" && (
                   <Link
                     href="/templates/send"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg wa-gradient text-white text-xs font-semibold hover:opacity-90 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg wa-gradient text-primary-foreground text-xs font-semibold hover:opacity-90 transition-all"
                   >
                     <Send className="w-3.5 h-3.5" /> Use
                   </Link>

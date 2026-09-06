@@ -72,7 +72,7 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
-      toast.success("Account created! Welcome to WASend.");
+      toast.success("Account created! Welcome to SendAnjal.");
       router.push("/dashboard");
       router.refresh();
     } catch (err: unknown) {
@@ -88,7 +88,7 @@ export default function RegisterPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0f1117] grid-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-rail grid-bg flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
@@ -99,7 +99,7 @@ export default function RegisterPage() {
             <MessageCircle className="w-7 h-7 text-white" fill="white" />
           </div>
           <h1 className="text-2xl font-bold text-white">Create your account</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Start sending messages in minutes
           </p>
         </div>
@@ -108,31 +108,31 @@ export default function RegisterPage() {
           <GoogleSignInButton label="Sign up with Google" />
 
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[10px] uppercase tracking-wider text-slate-500">or use email</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-secondary" />
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">or use email</span>
+            <div className="flex-1 h-px bg-secondary" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {fields.map(({ key, label, icon: Icon, type, placeholder }) => (
               <div key={key}>
-                <label className="text-sm font-medium text-slate-300 block mb-1.5">
+                <label className="text-sm font-medium text-muted-foreground block mb-1.5">
                   {label}
                 </label>
                 <div className="relative">
-                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type={type}
                     value={form[key as keyof typeof form]}
                     onChange={(e) => update(key, e.target.value)}
                     placeholder={placeholder}
-                    className={`w-full bg-white/5 border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
-                      errors[key] ? "border-red-500/60" : "border-white/10"
+                    className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                      errors[key] ? "border-destructive/25" : "border-border"
                     }`}
                   />
                 </div>
                 {errors[key] && (
-                  <p className="text-xs text-red-400 mt-1">{errors[key]}</p>
+                  <p className="text-xs text-destructive mt-1">{errors[key]}</p>
                 )}
               </div>
             ))}
@@ -142,30 +142,30 @@ export default function RegisterPage() {
               { key: "confirm", label: "Confirm password", show: showConfirm, toggle: () => setShowConfirm(!showConfirm) },
             ].map(({ key, label, show, toggle }) => (
               <div key={key}>
-                <label className="text-sm font-medium text-slate-300 block mb-1.5">
+                <label className="text-sm font-medium text-muted-foreground block mb-1.5">
                   {label}
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type={show ? "text" : "password"}
                     value={form[key as keyof typeof form]}
                     onChange={(e) => update(key, e.target.value)}
                     placeholder="••••••••"
-                    className={`w-full bg-white/5 border rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
-                      errors[key] ? "border-red-500/60" : "border-white/10"
+                    className={`w-full bg-secondary border rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                      errors[key] ? "border-destructive/25" : "border-border"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={toggle}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground"
                   >
                     {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {errors[key] && (
-                  <p className="text-xs text-red-400 mt-1">{errors[key]}</p>
+                  <p className="text-xs text-destructive mt-1">{errors[key]}</p>
                 )}
               </div>
             ))}
@@ -178,7 +178,7 @@ export default function RegisterPage() {
                   onChange={(e) => setAgreed(e.target.checked)}
                   className="mt-0.5 w-3.5 h-3.5 rounded accent-primary"
                 />
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-muted-foreground">
                   I agree to the{" "}
                   <span className="text-primary hover:underline cursor-pointer">
                     Terms of Service
@@ -190,14 +190,14 @@ export default function RegisterPage() {
                 </span>
               </label>
               {errors.terms && (
-                <p className="text-xs text-red-400 mt-1">{errors.terms}</p>
+                <p className="text-xs text-destructive mt-1">{errors.terms}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full wa-gradient text-white font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/25"
+              className="w-full wa-gradient text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/25"
             >
               {loading ? (
                 <>
@@ -210,7 +210,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-slate-400 mt-6">
+          <p className="text-center text-sm text-muted-foreground mt-6">
             Already have an account?{" "}
             <Link href="/login" className="text-primary hover:text-primary/80 font-medium">
               Sign in

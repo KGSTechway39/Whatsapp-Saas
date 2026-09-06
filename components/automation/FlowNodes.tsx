@@ -21,21 +21,21 @@ export const NODE_CATALOGUE = [
   {
     group: "Triggers",
     items: [
-      { type: "triggerNode", label: "Trigger", icon: Zap,         desc: "Start the flow",             color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+      { type: "triggerNode", label: "Trigger", icon: Zap,         desc: "Start the flow",             color: "bg-success-soft text-success border-success/25" },
     ],
   },
   {
     group: "Actions",
     items: [
-      { type: "sendMessageNode", label: "Send Message", icon: MessageSquare, desc: "Send WhatsApp message",    color: "bg-blue-500/20 text-blue-400 border-blue-500/30"     },
-      { type: "waitNode",        label: "Wait / Delay", icon: Clock,         desc: "Pause for a duration",    color: "bg-amber-500/20 text-amber-400 border-amber-500/30"  },
-      { type: "conditionNode",   label: "Condition",    icon: GitBranch,     desc: "Branch on if / else",     color: "bg-violet-500/20 text-violet-400 border-violet-500/30"},
-      { type: "addTagNode",      label: "Add / Remove Tag", icon: Tag,       desc: "Tag the contact",         color: "bg-pink-500/20 text-pink-400 border-pink-500/30"     },
-      { type: "updateContactNode",label: "Update Contact",icon: RefreshCw,   desc: "Set a contact field",     color: "bg-orange-500/20 text-orange-400 border-orange-500/30"},
-      { type: "assignAgentNode", label: "Assign Agent", icon: UserCheck,     desc: "Route to human agent",    color: "bg-teal-500/20 text-teal-400 border-teal-500/30"     },
-      { type: "aiReplyNode",     label: "AI Reply",     icon: Sparkles,      desc: "Generate smart reply",    color: "bg-purple-500/20 text-purple-400 border-purple-500/30"},
-      { type: "httpRequestNode", label: "HTTP Request", icon: Globe,         desc: "Call external webhook",   color: "bg-slate-500/20 text-slate-400 border-slate-500/30"  },
-      { type: "endNode",         label: "End Flow",     icon: Flag,          desc: "Mark flow complete",      color: "bg-red-500/20 text-red-400 border-red-500/30"        },
+      { type: "sendMessageNode", label: "Send Message", icon: MessageSquare, desc: "Send WhatsApp message",    color: "bg-accent text-primary border-primary/25"     },
+      { type: "waitNode",        label: "Wait / Delay", icon: Clock,         desc: "Pause for a duration",    color: "bg-warning-soft text-warning border-warning/25"  },
+      { type: "conditionNode",   label: "Condition",    icon: GitBranch,     desc: "Branch on if / else",     color: "bg-accent text-primary border-primary/25"},
+      { type: "addTagNode",      label: "Add / Remove Tag", icon: Tag,       desc: "Tag the contact",         color: "bg-accent text-primary border-primary/25"     },
+      { type: "updateContactNode",label: "Update Contact",icon: RefreshCw,   desc: "Set a contact field",     color: "bg-warning-soft text-warning border-warning/25"},
+      { type: "assignAgentNode", label: "Assign Agent", icon: UserCheck,     desc: "Route to human agent",    color: "bg-success-soft text-success border-success/25"     },
+      { type: "aiReplyNode",     label: "AI Reply",     icon: Sparkles,      desc: "Generate smart reply",    color: "bg-accent text-primary border-primary/25"},
+      { type: "httpRequestNode", label: "HTTP Request", icon: Globe,         desc: "Call external webhook",   color: "bg-muted text-muted-foreground border-border"  },
+      { type: "endNode",         label: "End Flow",     icon: Flag,          desc: "Mark flow complete",      color: "bg-destructive-soft text-destructive border-destructive/25"        },
     ],
   },
 ];
@@ -70,8 +70,8 @@ function BaseNode({
 
   return (
     <div
-      className={`w-52 rounded-xl border bg-[#111b21] shadow-md transition-all duration-150
-        ${selected ? "ring-2 ring-primary ring-offset-1 ring-offset-[#111b21] shadow-lg shadow-primary/20" : "border-white/10"}
+      className={`w-52 rounded-xl border bg-chat-ground shadow-md transition-all duration-150
+        ${selected ? "ring-2 ring-primary ring-offset-1 ring-offset-[#111b21] shadow-lg shadow-primary/20" : "border-border"}
       `}
     >
       {/* Input handle */}
@@ -79,23 +79,23 @@ function BaseNode({
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-3 !h-3 !border-2 !border-[#111b21] !bg-white/40"
+          className="!w-3 !h-3 !border-2 !border-hairline !bg-secondary"
         />
       )}
 
       {/* Header */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-b border-white/5 ${bg} bg-opacity-30`}>
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-t-xl border-b border-border ${bg} bg-opacity-30`}>
         <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${text}`} />
         <span className={`text-xs font-semibold truncate ${text}`}>{meta?.label ?? nodeType}</span>
         {stats && stats.count > 0 && (
-          <span className="ml-auto text-[10px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">
+          <span className="ml-auto text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-full font-medium flex-shrink-0">
             {stats.count}
           </span>
         )}
       </div>
 
       {/* Body */}
-      <div className="px-3 py-2.5 text-xs text-white/60 min-h-[36px]">{children}</div>
+      <div className="px-3 py-2.5 text-xs text-muted-foreground min-h-[36px]">{children}</div>
 
       {/* Output handles */}
       {dualOutput ? (
@@ -105,21 +105,21 @@ function BaseNode({
             position={Position.Bottom}
             id="true"
             style={{ left: "30%" }}
-            className="!w-3 !h-3 !border-2 !border-[#111b21] !bg-emerald-500"
+            className="!w-3 !h-3 !border-2 !border-hairline !bg-success"
           />
           <Handle
             type="source"
             position={Position.Bottom}
             id="false"
             style={{ left: "70%" }}
-            className="!w-3 !h-3 !border-2 !border-[#111b21] !bg-red-500"
+            className="!w-3 !h-3 !border-2 !border-hairline !bg-destructive"
           />
         </>
       ) : hasOutput ? (
         <Handle
           type="source"
           position={Position.Bottom}
-          className="!w-3 !h-3 !border-2 !border-[#111b21] !bg-white/40"
+          className="!w-3 !h-3 !border-2 !border-hairline !bg-secondary"
         />
       ) : null}
     </div>
@@ -146,8 +146,8 @@ export function TriggerNode({ data, selected }: NodeProps) {
   return (
     <BaseNode nodeType="triggerNode" selected={selected} hasInput={false} stats={d.stats}>
       <div className="flex items-center gap-1.5">
-        <TIcon className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-        <span className="font-medium text-white/80">{meta?.label ?? "Trigger"}</span>
+        <TIcon className="w-3 h-3 text-success flex-shrink-0" />
+        <span className="font-medium text-muted-foreground">{meta?.label ?? "Trigger"}</span>
       </div>
       {cfg.keywords ? (
         <p className="mt-1 truncate text-[11px]">Keywords: {String(cfg.keywords)}</p>
@@ -168,7 +168,7 @@ export function SendMessageNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="sendMessageNode" selected={selected} stats={d.stats}>
-      <p className="font-medium text-white/80 truncate">
+      <p className="font-medium text-muted-foreground truncate">
         {isTemplate ? `📋 ${String(cfg.templateName || "Pick template")}` : "💬 Custom text"}
       </p>
       {!isTemplate && cfg.text ? (
@@ -186,7 +186,7 @@ export function WaitNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="waitNode" selected={selected} stats={d.stats}>
-      <p className="font-medium text-white/80">
+      <p className="font-medium text-muted-foreground">
         ⏱&nbsp;{duration} {unit}
       </p>
     </BaseNode>
@@ -203,11 +203,11 @@ export function ConditionNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="conditionNode" selected={selected} dualOutput stats={d.stats}>
-      <p className="font-medium text-white/80 truncate">if {field}</p>
+      <p className="font-medium text-muted-foreground truncate">if {field}</p>
       <p className="mt-0.5 text-[11px] truncate">{operator} "{value}"</p>
       <div className="flex justify-between mt-1.5 text-[10px]">
-        <span className="text-emerald-400 font-semibold">✓ True</span>
-        <span className="text-red-400 font-semibold">✗ False</span>
+        <span className="text-success font-semibold">✓ True</span>
+        <span className="text-destructive font-semibold">✗ False</span>
       </div>
     </BaseNode>
   );
@@ -221,7 +221,7 @@ export function AddTagNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="addTagNode" selected={selected} stats={d.stats}>
-      <p className="font-medium text-white/80">
+      <p className="font-medium text-muted-foreground">
         {action === "add" ? "➕" : "➖"} #{tag || "tag-name"}
       </p>
     </BaseNode>
@@ -237,7 +237,7 @@ export function HttpRequestNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="httpRequestNode" selected={selected} stats={d.stats}>
-      <span className="font-mono text-[10px] bg-white/10 px-1.5 py-0.5 rounded mr-1 font-semibold">
+      <span className="font-mono text-[10px] bg-secondary px-1.5 py-0.5 rounded mr-1 font-semibold">
         {method}
       </span>
       <span className="text-[11px] truncate">{shortUrl}</span>
@@ -254,7 +254,7 @@ export function AiReplyNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="aiReplyNode" selected={selected} stats={d.stats}>
-      <p className="font-medium text-white/80">✨ {modelLabel}</p>
+      <p className="font-medium text-muted-foreground">✨ {modelLabel}</p>
       {d.config.systemPrompt ? (
         <p className="mt-1 text-[11px] truncate">{String(d.config.systemPrompt).slice(0, 40)}</p>
       ) : null}
@@ -270,7 +270,7 @@ export function AssignAgentNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="assignAgentNode" selected={selected} stats={d.stats}>
-      <p className="font-medium text-white/80 truncate">→ {agentName}</p>
+      <p className="font-medium text-muted-foreground truncate">→ {agentName}</p>
     </BaseNode>
   );
 }
@@ -283,7 +283,7 @@ export function UpdateContactNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="updateContactNode" selected={selected} stats={d.stats}>
-      <p className="font-medium text-white/80 truncate">Set {field}</p>
+      <p className="font-medium text-muted-foreground truncate">Set {field}</p>
       <p className="mt-0.5 text-[11px] truncate">= "{value}"</p>
     </BaseNode>
   );
@@ -296,7 +296,7 @@ export function EndNode({ data, selected }: NodeProps) {
 
   return (
     <BaseNode nodeType="endNode" selected={selected} hasOutput={false} stats={d.stats}>
-      <p className="font-medium text-white/80">✓ Flow Complete</p>
+      <p className="font-medium text-muted-foreground">✓ Flow Complete</p>
       {d.config.endReason ? (
         <p className="mt-0.5 text-[11px] truncate">{String(d.config.endReason)}</p>
       ) : null}

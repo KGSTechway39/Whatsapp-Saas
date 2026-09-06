@@ -1,5 +1,5 @@
 -- =====================================================
--- WASend Model B — Unified Schema Fill-In  (idempotent)
+-- SendAnjal Model B — Unified Schema Fill-In  (idempotent)
 -- =====================================================
 -- This migration is safe to run on a fresh DB OR on a DB
 -- that already has migrations 001-008 applied. Every statement

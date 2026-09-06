@@ -44,21 +44,31 @@ export async function POST() {
   const errors: string[] = [];
   const byWaba: Record<string, number> = {};
   const allTemplates: { wabaId: string; tmpl: MetaTemplate }[] = [];
+  /** Every template id Meta holds for this tenant, whatever its status. */
+  const metaAllIds = new Set<string>();
 
   for (const [wabaId, token] of Array.from(wabaSet.entries())) {
     try {
       const tmpls = await getMessageTemplates(wabaId, token);
-      byWaba[wabaId] = tmpls.length;
-      for (const t of tmpls) allTemplates.push({ wabaId, tmpl: t });
+      // Two different sets, deliberately:
+      //  • metaAllIds — everything Meta HAS, at any status. This is the keep-set
+      //    for the prune below. A PENDING template you just submitted is real
+      //    and in flight; deleting it would make the starter flow eat its own
+      //    output on the next sync.
+      //  • allTemplates — APPROVED only, the ones we import as sendable rows.
+      for (const t of tmpls) metaAllIds.add(t.id);
+      const approved = tmpls.filter((t) => normalizeTemplateStatus(t.status) === "APPROVED");
+      byWaba[wabaId] = approved.length;
+      for (const t of approved) allTemplates.push({ wabaId, tmpl: t });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "fetch failed";
       errors.push(`WABA ${wabaId}: ${msg}`);
     }
   }
 
-  if (allTemplates.length === 0) {
-    return NextResponse.json({ synced: 0, created: 0, updated: 0, byWaba, errors });
-  }
+  // NOTE: no early return when Meta has nothing. That is precisely the case
+  // where the local library is entirely stale and the prune below matters most
+  // — returning early here is what left 7 unsendable rows in place.
 
   // Load existing templates so we know what to update vs create.
   const { data: existing = [] } = await supabase
@@ -103,10 +113,56 @@ export async function POST() {
     }
   }
 
+  // ── Prune: make the local library MIRROR what Meta actually has approved ──
+  //
+  // Anything left over is one of:
+  //   • never sent to Meta (no meta_template_id) — seed/demo rows that read
+  //     APPROVED locally but would fail at send with "(#132001) does not exist"
+  //   • PENDING / REJECTED — not sendable now, and REJECTED never will be
+  //   • deleted at Meta since the last sync
+  //
+  // Keeping them is what made the app claim "4 approved templates" while every
+  // send failed. The library should only ever offer what can actually be sent.
+  // Keep anything Meta still has (approved OR pending). Remove only rows that
+  // Meta does not know about, or that Meta has rejected.
+  const keepMetaIds = metaAllIds;
+
+  const { data: locals } = await supabase
+    .from("templates")
+    .select("id, name, status, meta_template_id")
+    .eq("user_id", user.id);
+
+  const doomed = (locals ?? []).filter(
+    (r: { meta_template_id: string | null; status: string }) =>
+      // Never sent to Meta → cannot be sent, and Meta will never approve it.
+      !r.meta_template_id ||
+      // Meta no longer has it (deleted there).
+      !keepMetaIds.has(r.meta_template_id) ||
+      // Rejected → never becomes sendable.
+      r.status === "REJECTED",
+  );
+
+  let removed = 0;
+  const removedNames: string[] = [];
+  if (doomed.length > 0) {
+    const { error } = await supabase
+      .from("templates")
+      .delete()
+      .eq("user_id", user.id)               // tenant scoping — never a blanket delete
+      .in("id", doomed.map((d: { id: string }) => d.id));
+    if (error) errors.push(`prune: ${error.message}`);
+    else {
+      removed = doomed.length;
+      for (const d of doomed as { name: string }[]) removedNames.push(d.name);
+    }
+  }
+
   return NextResponse.json({
     synced: created + updated,
     created,
     updated,
+    removed,
+    removedNames,
     byWaba,
     errors,
   });

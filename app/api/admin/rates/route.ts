@@ -8,10 +8,12 @@
  *   GET  → { rates, tiers, settings }   (current config; nulls if 017 not applied)
  *   POST { rates?, tiers?, settings? }  → applies changes, returns fresh config
  *
- * Gated by requireAdmin() (ADMIN_EMAILS allowlist).
+ * SUPER ADMIN ONLY (requireSuperAdmin) — this is the rate card and markup.
+ * tenant_admin gets 403 here: support staff must never see cost basis.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/roles";
+import { audit } from "@/lib/audit";
 import { createServiceClient } from "@/lib/supabase/server";
 
 const CATEGORIES = ["MARKETING", "UTILITY", "AUTHENTICATION", "SERVICE"] as const;
@@ -70,7 +72,7 @@ async function loadConfig(supabase: any) {
 }
 
 export async function GET() {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   return NextResponse.json(await loadConfig(createServiceClient()));
 }
@@ -81,7 +83,7 @@ const int = (v: unknown): number | null => {
 };
 
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = (await request.json()) as {
@@ -105,6 +107,21 @@ export async function POST(request: NextRequest) {
     if (inserts.length) {
       const { error } = await supabase.from("meta_rates").insert(inserts);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      // COGS changed — record who, when, and the before/after per category.
+      await audit({
+        action: "rates.wholesale_update",
+        userId: admin.id,
+        resourceType: "meta_rates",
+        request,
+        details: {
+          changes: inserts.map((i) => ({
+            category: i.category,
+            region: i.region,
+            from: current?.[i.category] ?? null,
+            to: i.wholesale_paise,
+          })),
+        },
+      });
     }
   }
 
@@ -121,6 +138,15 @@ export async function POST(request: NextRequest) {
       if (Object.keys(patch).length === 0) continue;
       const { error } = await supabase.from("plan_tiers").update(patch).eq("tier", t.tier);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      // Markup / fees / cap are margin levers — attribute every change.
+      await audit({
+        action: "rates.tier_update",
+        userId: admin.id,
+        resourceType: "plan_tiers",
+        resourceId: t.tier,
+        request,
+        details: { tier: t.tier, patch },
+      });
     }
   }
 
@@ -137,6 +163,14 @@ export async function POST(request: NextRequest) {
     if (Object.keys(patch).length) {
       const { error } = await supabase.from("platform_settings").update(patch).eq("id", 1);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      await audit({
+        action: "rates.settings_update",
+        userId: admin.id,
+        resourceType: "platform_settings",
+        resourceId: "1",
+        request,
+        details: { patch },
+      });
     }
   }
 

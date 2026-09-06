@@ -48,24 +48,24 @@ function NodeConfigPanel({
     }
   }, [node.type]);
 
-  const inputCls = "w-full bg-[#202c33] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-white/30";
-  const labelCls = "text-xs font-medium text-white/50 uppercase tracking-wide block mb-1.5";
+  const inputCls = "w-full bg-chat-in border border-chat-inBorder border border-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-muted-foreground";
+  const labelCls = "text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5";
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
         <p className="text-sm font-semibold text-white truncate pr-2">{node.data.label || "Configure Node"}</p>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => onDelete(node.id)}
-            className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-destructive-soft text-destructive transition-colors"
             title="Delete node"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="w-3.5 h-3.5 text-white/60" />
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <X className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
         </div>
       </div>
@@ -101,7 +101,7 @@ function NodeConfigPanel({
               <div>
                 <label className={labelCls}>Keywords (comma-separated)</label>
                 <input className={inputCls} value={String(cfg.keywords || "")} onChange={(e) => set("keywords", e.target.value)} placeholder="hello, hi, start, menu" />
-                <p className="text-[11px] text-white/30 mt-1">Matches if message contains any keyword</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Matches if message contains any keyword</p>
               </div>
             )}
             {cfg.triggerType === "contact_tagged" && (
@@ -117,8 +117,8 @@ function NodeConfigPanel({
               </div>
             )}
             {cfg.triggerType === "webhook" && (
-              <div className="bg-white/5 rounded-lg p-3">
-                <p className="text-xs text-white/50 mb-1">Webhook Endpoint</p>
+              <div className="bg-secondary rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">Webhook Endpoint</p>
                 <p className="text-[11px] font-mono text-primary/80 break-all">POST /api/automation-flows/{"{id}"}/execute</p>
               </div>
             )}
@@ -135,7 +135,7 @@ function NodeConfigPanel({
                   <button
                     key={t}
                     onClick={() => set("messageType", t)}
-                    className={`py-2 rounded-lg text-xs font-semibold border transition-all ${cfg.messageType === t ? "border-primary bg-primary/15 text-primary" : "border-white/10 text-white/50 hover:border-white/25"}`}
+                    className={`py-2 rounded-lg text-xs font-semibold border transition-all ${cfg.messageType === t ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:border-border"}`}
                   >
                     {t === "text" ? "💬 Custom Text" : "📋 Template"}
                   </button>
@@ -159,7 +159,7 @@ function NodeConfigPanel({
                   ))}
                 </select>
                 {cfg.templateId ? (
-                  <p className="mt-2 text-[11px] text-white/40 bg-white/5 rounded-lg p-2 leading-relaxed">
+                  <p className="mt-2 text-[11px] text-muted-foreground bg-secondary rounded-lg p-2 leading-relaxed">
                     {templates.find((t) => t.id === String(cfg.templateId))?.body ?? ""}
                   </p>
                 ) : null}
@@ -174,7 +174,7 @@ function NodeConfigPanel({
                   onChange={(e) => set("text", e.target.value)}
                   placeholder={"Hi {{name}}, thanks for reaching out!"}
                 />
-                <p className="text-[11px] text-white/30 mt-1">Use {"{{name}}"} for contact name</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Use {"{{name}}"} for contact name</p>
               </div>
             )}
           </>
@@ -232,11 +232,11 @@ function NodeConfigPanel({
               </div>
             )}
             <div className="flex gap-3 text-xs pt-1">
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> True → left handle
+              <span className="flex items-center gap-1.5 text-success">
+                <span className="w-2 h-2 rounded-full bg-success inline-block" /> True → left handle
               </span>
-              <span className="flex items-center gap-1.5 text-red-400">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> False → right handle
+              <span className="flex items-center gap-1.5 text-destructive">
+                <span className="w-2 h-2 rounded-full bg-destructive inline-block" /> False → right handle
               </span>
             </div>
           </>
@@ -250,7 +250,7 @@ function NodeConfigPanel({
               <div className="grid grid-cols-2 gap-2">
                 {(["add", "remove"] as const).map((a) => (
                   <button key={a} onClick={() => set("action", a)}
-                    className={`py-2 rounded-lg text-xs font-semibold border transition-all ${cfg.action === a ? "border-primary bg-primary/15 text-primary" : "border-white/10 text-white/50 hover:border-white/25"}`}
+                    className={`py-2 rounded-lg text-xs font-semibold border transition-all ${cfg.action === a ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:border-border"}`}
                   >
                     {a === "add" ? "➕ Add Tag" : "➖ Remove Tag"}
                   </button>
@@ -411,35 +411,35 @@ function TestModal({ flowId, onClose }: { flowId: string | null; onClose: () => 
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-[#111b21] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+      <div className="w-full max-w-lg bg-chat-ground border border-border rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <Terminal className="w-4 h-4 text-primary" />
             <p className="font-semibold text-sm">Test Flow Simulation</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="w-4 h-4 text-white/60" />
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
         <div className="p-5 space-y-4">
-          <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
-            <Info className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-300">Test mode simulates the flow with a sample contact. No real messages are sent.</p>
+          <div className="flex items-start gap-2 bg-warning-soft border border-warning/25 rounded-lg px-3 py-2.5">
+            <Info className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-warning">Test mode simulates the flow with a sample contact. No real messages are sent.</p>
           </div>
           {log.length > 0 && (
-            <div className="bg-[#0d1117] rounded-xl p-4 space-y-2 max-h-64 overflow-y-auto font-mono">
+            <div className="bg-rail rounded-xl p-4 space-y-2 max-h-64 overflow-y-auto font-mono">
               {log.map((entry, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs">
                   {entry.success
-                    ? <Check className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    : <X className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />}
-                  <span className="text-white/30">[{entry.type}]</span>
-                  <span className="text-white/60 flex-shrink-0">{entry.label}</span>
-                  <span className={`flex-1 truncate ${entry.success ? "text-emerald-400/80" : "text-red-400/80"}`}>{entry.result}</span>
+                    ? <Check className="w-3 h-3 text-success flex-shrink-0 mt-0.5" />
+                    : <X className="w-3 h-3 text-destructive flex-shrink-0 mt-0.5" />}
+                  <span className="text-muted-foreground">[{entry.type}]</span>
+                  <span className="text-muted-foreground flex-shrink-0">{entry.label}</span>
+                  <span className={`flex-1 truncate ${entry.success ? "text-success" : "text-destructive"}`}>{entry.result}</span>
                 </div>
               ))}
               {done && (
-                <div className="pt-2 border-t border-white/10 text-emerald-400 text-xs flex items-center gap-2">
+                <div className="pt-2 border-t border-border text-success text-xs flex items-center gap-2">
                   <Check className="w-3 h-3" /> Simulation complete
                 </div>
               )}
@@ -449,12 +449,12 @@ function TestModal({ flowId, onClose }: { flowId: string | null; onClose: () => 
             <button
               onClick={run}
               disabled={running}
-              className="flex-1 flex items-center justify-center gap-2 wa-gradient text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
             >
               {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               {running ? "Running..." : "Run Simulation"}
             </button>
-            <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-white/10 text-sm text-white/60 hover:bg-white/5 transition-colors">
+            <button onClick={onClose} className="px-5 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-secondary transition-colors">
               Close
             </button>
           </div>
@@ -647,26 +647,26 @@ function FlowCanvas({
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="h-12 flex items-center gap-3 px-4 border-b border-white/8 bg-[#111b21] flex-shrink-0">
+      <div className="h-12 flex items-center gap-3 px-4 border-b border-border bg-chat-ground flex-shrink-0">
         <button
           onClick={() => router.push("/automation")}
-          className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors flex-shrink-0"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-muted-foreground transition-colors flex-shrink-0"
         >
           <ChevronLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Automations</span>
         </button>
-        <div className="w-px h-5 bg-white/10" />
+        <div className="w-px h-5 bg-secondary" />
         <input
           value={flowName}
           onChange={(e) => setFlowName(e.target.value)}
-          className="flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/30 min-w-0"
+          className="flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-muted-foreground min-w-0"
           placeholder="Flow name..."
         />
         <div className="flex items-center gap-2 flex-shrink-0">
           <AIFlowAssist onApply={applyAiFlow} />
           <button
             onClick={() => setShowTest(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-white/60 hover:bg-white/5 hover:text-white transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-white transition-all"
           >
             <Play className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Test</span>
@@ -683,18 +683,18 @@ function FlowCanvas({
                 setNodes((nds) => [...nds, newNode]);
                 toast.success("Node duplicated");
               }}
-              className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-all"
+              className="p-1.5 rounded-lg border border-border hover:bg-secondary transition-all"
               title="Duplicate node"
             >
-              <Copy className="w-3.5 h-3.5 text-white/60" />
+              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
           )}
           <button
             onClick={handleToggleActive}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
               isActive
-                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                : "border-white/10 text-white/50 hover:bg-white/5"
+                ? "bg-success-soft text-success border-success/25"
+                : "border-border text-muted-foreground hover:bg-secondary"
             }`}
           >
             {isActive ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
@@ -703,7 +703,7 @@ function FlowCanvas({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 px-3 py-1.5 wa-gradient text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
+            className="flex items-center gap-1.5 px-3 py-1.5 wa-gradient text-primary-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
             {saved ? "Saved!" : "Save"}
@@ -714,12 +714,12 @@ function FlowCanvas({
       {/* Main area */}
       <div className="flex flex-1 min-h-0">
         {/* Left palette */}
-        <div className="w-48 border-r border-white/8 bg-[#0d1117] overflow-y-auto flex-shrink-0">
+        <div className="w-48 border-r border-border bg-rail overflow-y-auto flex-shrink-0">
           <div className="p-3 space-y-4">
-            <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider px-1 pt-1">Drag to canvas</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1">Drag to canvas</p>
             {NODE_CATALOGUE.map((group) => (
               <div key={group.group}>
-                <p className="text-[10px] font-semibold text-white/25 uppercase tracking-wider mb-2 px-1">{group.group}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{group.group}</p>
                 <div className="space-y-1.5">
                   {group.items.map((item) => {
                     const Icon = item.icon;
@@ -780,9 +780,9 @@ function FlowCanvas({
           {nodes.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center space-y-2">
-                <Zap className="w-12 h-12 text-white/8 mx-auto" />
-                <p className="text-sm text-white/20 font-medium">Drop nodes here to build your flow</p>
-                <p className="text-xs text-white/12">Drag from the panel on the left</p>
+                <Zap className="w-12 h-12 text-muted-foreground mx-auto" />
+                <p className="text-sm text-muted-foreground font-medium">Drop nodes here to build your flow</p>
+                <p className="text-xs text-muted-foreground">Drag from the panel on the left</p>
               </div>
             </div>
           )}
@@ -790,7 +790,7 @@ function FlowCanvas({
 
         {/* Right config panel */}
         {selectedNode && (
-          <div className="w-72 border-l border-white/8 bg-[#111b21] flex flex-col flex-shrink-0 overflow-hidden">
+          <div className="w-72 border-l border-border bg-chat-ground flex flex-col flex-shrink-0 overflow-hidden">
             <NodeConfigPanel
               node={selectedNode as Node & { data: FlowNodeData }}
               onUpdate={updateNodeConfig}
@@ -811,10 +811,14 @@ function FlowCanvas({
 function FlowBuilderInner() {
   const searchParams = useSearchParams();
   const flowId = searchParams.get("id");
+  // An industry suggestion opened from the "Recommended for …" rail. It arrives
+  // as an UNSAVED draft on the canvas — never a saved or active flow. The person
+  // edits it, saves it, and turns it on themselves.
+  const suggestionId = searchParams.get("suggestion");
   const [initialData, setInitialData] = useState<{
     nodes: Node[]; edges: Edge[]; name: string; is_active: boolean;
   } | null>(null);
-  const [loading, setLoading] = useState(!!flowId);
+  const [loading, setLoading] = useState(!!flowId || !!suggestionId);
 
   useEffect(() => {
     if (!flowId) return;
@@ -823,9 +827,39 @@ function FlowBuilderInner() {
       .then((d) => {
         if (d.flow) setInitialData({ nodes: d.flow.flow_data?.nodes || [], edges: d.flow.flow_data?.edges || [], name: d.flow.name, is_active: d.flow.is_active });
       })
-      .catch(() => toast.error("Failed to load flow"))
+      .catch(() => toast.error("We couldn't open that automation. Please try again."))
       .finally(() => setLoading(false));
   }, [flowId]);
+
+  useEffect(() => {
+    if (flowId || !suggestionId) return;
+    fetch(`/api/verticals/suggestions/${suggestionId}`)
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d?.error || "");
+        return d as { name: string; flow: CanvasGraph };
+      })
+      .then((d) => {
+        setInitialData({
+          nodes: d.flow.nodes.map((n) => ({
+            id: n.id,
+            type: n.type,
+            position: n.position,
+            data: { label: n.data.label, config: n.data.config },
+          })) as Node[],
+          edges: d.flow.edges.map((e) => ({
+            ...e,
+            animated: true,
+            style: { stroke: "rgba(255,255,255,0.2)", strokeWidth: 2 },
+          })) as Edge[],
+          name: d.flow.name || d.name,
+          is_active: false, // never pre-activated
+        });
+        toast.success("Opened as a draft — change the wording, then save and turn it on");
+      })
+      .catch((err) => toast.error((err as Error).message || "We couldn't open this suggestion."))
+      .finally(() => setLoading(false));
+  }, [flowId, suggestionId]);
 
   if (loading) {
     return (
@@ -844,7 +878,7 @@ function FlowBuilderInner() {
 
 export default function AutomationCreatePage() {
   return (
-    <div className="h-[calc(100vh-4rem)] -mx-4 sm:-mx-6 overflow-hidden bg-[#0b141a]">
+    <div className="h-[calc(100vh-4rem)] -mx-4 sm:-mx-6 overflow-hidden bg-chat-ground">
       <Suspense
         fallback={
           <div className="h-full flex items-center justify-center">

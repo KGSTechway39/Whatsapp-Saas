@@ -12,7 +12,7 @@ import { InsufficientBalanceError } from "@/lib/billing/wallet";
  *   fields: to, name, file (PDF), template_name?, language?, idempotency_key?
  *
  * WorkspaceCV's resume-delivery endpoint. WorkspaceCV never calls the Graph API
- * itself — it hands WASend a recipient + a PDF, and we:
+ * itself — it hands SendAnjal a recipient + a PDF, and we:
  *   1. uploadMedia(pdf) → media_id  (tied to the tenant's own connected number)
  *   2. send a UTILITY-category template with the PDF attached via that media_id,
  *      personalised with {{1}} = name

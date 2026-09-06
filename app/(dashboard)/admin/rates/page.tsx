@@ -115,7 +115,7 @@ export default function AdminRatesPage() {
     return (
       <div>
         <PageHeader title="Rates & markup" subtitle="Edit Meta rates, markup & limits" />
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6 text-sm">
+        <div className="rounded-xl border border-warning/25 bg-warning-soft p-6 text-sm">
           Apply migration <code className="font-mono text-xs">017_billing_rates.sql</code> to configure rates.
         </div>
       </div>

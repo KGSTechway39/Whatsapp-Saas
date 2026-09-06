@@ -67,7 +67,7 @@ export default function RechargePage() {
           ))}
         </div>
         <div className="flex gap-3 justify-center">
-          <Link href="/billing" className="wa-gradient text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
+          <Link href="/billing" className="wa-gradient text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25">
             View Wallet
           </Link>
           <button onClick={() => setSuccess(false)} className="px-5 py-2.5 rounded-xl border border-border hover:bg-accent text-sm font-medium transition-colors">
@@ -86,7 +86,7 @@ export default function RechargePage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold">Recharge Wallet</h1>
-          <p className="text-sm text-muted-foreground">Add credits to your WASend wallet</p>
+          <p className="text-sm text-muted-foreground">Add credits to your SendAnjal wallet</p>
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export default function RechargePage() {
           <p className="text-sm font-semibold mb-4">Payment Method</p>
 
           <div className="flex items-center gap-3 p-4 rounded-xl bg-[#072654]/10 border border-[#072654]/20 mb-4">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-card flex items-center justify-center flex-shrink-0">
               <span className="text-[#072654] font-black text-xs tracking-tighter">R₹</span>
             </div>
             <div>
@@ -168,10 +168,10 @@ export default function RechargePage() {
 
           <div className="flex items-center gap-2 mb-5">
             {[
-              { label: "UPI", color: "text-violet-400" },
-              { label: "Cards", color: "text-blue-400" },
-              { label: "NetBanking", color: "text-emerald-400" },
-              { label: "Wallets", color: "text-amber-400" },
+              { label: "UPI", color: "text-primary" },
+              { label: "Cards", color: "text-primary" },
+              { label: "NetBanking", color: "text-success" },
+              { label: "Wallets", color: "text-warning" },
             ].map((m) => (
               <span
                 key={m.label}
@@ -185,7 +185,7 @@ export default function RechargePage() {
           <button
             onClick={handlePay}
             disabled={loading || !numAmount || numAmount < 1}
-            className="flex items-center justify-center gap-2 w-full wa-gradient text-white font-semibold py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/25"
+            className="flex items-center justify-center gap-2 w-full wa-gradient text-primary-foreground font-semibold py-3.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/25"
           >
             {loading ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>

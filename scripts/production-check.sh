@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# production-check.sh — WASend production-readiness gate.
+# production-check.sh — SendAnjal production-readiness gate.
 #
 # Runs the checks a deploy should pass before it ships:
 #   1. Required environment variables are present
@@ -29,7 +29,7 @@ ok()   { printf "  ${GRN}✓ %s${RST}\n" "$1"; }
 bad()  { printf "  ${RED}✗ %s${RST}\n" "$1"; FAIL=$((FAIL+1)); }
 warn() { printf "  ${YLW}! %s${RST}\n" "$1"; WARN=$((WARN+1)); }
 
-printf "${BOLD}WASend — production readiness check${RST}\n${DIM}%s${RST}\n" "$(date)"
+printf "${BOLD}SendAnjal — production readiness check${RST}\n${DIM}%s${RST}\n" "$(date)"
 
 # ── 1. Required environment variables ───────────────────────────────────────
 step "Environment variables"

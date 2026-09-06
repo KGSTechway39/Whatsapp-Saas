@@ -173,8 +173,8 @@ export default function SettingsPage() {
               disabled={saving || saved}
               className={`flex items-center gap-2 font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-60 ${
                 saved
-                  ? "bg-emerald-500 text-white"
-                  : "wa-gradient text-white shadow-lg shadow-primary/25"
+                  ? "bg-success text-white"
+                  : "wa-gradient text-primary-foreground shadow-lg shadow-primary/25"
               }`}
             >
               {saving ? (
@@ -229,7 +229,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/25"
+              className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/25"
             >
               {saving ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</>

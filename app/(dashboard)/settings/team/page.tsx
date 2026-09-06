@@ -22,8 +22,8 @@ interface Member {
 }
 
 const roleColors = {
-  owner: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  admin: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  owner: "bg-warning-soft text-warning border border-warning/25",
+  admin: "bg-accent text-primary border border-primary/25",
   agent: "bg-muted/50 text-muted-foreground border border-border",
 };
 
@@ -84,7 +84,7 @@ export default function TeamPage() {
         action={
           <button
             onClick={() => setShowInvite(true)}
-            className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+            className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
           >
             <UserPlus className="w-4 h-4" />
             Invite Member
@@ -151,7 +151,7 @@ export default function TeamPage() {
                                 </button>
                                 <button
                                   onClick={() => handleRemove(member.id)}
-                                  className="flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
+                                  className="flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive-soft transition-colors w-full text-left"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" /> Remove
                                 </button>
@@ -226,7 +226,7 @@ export default function TeamPage() {
                   <button
                     type="submit"
                     disabled={inviting}
-                    className="flex-1 flex items-center justify-center gap-2 wa-gradient text-white font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 wa-gradient text-primary-foreground font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
                   >
                     {inviting ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>

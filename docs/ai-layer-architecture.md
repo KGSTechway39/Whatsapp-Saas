@@ -1,4 +1,4 @@
-# WASend AI-Assist Layer — Architecture & Impact Analysis
+# SendAnjal AI-Assist Layer — Architecture & Impact Analysis
 
 **Author:** Principal Full-Stack Engineer (architecture pass)
 **Status:** Design — pre-implementation. No code merged yet.

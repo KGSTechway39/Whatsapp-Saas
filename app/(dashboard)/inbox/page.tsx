@@ -45,6 +45,8 @@ interface Message {
 interface Template {
   id: string; name: string; displayName: string; category: string;
   language: string; status: string; body: string; variables: string[];
+  /** False when Meta doesn't actually have it — see lib/whatsapp/template-sendable.ts */
+  sendable?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,8 +89,8 @@ function StatusIcon({ status }: { status: string }) {
   if (status === "pending") return <Clock className="w-3 h-3 text-muted-foreground/60" />;
   if (status === "sent") return <Check className="w-3 h-3 text-muted-foreground/80" />;
   if (status === "delivered") return <CheckCheck className="w-3 h-3 text-muted-foreground/80" />;
-  if (status === "read") return <CheckCheck className="w-3 h-3 text-blue-400" />;
-  if (status === "failed") return <XCircle className="w-3 h-3 text-red-400" />;
+  if (status === "read") return <CheckCheck className="w-3 h-3 text-primary" />;
+  if (status === "failed") return <XCircle className="w-3 h-3 text-destructive" />;
   return null;
 }
 
@@ -123,7 +125,7 @@ function MessageBubble({ msg }: { msg: Message }) {
     if (type === "image") {
       return (
         <div className="space-y-1">
-          <div className="w-48 h-32 bg-muted/50 rounded-xl flex items-center justify-center border border-border/30">
+          <div className="w-48 h-32 bg-muted/50 rounded-xl flex items-center justify-center border border-hairline">
             <Image className="w-8 h-8 text-muted-foreground/40" />
           </div>
           {content.caption ? <p className="text-xs text-muted-foreground">{String(content.caption)}</p> : null}
@@ -132,7 +134,7 @@ function MessageBubble({ msg }: { msg: Message }) {
     }
     if (type === "video") {
       return (
-        <div className="w-48 h-32 bg-muted/50 rounded-xl flex items-center justify-center border border-border/30">
+        <div className="w-48 h-32 bg-muted/50 rounded-xl flex items-center justify-center border border-hairline">
           <div className="text-center">
             <div className="w-10 h-10 rounded-full bg-background/80 flex items-center justify-center mx-auto mb-1">
               <span className="text-lg">▶</span>
@@ -160,8 +162,8 @@ function MessageBubble({ msg }: { msg: Message }) {
     if (type === "document") {
       return (
         <div className="flex items-center gap-2.5 bg-muted/30 rounded-xl px-3 py-2.5 min-w-[160px]">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-            <FileText className="w-4 h-4 text-blue-400" />
+          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium truncate">{(content.filename as string) || "Document"}</p>
@@ -173,9 +175,9 @@ function MessageBubble({ msg }: { msg: Message }) {
     if (type === "location") {
       const loc = content as { latitude?: number; longitude?: number; name?: string; address?: string };
       return (
-        <div className="w-48 bg-muted/30 rounded-xl overflow-hidden border border-border/30">
-          <div className="h-20 bg-emerald-500/10 flex items-center justify-center">
-            <MapPin className="w-8 h-8 text-emerald-400" />
+        <div className="w-48 bg-muted/30 rounded-xl overflow-hidden border border-hairline">
+          <div className="h-20 bg-success-soft flex items-center justify-center">
+            <MapPin className="w-8 h-8 text-success" />
           </div>
           <div className="p-2">
             <p className="text-xs font-medium">{loc.name || "Location"}</p>
@@ -192,8 +194,8 @@ function MessageBubble({ msg }: { msg: Message }) {
       <div className={`max-w-[72%] ${out ? "items-end" : "items-start"} flex flex-col`}>
         <div className={`relative px-3 py-2 rounded-2xl shadow-sm ${
           out
-            ? "bg-[#005c4b] text-white rounded-tr-sm"
-            : "bg-[#202c33] text-[#e9edef] rounded-tl-sm"
+            ? "bg-chat-out text-chat-outForeground rounded-tr-sm"
+            : "bg-chat-in border border-chat-inBorder text-foreground rounded-tl-sm"
         }`}>
           {renderContent()}
           <div className={`flex items-center gap-1 mt-1 ${out ? "justify-end" : "justify-start"}`}>
@@ -201,7 +203,7 @@ function MessageBubble({ msg }: { msg: Message }) {
             {out && <StatusIcon status={msg.status} />}
           </div>
           {msg.error_message && (
-            <p className="text-[10px] text-red-300 mt-0.5">{msg.error_message}</p>
+            <p className="text-[10px] text-destructive mt-0.5">{msg.error_message}</p>
           )}
         </div>
       </div>
@@ -220,21 +222,21 @@ function ConvCard({ conv, active, onClick }: {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b border-border/20 transition-colors hover:bg-accent/30 ${
+      className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b border-hairline transition-colors hover:bg-accent/30 ${
         active ? "bg-primary/10 border-l-2 border-l-primary" : ""
       }`}
     >
       {/* Avatar */}
       <div className="relative flex-shrink-0">
-        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white ${
-          conv.status === "bot_handling" ? "bg-violet-500" :
+        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-primary-foreground ${
+          conv.status === "bot_handling" ? "bg-primary" :
           conv.status === "resolved" ? "bg-muted-foreground/50" :
           "wa-gradient"
         }`}>
           {initials(conv.contact_name || conv.contact_phone || "?")}
         </div>
         <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-          withinWindow ? "bg-emerald-400" : "bg-red-400"
+          withinWindow ? "bg-success" : "bg-destructive"
         }`} title={withinWindow ? "24h window open" : "Window expired"} />
       </div>
 
@@ -249,11 +251,11 @@ function ConvCard({ conv, active, onClick }: {
         </div>
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground truncate pr-2 flex-1">
-            {conv.status === "bot_handling" && <span className="text-violet-400 mr-1">🤖</span>}
+            {conv.status === "bot_handling" && <span className="text-primary mr-1">🤖</span>}
             {conv.last_message_preview || "No messages yet"}
           </p>
           {conv.unread_count > 0 && (
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
               {conv.unread_count > 9 ? "9+" : conv.unread_count}
             </span>
           )}
@@ -282,7 +284,7 @@ function TemplatePicker({
   const [vars, setVars] = useState<string[]>([]);
 
   const filtered = templates
-    .filter(t => t.status === "APPROVED")
+    .filter(t => t.status === "APPROVED" && t.sendable !== false)
     .filter(t =>
       !search ||
       t.displayName.toLowerCase().includes(search.toLowerCase()) ||
@@ -295,7 +297,7 @@ function TemplatePicker({
   };
 
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#111b21] border border-border/50 rounded-2xl shadow-2xl overflow-hidden z-30 flex flex-col max-h-[460px]">
+    <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-hairline rounded-2xl shadow-2xl overflow-hidden z-30 flex flex-col max-h-[460px]">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
         <p className="text-sm font-semibold">Select Template</p>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-accent">
@@ -305,7 +307,7 @@ function TemplatePicker({
 
       {!selected ? (
         <>
-          <div className="px-3 py-2 border-b border-border/30">
+          <div className="px-3 py-2 border-b border-hairline">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
@@ -324,12 +326,12 @@ function TemplatePicker({
               <button
                 key={t.id}
                 onClick={() => handleSelect(t)}
-                className="w-full text-left px-4 py-3 hover:bg-accent/30 border-b border-border/20 last:border-0 transition-colors"
+                className="w-full text-left px-4 py-3 hover:bg-accent/30 border-b border-hairline last:border-0 transition-colors"
               >
                 <div className="flex items-center justify-between mb-0.5">
                   <span className="text-sm font-medium">{t.displayName}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                    t.category === "MARKETING" ? "bg-blue-500/15 text-blue-400" : "bg-emerald-500/15 text-emerald-400"
+                    t.category === "MARKETING" ? "bg-accent text-primary" : "bg-success-soft text-success"
                   }`}>{t.category}</span>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{t.body}</p>
@@ -371,7 +373,7 @@ function TemplatePicker({
           )}
           <button
             onClick={() => onSelect(selected, vars)}
-            className="w-full wa-gradient text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all"
+            className="w-full wa-gradient text-primary-foreground text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-all"
           >
             Send Template
           </button>
@@ -638,16 +640,16 @@ export default function InboxPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-[calc(100vh-4rem)] -m-4 sm:-m-6 flex overflow-hidden bg-[#0b141a]">
+    <div className="h-[calc(100vh-4rem)] -m-4 sm:-m-6 flex overflow-hidden bg-chat-ground">
 
       {/* ── LEFT PANEL: Conversation List ────────────────────────────────────── */}
-      <div className={`${selectedId ? "hidden lg:flex" : "flex"} flex-col w-full lg:w-[320px] border-r border-border/30 flex-shrink-0 bg-[#111b21]`}>
+      <div className={`${selectedId ? "hidden lg:flex" : "flex"} flex-col w-full lg:w-[320px] border-r border-hairline flex-shrink-0 bg-card`}>
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border/30 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
             <h2 className="text-base font-bold">Inbox</h2>
-            <div className={`w-2 h-2 rounded-full transition-all ${liveIndicator ? "bg-emerald-400" : "bg-emerald-400/40"}`} title="Live" />
+            <div className={`w-2 h-2 rounded-full transition-all ${liveIndicator ? "bg-success" : "bg-success-soft"}`} title="Live" />
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -667,14 +669,14 @@ export default function InboxPage() {
         </div>
 
         {/* Search */}
-        <div className="px-3 py-2 border-b border-border/20">
+        <div className="px-3 py-2 border-b border-hairline">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search contacts…"
-              className="w-full bg-[#202c33] border border-border/30 rounded-xl pl-8 pr-3 py-1.5 text-sm outline-none focus:border-primary/40 placeholder:text-muted-foreground/50"
+              className="w-full bg-secondary border border-hairline rounded-xl pl-8 pr-3 py-1.5 text-sm outline-none focus:border-primary/40 placeholder:text-muted-foreground/50"
             />
             {search && (
               <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -685,7 +687,7 @@ export default function InboxPage() {
         </div>
 
         {/* Filter tabs */}
-        <div className="flex border-b border-border/20 overflow-x-auto">
+        <div className="flex border-b border-hairline overflow-x-auto">
           {FILTERS.map(f => {
             const count = f.id === "unread"
               ? conversations.filter(c => c.unread_count > 0).length
@@ -703,7 +705,7 @@ export default function InboxPage() {
                 <f.icon className="w-3.5 h-3.5" />
                 {f.label}
                 {count > 0 && f.id === "unread" && (
-                  <span className="w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                  <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
                     {count}
                   </span>
                 )}
@@ -755,7 +757,7 @@ export default function InboxPage() {
         ) : (
           <>
             {/* Chat header */}
-            <div className="h-14 flex items-center gap-3 px-4 border-b border-border/30 bg-[#202c33] flex-shrink-0">
+            <div className="h-14 flex items-center gap-3 px-4 border-b border-hairline bg-secondary flex-shrink-0">
               {/* Mobile back */}
               <button
                 onClick={() => setSelectedId(null)}
@@ -764,7 +766,7 @@ export default function InboxPage() {
                 <ArrowLeft className="w-4 h-4" />
               </button>
 
-              <div className="w-9 h-9 rounded-full wa-gradient flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+              <div className="w-9 h-9 rounded-full wa-gradient flex items-center justify-center text-xs font-bold text-primary-foreground flex-shrink-0">
                 {initials(selectedConv?.contact_name || selectedConv?.contact_phone || "?")}
               </div>
 
@@ -782,7 +784,7 @@ export default function InboxPage() {
                     </span>
                   )}
                   {selectedConv?.status === "bot_handling" && (
-                    <span className="text-[10px] bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded-full font-medium hidden sm:flex items-center gap-1">
+                    <span className="text-[10px] bg-accent text-primary px-1.5 py-0.5 rounded-full font-medium hidden sm:flex items-center gap-1">
                       <Bot className="w-2.5 h-2.5" /> Bot
                     </span>
                   )}
@@ -796,8 +798,8 @@ export default function InboxPage() {
                   title={selectedConv?.status === "resolved" ? "Reopen" : "Resolve"}
                   className={`p-1.5 rounded-lg transition-colors ${
                     selectedConv?.status === "resolved"
-                      ? "text-emerald-400 hover:bg-emerald-500/10"
-                      : "text-muted-foreground hover:bg-accent hover:text-emerald-400"
+                      ? "text-success hover:bg-success-soft"
+                      : "text-muted-foreground hover:bg-accent hover:text-success"
                   }`}
                 >
                   <CheckCircle2 className="w-4.5 h-4.5" />
@@ -859,15 +861,15 @@ export default function InboxPage() {
 
             {/* 24h window banner */}
             {!withinWindow && selectedConv?.status !== "resolved" && (
-              <div className="flex items-center gap-2.5 bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex-shrink-0">
-                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <div className="flex items-center gap-2.5 bg-warning-soft border-b border-warning/25 px-4 py-2.5 flex-shrink-0">
+                <AlertCircle className="w-4 h-4 text-warning flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-amber-400">24-hour conversation window expired</p>
+                  <p className="text-xs font-medium text-warning">24-hour conversation window expired</p>
                   <p className="text-[11px] text-muted-foreground">Send a template message to re-engage this contact</p>
                 </div>
                 <button
                   onClick={() => setShowTemplatePicker(true)}
-                  className="flex-shrink-0 text-xs bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-lg hover:bg-amber-500/30 font-medium transition-colors"
+                  className="flex-shrink-0 text-xs bg-warning-soft text-warning px-2.5 py-1 rounded-lg hover:bg-warning-soft font-medium transition-colors"
                 >
                   Send Template
                 </button>
@@ -876,12 +878,12 @@ export default function InboxPage() {
 
             {/* Resolved banner */}
             {selectedConv?.status === "resolved" && (
-              <div className="flex items-center gap-2.5 bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 flex-shrink-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <p className="text-xs text-emerald-400 flex-1">This conversation is resolved</p>
+              <div className="flex items-center gap-2.5 bg-success-soft border-b border-success/25 px-4 py-2 flex-shrink-0">
+                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
+                <p className="text-xs text-success flex-1">This conversation is resolved</p>
                 <button
                   onClick={() => updateConvStatus(selectedId, "open")}
-                  className="text-xs text-emerald-400 hover:underline font-medium"
+                  className="text-xs text-success hover:underline font-medium"
                 >
                   Reopen
                 </button>
@@ -908,7 +910,7 @@ export default function InboxPage() {
                   {/* Date separator */}
                   <div className="flex items-center gap-3 my-4">
                     <div className="flex-1 h-px bg-border/30" />
-                    <span className="text-[11px] text-muted-foreground/60 bg-[#0b141a] px-2 py-0.5 rounded-full border border-border/20">
+                    <span className="text-[11px] text-muted-foreground/60 bg-chat-ground px-2 py-0.5 rounded-full border border-hairline">
                       {group.label}
                     </span>
                     <div className="flex-1 h-px bg-border/30" />
@@ -922,7 +924,7 @@ export default function InboxPage() {
             </div>
 
             {/* Input area */}
-            <div className="border-t border-border/30 bg-[#202c33] px-3 py-2 flex-shrink-0">
+            <div className="border-t border-hairline bg-secondary px-3 py-2 flex-shrink-0">
               {/* Quick replies */}
               {showQuickReplies && (
                 <div className="mb-2 flex flex-wrap gap-1.5">
@@ -988,7 +990,7 @@ export default function InboxPage() {
                   }
                   disabled={selectedConv?.status === "resolved" || sending}
                   rows={1}
-                  className="flex-1 bg-[#2a3942] border border-border/30 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-primary/40 resize-none placeholder:text-muted-foreground/50 max-h-24 disabled:opacity-50 disabled:cursor-not-allowed scrollbar-thin transition-all"
+                  className="flex-1 bg-secondary border border-hairline rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-primary/40 resize-none placeholder:text-muted-foreground/50 max-h-24 disabled:opacity-50 disabled:cursor-not-allowed scrollbar-thin transition-all"
                   style={{ lineHeight: "1.5" }}
                   onInput={e => {
                     const t = e.currentTarget;
@@ -1013,7 +1015,7 @@ export default function InboxPage() {
                 <button
                   onClick={() => sendMessage()}
                   disabled={sending || !inputText.trim() || selectedConv?.status === "resolved"}
-                  className="p-2 rounded-xl wa-gradient text-white flex-shrink-0 mb-0.5 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-md"
+                  className="p-2 rounded-xl wa-gradient text-primary-foreground flex-shrink-0 mb-0.5 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-md"
                   title="Send (Enter)"
                 >
                   {sending
@@ -1033,8 +1035,8 @@ export default function InboxPage() {
 
       {/* ── RIGHT PANEL: Contact Details ──────────────────────────────────────── */}
       {selectedId && rightOpen && (
-        <div className="hidden lg:flex flex-col w-[280px] border-l border-border/30 bg-[#111b21] flex-shrink-0 overflow-y-auto scrollbar-thin">
-          <div className="px-4 py-3 border-b border-border/30 flex items-center justify-between">
+        <div className="hidden lg:flex flex-col w-[280px] border-l border-hairline bg-card flex-shrink-0 overflow-y-auto scrollbar-thin">
+          <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
             <p className="text-sm font-semibold">Contact Info</p>
             <button onClick={() => setRightOpen(false)} className="p-1 rounded-lg hover:bg-accent text-muted-foreground">
               <X className="w-4 h-4" />
@@ -1045,7 +1047,7 @@ export default function InboxPage() {
             <div className="p-4 space-y-5">
               {/* Avatar + name */}
               <div className="text-center">
-                <div className="w-16 h-16 rounded-full wa-gradient flex items-center justify-center text-xl font-bold text-white mx-auto mb-3">
+                <div className="w-16 h-16 rounded-full wa-gradient flex items-center justify-center text-xl font-bold text-primary-foreground mx-auto mb-3">
                   {initials(selectedConv.contact_name || selectedConv.contact_phone || "?")}
                 </div>
                 <p className="font-semibold text-sm">{selectedConv.contact_name}</p>
@@ -1087,7 +1089,7 @@ export default function InboxPage() {
 
               {/* CRM Stage */}
               {selectedConv.contacts?.crm_stage && (
-                <div className="bg-muted/20 rounded-xl p-3 border border-border/30">
+                <div className="bg-muted/20 rounded-xl p-3 border border-hairline">
                   <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide mb-1.5">CRM Stage</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium capitalize">
@@ -1095,13 +1097,13 @@ export default function InboxPage() {
                     </span>
                     {selectedConv.contacts.crm_score && (
                       <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                        <span className="text-xs font-bold text-amber-400">{selectedConv.contacts.crm_score}</span>
+                        <Star className="w-3 h-3 text-warning fill-warning" />
+                        <span className="text-xs font-bold text-warning">{selectedConv.contacts.crm_score}</span>
                       </div>
                     )}
                   </div>
                   {(selectedConv.contacts.deal_value ?? 0) > 0 && (
-                    <p className="text-xs text-emerald-400 mt-1 font-medium">
+                    <p className="text-xs text-success mt-1 font-medium">
                       ₹{Number(selectedConv.contacts.deal_value).toLocaleString()}
                     </p>
                   )}
@@ -1111,10 +1113,10 @@ export default function InboxPage() {
               {/* 24h window status */}
               <div className={`rounded-xl p-3 border ${
                 withinWindow
-                  ? "bg-emerald-500/5 border-emerald-500/20"
-                  : "bg-red-500/5 border-red-500/20"
+                  ? "bg-success-soft border-success/25"
+                  : "bg-destructive-soft border-destructive/25"
               }`}>
-                <p className="text-[10px] uppercase tracking-wide mb-1 font-medium ${withinWindow ? 'text-emerald-400' : 'text-red-400'}">
+                <p className="text-[10px] uppercase tracking-wide mb-1 font-medium ${withinWindow ? 'text-success' : 'text-destructive'}">
                   {withinWindow ? "24h Window Open" : "Window Expired"}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
@@ -1136,9 +1138,9 @@ export default function InboxPage() {
                       <div key={i} className="flex items-center justify-between text-xs bg-muted/20 rounded-lg px-2.5 py-1.5">
                         <span className="truncate flex-1 mr-2">{cm.campaigns?.name || "Campaign"}</span>
                         <span className={`flex-shrink-0 text-[10px] font-medium ${
-                          cm.status === "delivered" ? "text-emerald-400" :
-                          cm.status === "read" ? "text-blue-400" :
-                          cm.status === "failed" ? "text-red-400" :
+                          cm.status === "delivered" ? "text-success" :
+                          cm.status === "read" ? "text-primary" :
+                          cm.status === "failed" ? "text-destructive" :
                           "text-muted-foreground"
                         }`}>{cm.status}</span>
                       </div>
@@ -1184,7 +1186,7 @@ export default function InboxPage() {
               {selectedConv.contacts?.crm_notes && (
                 <div>
                   <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide mb-1.5">Notes</p>
-                  <p className="text-xs text-muted-foreground bg-muted/20 rounded-xl p-3 border border-border/30 leading-relaxed">
+                  <p className="text-xs text-muted-foreground bg-muted/20 rounded-xl p-3 border border-hairline leading-relaxed">
                     {selectedConv.contacts.crm_notes}
                   </p>
                 </div>

@@ -37,7 +37,13 @@ export const contacts = {
     if (params?.group) q.set("group", params.group);
     if (params?.page) q.set("page", String(params.page));
     if (params?.limit) q.set("limit", String(params.limit));
-    return request<{ contacts: Contact[]; total: number }>(`/api/contacts?${q}`);
+    return request<{
+      contacts: Contact[];
+      total: number;
+      /** True when this tenant's industry requires explicit consent. */
+      consentRequired?: boolean;
+      consentRequiredBecause?: string | null;
+    }>(`/api/contacts?${q}`);
   },
   create: (data: Partial<Contact>) =>
     request<Contact>("/api/contacts", { method: "POST", body: JSON.stringify(data) }),
@@ -49,6 +55,20 @@ export const contacts = {
     request<{ imported: number }>("/api/contacts/import", { method: "POST", body: JSON.stringify({ contacts: items }) }),
   bulkDelete: (ids: string[]) =>
     request("/api/contacts/import", { method: "DELETE", body: JSON.stringify({ ids }) }),
+
+  /** Record or withdraw consent for one contact. */
+  setConsent: (id: string, given: boolean, source?: string) =>
+    request<{ consent: { contactId: string; given: boolean; at: string | null; source: string | null } }>(
+      `/api/contacts/${id}/consent`,
+      { method: "POST", body: JSON.stringify({ given, source }) },
+    ),
+
+  /** Record or withdraw consent for many contacts at once. */
+  setConsentBulk: (contactIds: string[], given: boolean, source?: string) =>
+    request<{ updated: number; failed: { id: string; error: string }[] }>("/api/contacts/consent", {
+      method: "POST",
+      body: JSON.stringify({ contactIds, given, source }),
+    }),
   count: (params?: { audienceType?: string; tags?: string; excludeRecentHours?: number }) => {
     const q = new URLSearchParams();
     if (params?.audienceType) q.set("audienceType", params.audienceType);
@@ -255,9 +275,164 @@ export interface AdminMargin {
   totalRevenuePaise: number;
 }
 
+/** Platform-wide aggregates behind the super-admin dashboard. Money in paise. */
+export interface AdminOverview {
+  generatedAt: string;
+  days: number;
+  tenants: {
+    total: number;
+    active: number;
+    newInPeriod: number;
+    byTier: Record<string, number>;
+  };
+  people: { tenantOwners: number; seats: number; total: number };
+  numbers: { total: number; active: number };
+  messages: {
+    allTime: number;
+    period: number;
+    byStatus: Record<string, number>;
+    series: {
+      date: string;
+      marketing: number;
+      utility: number;
+      authentication: number;
+      service: number;
+      billed: number;
+      total: number;
+    }[];
+  };
+  revenue: {
+    mrrPaise: number;
+    activeSubscriptions: number;
+    payingSubscriptions: number;
+    unpricedSubscriptions: number;
+    platformFeesPaise: number;
+    topupPaise: number;
+    messageMarginPaise: number;
+    messageChargedPaise: number;
+    messageWholesalePaise: number;
+    marginTrackedCount: number;
+    walletFloatPaise: number;
+  };
+  /** Period-over-period % change. null = not computable → render no chip. */
+  deltas: {
+    tenants: number | null;
+    activeTenants: number | null;
+    people: number | null;
+    numbers: number | null;
+    mrr: number | null;
+    messages: number | null;
+  };
+  ai: { requests: number; costPaise: number; creditsDeducted: number; nonOk: number };
+  campaigns: { active: number };
+  topTenants: {
+    id: string;
+    name: string;
+    email: string;
+    industry: string;
+    tier: string;
+    billingMode: string;
+    sent: number;
+    deliveredPct: number;
+    readPct: number;
+    failed: number;
+  }[];
+  health: {
+    key: string;
+    label: string;
+    status: "ok" | "warn" | "down" | "unknown";
+    detail: string;
+  }[];
+  warnings: string[];
+}
+
+export type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
+export type TicketPriority = "low" | "medium" | "high" | "urgent";
+export type TicketCategory =
+  | "onboarding" | "number" | "template" | "billing" | "webhook" | "api" | "other";
+
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  body?: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  createdAt: string;
+  userId: string;
+  tenant: string;
+  tenantEmail: string;
+}
+
+/** Operational (non-financial) state for the support & ops console. */
+export interface AdminOps {
+  generatedAt: string;
+  hours: number;
+  kpis: {
+    activeTenants: number;
+    connectedNumbers: number;
+    activeNumbers: number;
+    apiMessages: number;
+    apiFailed: number;
+    failedMessages: number;
+    totalMessages: number;
+    openTickets: number;
+    urgentOpen: number;
+  };
+  deltas: {
+    activeTenants: number | null;
+    apiMessages: number | null;
+    failedMessages: number | null;
+    messages: number | null;
+  };
+  series: { label: string; messages: number; apiMessages: number }[];
+  tickets: SupportTicket[];
+  ticketsByStatus: Record<string, number>;
+  events: {
+    id: string;
+    source: string;
+    route: string | null;
+    status: string;
+    error: string | null;
+    receivedAt: string;
+  }[];
+  health: AdminOverview["health"];
+  warnings: string[];
+}
+
 export const admin = {
   // Confirms the current session is a platform admin (403 → not admin).
   check: () => request<{ admin: true }>("/api/admin/billing-mode"),
+
+  // Whole-platform aggregates for the super-admin dashboard.
+  overview: (days = 7) =>
+    request<{ overview: AdminOverview }>(`/api/admin/overview?days=${days}`),
+
+  // Operational state for the support & ops console (no financial data).
+  ops: (hours = 24) => request<{ ops: AdminOps }>(`/api/admin/ops?hours=${hours}`),
+
+  // ── Support tickets ──
+  tickets: (status: "open" | "all" | TicketStatus = "open") =>
+    request<{ tickets: SupportTicket[] }>(`/api/admin/tickets?status=${status}`),
+
+  ticketCreate: (body: {
+    email?: string;
+    userId?: string;
+    subject: string;
+    body?: string;
+    category?: TicketCategory;
+    priority?: TicketPriority;
+  }) =>
+    request<{ ticket: SupportTicket }>("/api/admin/tickets", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  ticketUpdate: (body: { id: string; status?: TicketStatus; priority?: TicketPriority }) =>
+    request<{ ticket: SupportTicket }>("/api/admin/tickets", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 
   lookup: (email: string) =>
     request<{ user: AdminUser }>(`/api/admin/billing-mode?email=${encodeURIComponent(email)}`),
@@ -277,7 +452,206 @@ export const admin = {
   ratesGet: () => request<RateConfig>("/api/admin/rates"),
   ratesSave: (body: RateConfigUpdate) =>
     request<RateConfig>("/api/admin/rates", { method: "POST", body: JSON.stringify(body) }),
+
+  // ── Industry verticals ──
+  // The catalogue for the picker (never hardcoded in the UI).
+  verticals: () => request<{ verticals: AdminVertical[] }>("/api/admin/verticals"),
+
+  // Everything a client would receive — powers the preview panel.
+  verticalPreview: (verticalId: string) =>
+    request<VerticalPreview>(`/api/admin/verticals/${encodeURIComponent(verticalId)}`),
+
+  // Create a new industry from the guided seed-kit form.
+  verticalCreate: (body: VerticalSeedKit) =>
+    request<{ vertical: { id: string; slug: string; displayName: string }; itemsCreated: number }>(
+      "/api/admin/verticals",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+
+  // Catalogue state: activate/deactivate, rename, re-icon, reorder.
+  verticalUpdate: (
+    verticalId: string,
+    patch: { isActive?: boolean; displayName?: string; description?: string; icon?: string | null; sortOrder?: number },
+  ) =>
+    request<{ vertical: AdminVertical }>(
+      `/api/admin/verticals/${encodeURIComponent(verticalId)}`,
+      { method: "PATCH", body: JSON.stringify(patch) },
+    ),
+
+  // The audit trail (read-only).
+  audit: (params: {
+    action?: string; outcome?: string; actor?: string; resourceType?: string;
+    q?: string; days?: number; page?: number; limit?: number;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== "" && v !== 0) qs.set(k, String(v));
+    });
+    return request<AuditPage>(`/api/admin/audit?${qs}`);
+  },
+
+  // Re-seed the shipped industries (idempotent).
+  verticalsSeed: () =>
+    request<{ ok: boolean; verticalsUpserted: number; itemsUpserted: number; errors: string[] }>(
+      "/api/admin/verticals/seed",
+      { method: "POST" },
+    ),
+
+  // The tenant directory — search/filter, with industry + tier per row.
+  clients: (params: { q?: string; vertical?: string; tier?: string; page?: number; limit?: number } = {}) => {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== "" && v !== 0) qs.set(k, String(v));
+    });
+    return request<AdminClientPage>(`/api/admin/clients?${qs}`);
+  },
+
+  // Assign an industry to many tenants at once. Reports partial success.
+  clientsBulkVertical: (userIds: string[], verticalId: string | null) =>
+    request<{ assigned: number; failed: { id: string; error: string }[] }>("/api/admin/clients", {
+      method: "POST",
+      body: JSON.stringify({ userIds, verticalId }),
+    }),
+
+  // A client's current industry.
+  clientVertical: (userId: string) =>
+    request<{ client: AdminVerticalClient; vertical: AdminVertical | null }>(
+      `/api/admin/clients/${encodeURIComponent(userId)}/vertical`,
+    ),
+
+  // Provision, change or clear it. Pass null to clear.
+  clientVerticalSet: (userId: string, verticalId: string | null) =>
+    request<{ client: AdminVerticalClient; vertical: AdminVertical | null }>(
+      `/api/admin/clients/${encodeURIComponent(userId)}/vertical`,
+      { method: "POST", body: JSON.stringify({ verticalId }) },
+    ),
 };
+
+export interface AuditEntry {
+  id: string;
+  at: string;
+  action: string;
+  outcome: "success" | "failure";
+  resourceType: string | null;
+  resourceId: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  details: Record<string, unknown>;
+  actorId: string | null;
+  /** Resolved name/email, or "Deleted user" / "System" — never blank. */
+  actor: string;
+  actorEmail: string | null;
+}
+
+export interface AuditPage {
+  entries: AuditEntry[];
+  total: number;
+  page: number;
+  pages: number;
+  /** Facets for the filter bar, from a recent slice of the table. */
+  actions: string[];
+  actors: { id: string; email: string }[];
+  warning?: string;
+}
+
+/** One row in the tenant directory. */
+export interface AdminClient {
+  id: string;
+  email: string;
+  name: string;
+  tier: string;
+  billingMode: string;
+  wabaMode: string;
+  /** null = no industry track. A real state, not "unconfigured". */
+  vertical: { id: string; slug: string; displayName: string; icon: string | null; isActive: boolean } | null;
+  numbers: number;
+  balancePaise: number;
+  createdAt: string | null;
+}
+
+export interface AdminClientPage {
+  clients: AdminClient[];
+  total: number;
+  page: number;
+  pages: number;
+  /** The industry catalogue, for the filter and the assign control. */
+  verticals: { id: string; slug: string; displayName: string; icon: string | null; isActive: boolean }[];
+}
+
+export interface AdminVertical {
+  id: string;
+  slug: string;
+  displayName: string;
+  description: string;
+  icon: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  isBuiltin: boolean;
+  /** Consent rule for this industry — drives the send-time gate. */
+  requiresExplicitConsent?: boolean;
+  counts?: { flows: number; campaignPrompts: number; messageTemplates: number };
+}
+
+export interface AdminVerticalClient {
+  id: string;
+  email: string;
+  full_name: string | null;
+  tier: string | null;
+}
+
+export type MetaCategory = "UTILITY" | "MARKETING" | "AUTHENTICATION";
+
+export interface VerticalPreview {
+  vertical: AdminVertical;
+  flows: {
+    id: string;
+    title: string;
+    description: string;
+    outcome: string;
+    adminNote: string | null;
+    /** The message the customer actually receives — shown as a chat bubble. */
+    firstMessage: string | null;
+    /** How many messages the flow sends when it runs in full. */
+    steps: number;
+    collectsBooking: boolean;
+  }[];
+  campaignPrompts: {
+    id: string;
+    title: string;
+    description: string;
+    outcome: string;
+    adminNote: string | null;
+    prompt: string;
+  }[];
+  messageTemplates: {
+    id: string;
+    title: string;
+    description: string;
+    outcome: string;
+    adminNote: string | null;
+    metaCategory: MetaCategory;
+    body: string;
+    footer: string | null;
+  }[];
+}
+
+export interface VerticalSeedKit {
+  displayName: string;
+  description: string;
+  icon?: string;
+  bookingFlow: { title: string; description: string; outcome: string; keywords: string; askMessage: string };
+  statusFlow: { title: string; description: string; outcome: string; keywords: string; notifyMessage: string };
+  campaignPrompt: { title: string; description: string; outcome: string; prompt: string };
+  templates: {
+    title: string;
+    description: string;
+    outcome: string;
+    body: string;
+    footer?: string;
+    variableNames: string[];
+    metaCategory: MetaCategory;
+  }[];
+}
 
 export type RateCategory = "MARKETING" | "UTILITY" | "AUTHENTICATION" | "SERVICE";
 

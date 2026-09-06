@@ -41,7 +41,7 @@ export function MetaConnectButton({
         onClick={() => setOpen(true)}
         className={
           className ??
-          "inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#25D366] px-6 py-4 font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-[#1DA851]"
+          "inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#25D366] px-6 py-4 font-semibold text-white shadow-lg shadow-success transition-all hover:bg-[#1DA851]"
         }
       >
         <MessageCircle className="h-5 w-5" />

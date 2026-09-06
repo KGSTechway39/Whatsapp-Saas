@@ -19,7 +19,7 @@ export async function sendEmail(payload: EmailPayload): Promise<void> {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM || "WASend <noreply@wasend.io>",
+      from: process.env.EMAIL_FROM || "SendAnjal <noreply@sendanjal.com>",
       to: [payload.to],
       subject: payload.subject,
       html: payload.html,
@@ -43,7 +43,7 @@ export function paymentSuccessEmail(name: string, amount: number, planName: stri
         <tr><td style="padding:8px 0;color:#999">Amount Paid</td><td style="padding:8px 0;text-align:right">₹${amount.toLocaleString()}</td></tr>
         <tr><td style="padding:8px 0;color:#999">Next Billing</td><td style="padding:8px 0;text-align:right">${nextBillingDate}</td></tr>
       </table>
-      <p style="color:#888;font-size:13px">Thank you for using WASend. Reply to this email if you have any questions.</p>
+      <p style="color:#888;font-size:13px">Thank you for using SendAnjal. Reply to this email if you have any questions.</p>
     </div>
   `;
 }

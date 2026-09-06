@@ -1,5 +1,5 @@
 -- =====================================================
--- WASend Platform — Full Schema (consolidated)
+-- SendAnjal Platform — Full Schema (consolidated)
 -- Run this ONCE in your Supabase SQL Editor
 -- Includes: base tables, CRM, subscriptions, helpers
 -- =====================================================

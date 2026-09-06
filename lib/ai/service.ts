@@ -1,5 +1,5 @@
 /**
- * AIProviderService — the one governed path for every AI action in WASend.
+ * AIProviderService — the one governed path for every AI action in SendAnjal.
  *
  * Provider-agnostic: which model runs is decided by ai_model_config at request
  * time (rule 4), never by code here. Adding a provider = a new adapter class + a

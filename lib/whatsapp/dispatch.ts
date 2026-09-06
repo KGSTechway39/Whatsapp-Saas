@@ -55,16 +55,24 @@ export async function sendOutbound(args: {
   }
 
   // ── Gate 2: resolve + decrypt the tenant's token ──────────────────────
+  // Reads `whatsapp_numbers` (the DEPLOYED legacy user_id model). This used to read
+  // `whatsapp_accounts` from the organization model, which exists in migrations but
+  // was never deployed — so every lookup missed and the engine's reply was computed
+  // and then silently dropped with NO_TOKEN. See CLAUDE.md "Deployment reality".
   const supabase = createServiceClient();
   const { data: account } = await supabase
-    .from("whatsapp_accounts")
-    .select("access_token, token_encrypted")
+    .from("whatsapp_numbers")
+    .select("access_token, token_encrypted, status")
     .eq("phone_number_id", phoneNumberId)
     .maybeSingle();
 
   if (!account?.access_token) {
     logger.warn("[dispatch] no token for phone_number_id", { phoneNumberId });
     return { sent: false, reason: "NO_TOKEN" };
+  }
+  if (account.status !== "active") {
+    logger.warn("[dispatch] number is not active", { phoneNumberId, status: account.status });
+    return { sent: false, reason: "NUMBER_INACTIVE" };
   }
   const token = await decrypt(account.access_token as string);
 

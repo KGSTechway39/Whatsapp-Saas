@@ -45,15 +45,15 @@ const GST_RATE = 0.18;
 const TIER_COLOR: Record<string, string> = {
   free:    "text-muted-foreground",
   starter: "text-primary",
-  growth:  "text-violet-400",
-  pro:     "text-amber-400",
+  growth:  "text-primary",
+  pro:     "text-warning",
 };
 
 const TIER_BG: Record<string, string> = {
   free:    "bg-muted/20 border-border/50",
   starter: "bg-primary/10 border-primary/30",
-  growth:  "bg-violet-500/10 border-violet-500/30",
-  pro:     "bg-amber-500/10 border-amber-500/30",
+  growth:  "bg-accent border-primary/25",
+  pro:     "bg-warning-soft border-warning/25",
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -61,9 +61,9 @@ const TIER_BG: Record<string, string> = {
 function UsageBar({ label, used, limit, percent }: { label: string; used: number; limit: number; percent: number }) {
   const isUnlimited = limit === -1;
   const color =
-    percent >= 90 ? "bg-red-500" :
-    percent >= 70 ? "bg-amber-500" :
-    "bg-gradient-to-r from-primary to-emerald-500";
+    percent >= 90 ? "bg-destructive" :
+    percent >= 70 ? "bg-warning" :
+    "bg-gradient-to-r from-primary to-success-soft";
 
   return (
     <div>
@@ -182,7 +182,7 @@ function RechargeModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             </div>
             <button
               onClick={onClose}
-              className="w-full wa-gradient text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-all"
+              className="w-full wa-gradient text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-all"
             >
               Done
             </button>
@@ -254,7 +254,7 @@ function RechargeModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             <button
               onClick={handlePay}
               disabled={loading || numAmount < 100}
-              className="flex items-center justify-center gap-2 w-full wa-gradient text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+              className="flex items-center justify-center gap-2 w-full wa-gradient text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
@@ -328,7 +328,7 @@ export default function BillingPage() {
           action={
             <button
               onClick={() => setShowRecharge(true)}
-              className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
             >
               <CreditCard className="w-4 h-4" /> Recharge Wallet
             </button>
@@ -355,8 +355,8 @@ export default function BillingPage() {
                 )}
               </div>
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                planStatus === "active" ? "bg-emerald-500/15 text-emerald-400" :
-                planStatus === "past_due" ? "bg-red-500/15 text-red-400" :
+                planStatus === "active" ? "bg-success-soft text-success" :
+                planStatus === "past_due" ? "bg-destructive-soft text-destructive" :
                 "bg-muted text-muted-foreground"
               }`}>
                 {planStatus}
@@ -420,9 +420,9 @@ export default function BillingPage() {
             {/* Pricing pill row */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                { type: "Marketing", price: "₹2.00", color: "text-purple-400", bg: "bg-purple-500/10" },
-                { type: "Utility",   price: "₹1.00", color: "text-blue-400",   bg: "bg-blue-500/10"   },
-                { type: "Auth",      price: "₹0.50", color: "text-amber-400",  bg: "bg-amber-500/10"  },
+                { type: "Marketing", price: "₹2.00", color: "text-primary", bg: "bg-accent" },
+                { type: "Utility",   price: "₹1.00", color: "text-primary",   bg: "bg-accent"   },
+                { type: "Auth",      price: "₹0.50", color: "text-warning",  bg: "bg-warning-soft"  },
               ].map((p) => (
                 <div key={p.type} className={`rounded-xl p-3 ${p.bg} text-center`}>
                   <p className={`text-xs font-medium ${p.color}`}>{p.type}</p>
@@ -433,7 +433,7 @@ export default function BillingPage() {
 
             <button
               onClick={() => setShowRecharge(true)}
-              className="flex items-center justify-center gap-2 w-full wa-gradient text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20 mt-auto"
+              className="flex items-center justify-center gap-2 w-full wa-gradient text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20 mt-auto"
             >
               <CreditCard className="w-4 h-4" /> Recharge Now
             </button>
@@ -542,8 +542,8 @@ export default function BillingPage() {
                         <td className="px-5 py-4">
                           <div className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
                             tx.type === "credit"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-red-500/10 text-red-400"
+                              ? "bg-success-soft text-success"
+                              : "bg-destructive-soft text-destructive"
                           }`}>
                             {tx.type === "credit"
                               ? <ArrowDownLeft className="w-3 h-3" />
@@ -556,7 +556,7 @@ export default function BillingPage() {
                         </td>
                         <td className="px-5 py-4">
                           <span className={`text-sm font-semibold tabular-nums ${
-                            tx.type === "credit" ? "text-emerald-400" : "text-red-400"
+                            tx.type === "credit" ? "text-success" : "text-destructive"
                           }`}>
                             {tx.type === "credit" ? "+" : "−"}₹{Math.abs(tx.amount).toLocaleString()}
                           </span>

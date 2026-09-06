@@ -22,7 +22,7 @@ export function GoogleSignInButton({
       href={href}
       className={
         className ??
-        "w-full flex items-center justify-center gap-2.5 bg-white text-slate-900 font-semibold py-3 rounded-xl hover:bg-white/90 active:scale-[0.98] transition-all shadow-lg shadow-black/10"
+        "w-full flex items-center justify-center gap-2.5 bg-card text-muted-foreground font-semibold py-3 rounded-xl hover:bg-secondary active:scale-[0.98] transition-all shadow-lg shadow-black/10"
       }
     >
       <GoogleIcon />

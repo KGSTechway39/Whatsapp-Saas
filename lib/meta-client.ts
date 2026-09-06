@@ -31,7 +31,11 @@ export class MetaApiError extends Error {
 }
 
 interface MetaErrorEnvelope {
-  error?: { message?: string; code?: number; type?: string };
+  error?: {
+    message?: string; code?: number; type?: string; error_subcode?: number;
+    /** Meta's actionable text — prefer these over `message`. */
+    error_user_title?: string; error_user_msg?: string;
+  };
 }
 
 export interface MetaPhoneNumber {
@@ -81,19 +85,77 @@ export function assertConfigured(): void {
  * "fetch failed") into an actionable MetaApiError carrying the real cause,
  * so callers/users see "Couldn't reach Meta (ENOTFOUND…)" instead of nothing.
  */
-async function graphFetch(url: string, init?: RequestInit): Promise<Response> {
-  try {
-    return await fetch(url, init);
-  } catch (err) {
-    const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
-    const detail = cause?.code || cause?.message || (err instanceof Error ? err.message : "unknown");
-    logger.error("[meta-client] network error reaching Graph", { url: url.split("?")[0], detail });
-    throw new MetaApiError(
-      `Couldn't reach Meta (network error: ${detail}). Check the server's internet connection/firewall and try again.`,
-      "NETWORK_ERROR",
-      502,
-    );
+/**
+ * Transport-level failures worth a second attempt. These are the network
+ * saying "not right now", not Meta saying "no" — a Graph 4xx never reaches
+ * here, because it is a successful HTTP response.
+ */
+/** Prefer Meta's error_user_msg — see lib/meta.ts for why. */
+function metaErrorText(
+  err: { message?: string; error_user_title?: string; error_user_msg?: string } | undefined,
+  fallback: string,
+): string {
+  if (!err) return fallback;
+  if (err.error_user_msg) {
+    return err.error_user_title ? `${err.error_user_title}: ${err.error_user_msg}` : err.error_user_msg;
   }
+  return err.message || fallback;
+}
+
+const RETRYABLE = new Set([
+  "ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "EAI_AGAIN",
+  "ENETUNREACH", "EPIPE", "UND_ERR_CONNECT_TIMEOUT", "UND_ERR_SOCKET",
+]);
+
+const MAX_ATTEMPTS = 3;
+/** Per-attempt ceiling. Without it a hung socket blocks a request handler. */
+const ATTEMPT_TIMEOUT_MS = 15_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function graphFetch(url: string, init?: RequestInit): Promise<Response> {
+  let lastDetail = "unknown";
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fetch(url, {
+        ...init,
+        // Bound each attempt so a stalled connection fails fast enough to retry
+        // rather than sitting until the platform's own request timeout.
+        signal: init?.signal ?? AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+      });
+    } catch (err) {
+      const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
+      const code = cause?.code ?? (err as Error)?.name;
+      lastDetail = cause?.code || cause?.message || (err instanceof Error ? err.message : "unknown");
+
+      // AbortSignal.timeout surfaces as TimeoutError — a stall, so retryable.
+      const retryable = RETRYABLE.has(String(code)) || String(code) === "TimeoutError";
+      const hasAttemptsLeft = attempt < MAX_ATTEMPTS;
+
+      if (!retryable || !hasAttemptsLeft) {
+        logger.error("[meta-client] network error reaching Graph", {
+          url: url.split("?")[0], detail: lastDetail, attempts: attempt,
+        });
+        break;
+      }
+
+      // Short exponential backoff (300ms, 900ms). Deliberately brief: a human
+      // is waiting on the connect screen, and this is a blip not an outage.
+      const backoff = 300 * 3 ** (attempt - 1);
+      logger.warn("[meta-client] transient network error, retrying", {
+        url: url.split("?")[0], detail: lastDetail, attempt, backoff,
+      });
+      await sleep(backoff);
+    }
+  }
+
+  throw new MetaApiError(
+    `Couldn't reach Meta after ${MAX_ATTEMPTS} attempts (network error: ${lastDetail}). ` +
+      `This is usually temporary — wait a moment and try again.`,
+    "NETWORK_ERROR",
+    502,
+  );
 }
 
 export async function graphGet<T>(
@@ -110,7 +172,7 @@ export async function graphGet<T>(
 
   if (!res.ok) {
     throw new MetaApiError(
-      data.error?.message ?? `Graph GET ${path} failed (${res.status})`,
+      metaErrorText(data.error, `Graph GET ${path} failed (${res.status})`),
       mapErrorCode(data.error?.code),
       res.status,
       data.error?.code,
@@ -137,7 +199,7 @@ export async function graphPost<T>(
 
   if (!res.ok) {
     throw new MetaApiError(
-      data.error?.message ?? `Graph POST ${path} failed (${res.status})`,
+      metaErrorText(data.error, `Graph POST ${path} failed (${res.status})`),
       mapErrorCode(data.error?.code),
       res.status,
       data.error?.code,
@@ -159,7 +221,7 @@ export async function graphDelete<T>(
 
   if (!res.ok) {
     throw new MetaApiError(
-      data.error?.message ?? `Graph DELETE ${path} failed (${res.status})`,
+      metaErrorText(data.error, `Graph DELETE ${path} failed (${res.status})`),
       mapErrorCode(data.error?.code),
       res.status,
       data.error?.code,

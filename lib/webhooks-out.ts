@@ -132,10 +132,10 @@ export async function attemptDelivery(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "WASend-Webhooks/1.0",
-        "X-WASend-Signature": sig,
-        "X-WASend-Event": delivery.event,
-        "X-WASend-Delivery-Id": delivery.id,
+        "User-Agent": "SendAnjal-Webhooks/1.0",
+        "X-SendAnjal-Signature": sig,
+        "X-SendAnjal-Event": delivery.event,
+        "X-SendAnjal-Delivery-Id": delivery.id,
       },
       body: rawBody,
       // Customer endpoints should respond fast; abort > 10s.

@@ -1,7 +1,7 @@
 /**
  * API key generation, hashing, and request authentication for the public REST API.
  *
- * Format: `wasend_{env}_{32 hex chars}`  e.g. `wasend_live_a1b2c3...`
+ * Format: `sendanjal_{env}_{32 hex chars}`  e.g. `sendanjal_live_a1b2c3...`
  * We store only:
  *   - key_prefix  : first 20 chars (for display in the dashboard)
  *   - key_hash    : SHA-256 of the full key (for verification)
@@ -61,7 +61,7 @@ export class ApiAuthError extends Error {
 }
 
 /**
- * Extract bearer token from `Authorization: Bearer wasend_…`, look up the
+ * Extract bearer token from `Authorization: Bearer sendanjal_…`, look up the
  * matching api_keys row, verify it's active, and return the calling context.
  *
  * Side effects: increments request_count and updates last_used_at. Best-effort

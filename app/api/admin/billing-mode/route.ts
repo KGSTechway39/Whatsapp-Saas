@@ -6,7 +6,7 @@
  * `waba_mode` together (see lib/billing/tiers.ts). There is no self-serve path;
  * clients are vetted before we hold their billing/BSP.
  *
- * Gated by requireAdmin() (ADMIN_EMAILS allowlist). All handlers 403 for non-admins.
+ * Platform staff only (requirePlatformStaff: super_admin or tenant_admin). All handlers 403 for non-admins.
  *
  *   GET                  → { admin: true }                 (admin check for the UI)
  *   GET ?email=<addr>    → { user: { id, email, full_name, tier, billing_mode, waba_mode, balance_paise } }
@@ -16,7 +16,8 @@
  * existing client/middleware entry.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requirePlatformStaff } from "@/lib/roles";
+import { audit } from "@/lib/audit";
 import { createServiceClient } from "@/lib/supabase/server";
 import { isTier, setTier } from "@/lib/billing/tiers";
 
@@ -50,8 +51,15 @@ async function loadUser(
   return { ...user, balance_paise: wallet?.balance_paise ?? 0 };
 }
 
+/** Strips the balance for anyone who is not super_admin. */
+function redactMoney<T extends { balance_paise: number }>(user: T, canSeeMoney: boolean) {
+  if (canSeeMoney) return { ...user, wallet_funded: user.balance_paise > 0 };
+  const { balance_paise, ...rest } = user;
+  return { ...rest, balance_paise: null, wallet_funded: balance_paise > 0 };
+}
+
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requirePlatformStaff();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const email = request.nextUrl.searchParams.get("email")?.trim();
@@ -64,11 +72,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  return NextResponse.json({ user });
+  // MONEY REDACTION: tenant_admin may set a tier BY NAME (that is the whole
+  // point of a pre-configured plan dropdown) but must never see the wallet
+  // amount. Redacted server-side, not hidden in the UI.
+  return NextResponse.json({ user: redactMoney(user, admin.canSeeMoney) });
 }
 
 export async function POST(request: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requirePlatformStaff();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId, email, tier } = await request.json();
@@ -90,9 +101,31 @@ export async function POST(request: NextRequest) {
   try {
     await setTier(target.id, tier);
   } catch (err) {
+    await audit({
+      action: "tier.change",
+      userId: admin.id,
+      resourceType: "users",
+      resourceId: target.id,
+      outcome: "failure",
+      request,
+      details: { from: target.tier, to: tier, error: (err as Error).message },
+    });
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 
   const updated = await loadUser({ id: target.id });
-  return NextResponse.json({ user: updated });
+  // Tier drives billing_mode + waba_mode, i.e. what this tenant is charged.
+  await audit({
+    action: "tier.change",
+    userId: admin.id,
+    resourceType: "users",
+    resourceId: target.id,
+    request,
+    details: {
+      target_email: target.email,
+      from: { tier: target.tier, billing_mode: target.billing_mode, waba_mode: target.waba_mode },
+      to: { tier: updated?.tier, billing_mode: updated?.billing_mode, waba_mode: updated?.waba_mode },
+    },
+  });
+  return NextResponse.json({ user: updated ? redactMoney(updated, admin.canSeeMoney) : null });
 }

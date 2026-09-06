@@ -78,7 +78,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // ── Build the message payload ────────────────────────────────────────
   let payload: Record<string, unknown>;
   if (kind === "text") {
-    const text = (body.body ?? "Hello from WASend! 👋").trim();
+    const text = (body.body ?? "Hello from SendAnjal! 👋").trim();
     payload = {
       messaging_product: "whatsapp",
       recipient_type: "individual",

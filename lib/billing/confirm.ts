@@ -24,8 +24,9 @@ const CONFIRM_STATUSES = new Set(["sent", "delivered", "read"]);
 export async function confirmOrReleaseBilling(
   waMessageId: string,
   status: string,
-): Promise<void> {
-  if (!waMessageId) return;
+): Promise<boolean> {
+  // No id to reconcile against — nothing is owed, so this is not a failure.
+  if (!waMessageId) return true;
   const supabase = createServiceClient();
 
   const { data: row } = await supabase
@@ -34,8 +35,8 @@ export async function confirmOrReleaseBilling(
     .eq("wa_message_id", waMessageId)
     .maybeSingle();
 
-  if (!row) return; // BYO / free / not a managed single send
-  if (row.status !== "reserved") return; // already settled or released
+  if (!row) return true; // BYO / free / not a managed single send — nothing owed
+  if (row.status !== "reserved") return true; // already settled or released
 
   try {
     if (CONFIRM_STATUSES.has(status)) {
@@ -63,6 +64,7 @@ export async function confirmOrReleaseBilling(
         .eq("status", "reserved");
       logger.info("billing released (failed send)", { waMessageId });
     }
+    return true;
   } catch (e) {
     // Late/duplicate webhook racing a closed reservation — safe to ignore.
     logger.warn("confirmOrReleaseBilling skipped", {
@@ -70,5 +72,8 @@ export async function confirmOrReleaseBilling(
       statusState: status,
       e: e instanceof Error ? e.message : String(e),
     });
+    // Report the failure so the caller can let Meta retry. Swallowing it here
+    // AND deduping the event would strand the hold permanently.
+    return false;
   }
 }

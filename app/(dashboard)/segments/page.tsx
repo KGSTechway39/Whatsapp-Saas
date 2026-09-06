@@ -16,12 +16,12 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 const COLORS: Record<string, { bg: string; text: string; border: string; ring: string }> = {
-  blue:     { bg: "bg-blue-500/10",     text: "text-blue-400",     border: "border-blue-500/20",     ring: "ring-blue-500/30" },
-  emerald:  { bg: "bg-emerald-500/10",  text: "text-emerald-400",  border: "border-emerald-500/20",  ring: "ring-emerald-500/30" },
-  amber:    { bg: "bg-amber-500/10",    text: "text-amber-400",    border: "border-amber-500/20",    ring: "ring-amber-500/30" },
-  red:      { bg: "bg-red-500/10",      text: "text-red-400",      border: "border-red-500/20",      ring: "ring-red-500/30" },
-  violet:   { bg: "bg-violet-500/10",   text: "text-violet-400",   border: "border-violet-500/20",   ring: "ring-violet-500/30" },
-  fuchsia:  { bg: "bg-fuchsia-500/10",  text: "text-fuchsia-400",  border: "border-fuchsia-500/20",  ring: "ring-fuchsia-500/30" },
+  blue:     { bg: "bg-accent",     text: "text-primary",     border: "border-primary/25",     ring: "ring-primary" },
+  emerald:  { bg: "bg-success-soft",  text: "text-success",  border: "border-success/25",  ring: "ring-success" },
+  amber:    { bg: "bg-warning-soft",    text: "text-warning",    border: "border-warning/25",    ring: "ring-warning" },
+  red:      { bg: "bg-destructive-soft",      text: "text-destructive",      border: "border-destructive/25",      ring: "ring-destructive" },
+  violet:   { bg: "bg-accent",   text: "text-primary",   border: "border-primary/25",   ring: "ring-primary" },
+  fuchsia:  { bg: "bg-accent",  text: "text-primary",  border: "border-primary/25",  ring: "ring-primary" },
 };
 
 interface Condition {
@@ -124,7 +124,7 @@ export default function SegmentsPage() {
         action={
           <button
             onClick={() => setShowBuilder(true)}
-            className="flex items-center gap-2 wa-gradient text-white font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+            className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
           >
             <Plus className="w-4 h-4" />
             New Segment
@@ -174,7 +174,7 @@ export default function SegmentsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-semibold flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-violet-400" />
+                      <BarChart3 className="w-4 h-4 text-primary" />
                       RFM Heatmap
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">Recency × Frequency • {rfm.total} contacts scored</p>
@@ -207,14 +207,14 @@ export default function SegmentsPage() {
                               return (
                                 <div
                                   key={fi}
-                                  className={`flex-1 aspect-square rounded-md flex items-center justify-center text-[10px] font-bold transition-all hover:ring-2 hover:ring-violet-500/50 ${
+                                  className={`flex-1 aspect-square rounded-md flex items-center justify-center text-[10px] font-bold transition-all hover:ring-2 hover:ring-primary ${
                                     v === 0
                                       ? "bg-muted/20 text-muted-foreground/40"
                                       : isHigh
-                                      ? "text-emerald-100"
+                                      ? "text-success"
                                       : isLow
-                                      ? "text-red-100"
-                                      : "text-violet-100"
+                                      ? "text-destructive"
+                                      : "text-primary"
                                   }`}
                                   style={{
                                     backgroundColor: v === 0 ? undefined : isHigh
@@ -240,7 +240,7 @@ export default function SegmentsPage() {
               {/* RFM buckets */}
               <div className="bg-card border border-border/50 rounded-2xl p-5">
                 <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-violet-400" />
+                  <Target className="w-4 h-4 text-primary" />
                   Customer Tiers
                 </p>
                 <div className="space-y-2">
@@ -290,7 +290,7 @@ export default function SegmentsPage() {
                 <p className="text-xs text-muted-foreground mb-4">Build a segment to target high-value contacts with precision</p>
                 <button
                   onClick={() => setShowBuilder(true)}
-                  className="inline-flex items-center gap-2 wa-gradient text-white font-semibold px-4 py-2 rounded-xl text-sm hover:opacity-90"
+                  className="inline-flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-4 py-2 rounded-xl text-sm hover:opacity-90"
                 >
                   <Plus className="w-3.5 h-3.5" /> Create Segment
                 </button>
@@ -312,7 +312,7 @@ export default function SegmentsPage() {
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-destructive-soft text-muted-foreground hover:text-destructive transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -461,7 +461,7 @@ function SegmentBuilder({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   key={op}
                   onClick={() => setOperator(op)}
                   className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                    operator === op ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    operator === op ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {op === "AND" ? "ALL" : "ANY"}
@@ -534,7 +534,7 @@ function SegmentBuilder({ onClose, onSaved }: { onClose: () => void; onSaved: ()
                   {conditions.length > 1 && (
                     <button
                       onClick={() => removeCondition(i)}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive-soft"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -566,15 +566,15 @@ function SegmentBuilder({ onClose, onSaved }: { onClose: () => void; onSaved: ()
             </div>
 
             {preview && (
-              <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-                <p className="text-2xl font-bold text-emerald-400">{preview.count.toLocaleString()}</p>
+              <div className="p-4 bg-success-soft border border-success/25 rounded-xl">
+                <p className="text-2xl font-bold text-success">{preview.count.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground mb-3">contacts match these rules</p>
                 {preview.sample.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">First {preview.sample.length}</p>
                     {preview.sample.slice(0, 5).map((c) => (
                       <div key={c.id} className="flex items-center gap-2 text-xs">
-                        <Check className="w-3 h-3 text-emerald-400" />
+                        <Check className="w-3 h-3 text-success" />
                         <span className="font-medium truncate">{c.name}</span>
                         <span className="text-muted-foreground">{c.phone}</span>
                       </div>
@@ -596,7 +596,7 @@ function SegmentBuilder({ onClose, onSaved }: { onClose: () => void; onSaved: ()
           <button
             onClick={save}
             disabled={!name.trim() || saving}
-            className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+            className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {saving ? "Saving…" : "Save Segment"}
@@ -699,7 +699,7 @@ function SegmentDetail({ segment, onClose }: { segment: SegmentRow; onClose: () 
             </button>
             <Link
               href={`/campaigns/create?segment=${segment.id}`}
-              className="flex items-center gap-1.5 wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
+              className="flex items-center gap-1.5 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
             >
               <Send className="w-3.5 h-3.5" /> Send Campaign <ChevronRight className="w-3.5 h-3.5" />
             </Link>

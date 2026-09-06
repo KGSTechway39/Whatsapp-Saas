@@ -1,20 +1,46 @@
 import { GRAPH_API_BASE } from "@/lib/meta-version";
 
 const GRAPH = GRAPH_API_BASE;
+
+/**
+ * Meta's useful message lives in `error_user_msg` / `error_user_title`, not in
+ * `message`. `message` is almost always the generic "Invalid parameter", which
+ * sends people hunting with no information. Example for a template rejected at
+ * submission:
+ *   message          : "Invalid parameter"
+ *   error_user_title : "Leading or trailing params not allowed"
+ *   error_user_msg   : "Variables can't be at the start or end of the template."
+ * Prefer the specific one.
+ */
+function metaErrorText(err: {
+  message?: string; error_user_title?: string; error_user_msg?: string;
+} | undefined, fallback: string): string {
+  if (!err) return fallback;
+  if (err.error_user_msg) {
+    return err.error_user_title ? `${err.error_user_title}: ${err.error_user_msg}` : err.error_user_msg;
+  }
+  return err.message || fallback;
+}
+
 const APP_ID = process.env.META_APP_ID || process.env.NEXT_PUBLIC_META_APP_ID!;
 const APP_SECRET = process.env.META_APP_SECRET!;
 
-async function graphGet<T>(path: string, token: string, params: Record<string, string> = {}): Promise<T> {
+/**
+ * Exported so sibling modules (lib/whatsapp/commerce-messages.ts) can reach the
+ * Graph API through THIS wrapper — pinned version, one error shape — instead of
+ * opening a second fetch path. Do not add bare graph.facebook.com calls.
+ */
+export async function graphGet<T>(path: string, token: string, params: Record<string, string> = {}): Promise<T> {
   const url = new URL(`${GRAPH}${path}`);
   url.searchParams.set("access_token", token);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = await fetch(url.toString());
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `Graph API error on ${path}`);
+  if (!res.ok) throw new Error(metaErrorText(data.error, `Graph API error on ${path}`));
   return data as T;
 }
 
-async function graphPost<T>(path: string, token: string, body?: Record<string, unknown>): Promise<T> {
+export async function graphPost<T>(path: string, token: string, body?: Record<string, unknown>): Promise<T> {
   const url = new URL(`${GRAPH}${path}`);
   url.searchParams.set("access_token", token);
   const res = await fetch(url.toString(), {
@@ -23,7 +49,7 @@ async function graphPost<T>(path: string, token: string, body?: Record<string, u
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `Graph API POST error on ${path}`);
+  if (!res.ok) throw new Error(metaErrorText(data.error, `Graph API POST error on ${path}`));
   return data as T;
 }
 

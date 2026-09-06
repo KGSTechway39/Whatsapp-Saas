@@ -138,11 +138,63 @@ export function sanitizeFlowGraph(raw: unknown): CanvasGraph {
     });
   }
 
+  // Reject cycles. The executor walks the graph with a bounded loop, but a cyclic
+  // graph must never be *stored*: it would send the same message on every pass and
+  // burn a function invocation to its timeout. Prevent here, defend in the executor.
+  assertAcyclic(nodes, edges);
+
   return {
     name: typeof obj.name === "string" ? obj.name.trim().slice(0, 60) : undefined,
     nodes,
     edges,
   };
+}
+
+/**
+ * Throw if the graph contains a directed cycle. Iterative DFS with a three-colour
+ * marking (unvisited / on-stack / done) so a deep graph can't blow the JS stack.
+ */
+function assertAcyclic(nodes: CanvasNode[], edges: CanvasEdge[]): void {
+  const out = new Map<string, string[]>();
+  for (const e of edges) {
+    const list = out.get(e.source);
+    if (list) list.push(e.target);
+    else out.set(e.source, [e.target]);
+  }
+
+  const DONE = 1;
+  const ON_STACK = 2;
+  const mark = new Map<string, number>();
+
+  for (const start of nodes) {
+    if (mark.get(start.id)) continue;
+    // Each frame is [nodeId, indexOfNextChildToVisit].
+    const stack: [string, number][] = [[start.id, 0]];
+    mark.set(start.id, ON_STACK);
+
+    while (stack.length) {
+      const frame = stack[stack.length - 1];
+      const children = out.get(frame[0]);
+
+      if (!children || frame[1] >= children.length) {
+        mark.set(frame[0], DONE);
+        stack.pop();
+        continue;
+      }
+
+      const child = children[frame[1]++];
+      const state = mark.get(child);
+      if (state === ON_STACK) {
+        throw new Error(
+          `flow contains a loop (${frame[0]} → ${child}); remove the repeating connection`,
+        );
+      }
+      if (state !== DONE) {
+        mark.set(child, ON_STACK);
+        stack.push([child, 0]);
+      }
+    }
+  }
 }
 
 /**

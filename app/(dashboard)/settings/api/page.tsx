@@ -187,7 +187,7 @@ function KeysPanel({ keys, loading, onRevoke, onCreate }: {
         </p>
         <button
           onClick={onCreate}
-          className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
+          className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
         >
           <Plus className="w-4 h-4" /> New Key
         </button>
@@ -198,7 +198,7 @@ function KeysPanel({ keys, loading, onRevoke, onCreate }: {
           icon={Key}
           title="No API keys yet"
           description="Create your first key to start sending messages programmatically"
-          action={<button onClick={onCreate} className="wa-gradient text-white px-4 py-2 rounded-xl text-sm font-semibold">Create Key</button>}
+          action={<button onClick={onCreate} className="wa-gradient text-primary-foreground px-4 py-2 rounded-xl text-sm font-semibold">Create Key</button>}
         />
       ) : (
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
@@ -224,7 +224,7 @@ function KeysPanel({ keys, loading, onRevoke, onCreate }: {
                   <td className="px-4 py-3 font-mono text-xs">{k.prefix}…</td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      k.environment === "live" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+                      k.environment === "live" ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
                     }`}>
                       {k.environment.toUpperCase()}
                     </span>
@@ -245,7 +245,7 @@ function KeysPanel({ keys, loading, onRevoke, onCreate }: {
                   </td>
                   <td className="px-4 py-3">
                     {k.is_active ? (
-                      <button onClick={() => onRevoke(k.id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10">
+                      <button onClick={() => onRevoke(k.id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive-soft">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     ) : (
@@ -273,11 +273,11 @@ function WebhooksPanel({ endpoints, loading, onToggle, onDelete, onCreate }: {
     <>
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-muted-foreground">
-          We POST signed events to your endpoints. Verify <code className="bg-muted/40 px-1 rounded">X-WASend-Signature</code> with the signing secret.
+          We POST signed events to your endpoints. Verify <code className="bg-muted/40 px-1 rounded">X-SendAnjal-Signature</code> with the signing secret.
         </p>
         <button
           onClick={onCreate}
-          className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
+          className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90"
         >
           <Plus className="w-4 h-4" /> Add Endpoint
         </button>
@@ -288,7 +288,7 @@ function WebhooksPanel({ endpoints, loading, onToggle, onDelete, onCreate }: {
           icon={Webhook}
           title="No webhook endpoints"
           description="Get notified in real time when messages are delivered, read, or replied to"
-          action={<button onClick={onCreate} className="wa-gradient text-white px-4 py-2 rounded-xl text-sm font-semibold">Add Endpoint</button>}
+          action={<button onClick={onCreate} className="wa-gradient text-primary-foreground px-4 py-2 rounded-xl text-sm font-semibold">Add Endpoint</button>}
         />
       ) : (
         <div className="space-y-3">
@@ -297,10 +297,10 @@ function WebhooksPanel({ endpoints, loading, onToggle, onDelete, onCreate }: {
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                   <div className={`w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center ${
-                    ep.status === "active" ? "bg-emerald-500/10" : ep.status === "paused" ? "bg-amber-500/10" : "bg-red-500/10"
+                    ep.status === "active" ? "bg-success-soft" : ep.status === "paused" ? "bg-warning-soft" : "bg-destructive-soft"
                   }`}>
                     <Webhook className={`w-4 h-4 ${
-                      ep.status === "active" ? "text-emerald-400" : ep.status === "paused" ? "text-amber-400" : "text-red-400"
+                      ep.status === "active" ? "text-success" : ep.status === "paused" ? "text-warning" : "text-destructive"
                     }`} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -310,16 +310,16 @@ function WebhooksPanel({ endpoints, loading, onToggle, onDelete, onCreate }: {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                    ep.status === "active" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                    ep.status === "paused" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
-                                              "bg-red-500/10 text-red-400 border border-red-500/20"
+                    ep.status === "active" ? "bg-success-soft text-success border border-success/25" :
+                    ep.status === "paused" ? "bg-warning-soft text-warning border border-warning/25" :
+                                              "bg-destructive-soft text-destructive border border-destructive/25"
                   }`}>
                     {ep.status}
                   </span>
                   <button onClick={() => onToggle(ep)} className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground">
                     {ep.status === "paused" ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                   </button>
-                  <button onClick={() => onDelete(ep.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400">
+                  <button onClick={() => onDelete(ep.id)} className="p-1.5 rounded-lg hover:bg-destructive-soft text-muted-foreground hover:text-destructive">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -333,7 +333,7 @@ function WebhooksPanel({ endpoints, loading, onToggle, onDelete, onCreate }: {
                 <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> {ep.total_deliveries} delivered</span>
                 <span>Last: {ep.last_delivery_at ? new Date(ep.last_delivery_at).toLocaleString() : "Never"}</span>
                 {ep.failure_count > 0 && (
-                  <span className="text-red-400">⚠ {ep.failure_count} consecutive failures</span>
+                  <span className="text-destructive">⚠ {ep.failure_count} consecutive failures</span>
                 )}
               </div>
             </div>
@@ -461,7 +461,7 @@ function CreateKeyModal({ scopes, onClose, onCreated }: {
         <div className="flex justify-end gap-2 p-5 border-t border-border sticky bottom-0 bg-card">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border hover:bg-accent text-sm font-medium">Cancel</button>
           <button onClick={submit} disabled={submitting}
-            className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-40">
+            className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-40">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {submitting ? "Creating…" : "Create Key"}
           </button>
@@ -489,8 +489,8 @@ function ShowKeyOnceModal({ data, onClose }: {
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-xl">
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-amber-400" />
+            <div className="w-10 h-10 rounded-xl bg-warning-soft flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-warning" />
             </div>
             <div>
               <h3 className="font-semibold">Save this key now</h3>
@@ -505,10 +505,10 @@ function ShowKeyOnceModal({ data, onClose }: {
               {reveal ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
             <button onClick={copy} className="p-1.5 rounded-lg hover:bg-muted/50">
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs text-muted-foreground space-y-1.5">
+          <div className="bg-accent border border-primary/25 rounded-xl p-3 text-xs text-muted-foreground space-y-1.5">
             <p className="font-semibold text-foreground">How to use</p>
             <pre className="bg-muted/30 rounded-lg p-2 overflow-x-auto"><code>{`curl https://your-domain.com/api/v1/messages \\
   -H "Authorization: Bearer ${reveal ? data.full_key : data.prefix + "…"}" \\
@@ -517,7 +517,7 @@ function ShowKeyOnceModal({ data, onClose }: {
           </div>
         </div>
         <div className="p-5 border-t border-border flex justify-end">
-          <button onClick={onClose} className="wa-gradient text-white px-5 py-2 rounded-xl text-sm font-semibold">
+          <button onClick={onClose} className="wa-gradient text-primary-foreground px-5 py-2 rounded-xl text-sm font-semibold">
             I&apos;ve saved my key
           </button>
         </div>
@@ -575,7 +575,7 @@ function CreateWebhookModal({ supportedEvents, onClose, onCreated }: {
           <div>
             <label className="text-sm font-medium block mb-1.5">Endpoint URL *</label>
             <input value={url} onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://api.yourdomain.com/wasend/events"
+              placeholder="https://api.yourdomain.com/sendanjal/events"
               className="w-full bg-muted/50 border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60" />
           </div>
           <div>
@@ -599,7 +599,7 @@ function CreateWebhookModal({ supportedEvents, onClose, onCreated }: {
         <div className="flex justify-end gap-2 p-5 border-t border-border sticky bottom-0 bg-card">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-border hover:bg-accent text-sm font-medium">Cancel</button>
           <button onClick={submit} disabled={submitting}
-            className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-40">
+            className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2 rounded-xl hover:opacity-90 disabled:opacity-40">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             {submitting ? "Creating…" : "Add Endpoint"}
           </button>
@@ -619,7 +619,7 @@ function ShowSecretOnceModal({ data, onClose }: { data: { secret: string; url: s
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-xl">
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center"><AlertCircle className="w-5 h-5 text-amber-400" /></div>
+            <div className="w-10 h-10 rounded-xl bg-warning-soft flex items-center justify-center"><AlertCircle className="w-5 h-5 text-warning" /></div>
             <div>
               <h3 className="font-semibold">Signing secret — save now</h3>
               <p className="text-xs text-muted-foreground">{data.url} — won&apos;t be shown again</p>
@@ -630,16 +630,16 @@ function ShowSecretOnceModal({ data, onClose }: { data: { secret: string; url: s
           <div className="bg-muted/30 border border-border/50 rounded-xl p-3 font-mono text-xs break-all flex items-center gap-2">
             <span className="flex-1">{data.secret}</span>
             <button onClick={copy} className="p-1.5 rounded-lg hover:bg-muted/50">
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Verify the <code className="bg-muted/40 px-1 rounded font-mono">X-WASend-Signature</code> header on every request to prove the
+            Verify the <code className="bg-muted/40 px-1 rounded font-mono">X-SendAnjal-Signature</code> header on every request to prove the
             event came from us. See <Link href="/settings/api/docs" className="text-primary hover:underline inline-flex items-center gap-0.5">webhook signing docs <ExternalLink className="w-3 h-3" /></Link>.
           </p>
         </div>
         <div className="p-5 border-t border-border flex justify-end">
-          <button onClick={onClose} className="wa-gradient text-white px-5 py-2 rounded-xl text-sm font-semibold">Got it</button>
+          <button onClick={onClose} className="wa-gradient text-primary-foreground px-5 py-2 rounded-xl text-sm font-semibold">Got it</button>
         </div>
       </div>
     </div>

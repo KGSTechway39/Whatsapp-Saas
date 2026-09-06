@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const BASE_URL      = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3001";
-const TEST_EMAIL    = "admin@wasend.demo";
+const TEST_EMAIL    = "admin@sendanjal.com";
 const TEST_PASSWORD = "Test@12345";
 
 test.describe("Authentication", () => {

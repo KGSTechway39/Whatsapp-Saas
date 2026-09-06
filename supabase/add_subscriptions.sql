@@ -22,5 +22,5 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_razorpay_id ON subscriptions(razorp
 -- Seed free plan for test user (only if seed user exists)
 INSERT INTO subscriptions (user_id, plan_id, billing_cycle, status)
 SELECT id, 'free', 'monthly', 'active'
-FROM users WHERE email = 'admin@wasend.demo'
+FROM users WHERE email = 'admin@sendanjal.com'
 ON CONFLICT (user_id) DO NOTHING;

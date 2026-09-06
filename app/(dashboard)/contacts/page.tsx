@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, Filter, Users, Download,
 } from "lucide-react";
 import { TableRowSkeleton } from "@/components/shared/Skeleton";
+import { ConsentBanner, ConsentBulkBar, ConsentCell } from "@/components/contacts/ConsentControls";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
@@ -25,6 +26,11 @@ export default function ContactsPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  // Consent is a property of the tenant's INDUSTRY, so it arrives with the
+  // list. When false, every consent affordance below is omitted entirely.
+  const [consentRequired, setConsentRequired] = useState(false);
+  const [consentIndustry, setConsentIndustry] = useState("");
+  const [onlyMissingConsent, setOnlyMissingConsent] = useState(false);
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
@@ -32,6 +38,8 @@ export default function ContactsPage() {
       const data = await contactsApi.list({ search, group: groupFilter, page, limit: PER_PAGE });
       setContactList(data.contacts);
       setTotal(data.total);
+      setConsentRequired(Boolean(data.consentRequired));
+      setConsentIndustry(data.consentRequiredBecause || "");
     } catch {
       toast.error("Failed to load contacts");
     } finally {
@@ -40,6 +48,18 @@ export default function ContactsPage() {
   }, [search, groupFilter, page]);
 
   useEffect(() => { fetchContacts(); }, [fetchContacts]);
+
+  /** Flip one row locally so the table reflects a saved change immediately. */
+  const applyConsent = (id: string, given: boolean) =>
+    setContactList((prev) => prev.map((c) => (c.id === id ? { ...c, consentGiven: given } : c)));
+
+  const missingConsent = consentRequired
+    ? contactList.filter((c) => !c.consentGiven).length
+    : 0;
+  const visibleContacts =
+    consentRequired && onlyMissingConsent
+      ? contactList.filter((c) => !c.consentGiven)
+      : contactList;
 
   useEffect(() => {
     contactsApi.list({ limit: 500 }).then((data) => {
@@ -54,9 +74,14 @@ export default function ContactsPage() {
     setSelected((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]);
   };
 
+  // Operates on what is VISIBLE, not on the whole page. With the "only people
+  // who haven't agreed" filter on, selecting rows the user cannot see — and
+  // then bulk-acting on them — is how a bulk action does something nobody
+  // intended.
   const selectAll = () => {
-    if (selected.length === contactList.length) setSelected([]);
-    else setSelected(contactList.map((c) => c.id));
+    const visible = visibleContacts.map((c) => c.id);
+    if (visible.every((id) => selected.includes(id)) && visible.length > 0) setSelected([]);
+    else setSelected(visible);
   };
 
   const handleDelete = async (id: string) => {
@@ -109,7 +134,7 @@ export default function ContactsPage() {
             </Link>
             <Link
               href="/contacts/import"
-              className="flex items-center gap-2 wa-gradient text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
+              className="flex items-center gap-2 wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/25"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Add Contact</span>
@@ -117,6 +142,24 @@ export default function ContactsPage() {
           </div>
         }
       />
+
+      {consentRequired && (
+        <div className="mb-4">
+          <ConsentBanner
+            industryName={consentIndustry}
+            missingCount={missingConsent}
+            onShowMissing={onlyMissingConsent ? undefined : () => setOnlyMissingConsent(true)}
+          />
+          {onlyMissingConsent && (
+            <button
+              onClick={() => setOnlyMissingConsent(false)}
+              className="mt-2 text-sm font-medium text-primary hover:underline"
+            >
+              Show everyone again
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="bg-card rounded-2xl border border-border/50 overflow-hidden">
         <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -143,13 +186,26 @@ export default function ContactsPage() {
           {selected.length > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-destructive-soft text-destructive text-sm font-medium hover:bg-destructive-soft transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Delete ({selected.length})
             </button>
           )}
         </div>
+
+        {/* Own full-width band. Inside the filter row it competed for
+            horizontal space and collapsed the search box to a stub. */}
+        {consentRequired && selected.length > 0 && (
+          <div className="border-b border-border/50 p-4">
+            <ConsentBulkBar
+              count={selected.length}
+              contactIds={selected}
+              onDone={() => { setSelected([]); fetchContacts(); }}
+              onCancel={() => setSelected([])}
+            />
+          </div>
+        )}
 
         {loading ? (
           <div className="overflow-x-auto">
@@ -173,7 +229,7 @@ export default function ContactsPage() {
             title="No contacts found"
             description="Try adjusting your search or add new contacts"
             action={
-              <Link href="/contacts/import" className="wa-gradient text-white text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all">
+              <Link href="/contacts/import" className="wa-gradient text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all">
                 Add Contact
               </Link>
             }
@@ -186,18 +242,18 @@ export default function ContactsPage() {
                   <th className="px-4 py-3 text-left">
                     <input
                       type="checkbox"
-                      checked={selected.length === contactList.length && contactList.length > 0}
+                      checked={visibleContacts.length > 0 && visibleContacts.every((c) => selected.includes(c.id))}
                       onChange={selectAll}
                       className="rounded accent-primary"
                     />
                   </th>
-                  {["Name", "Phone", "Group", "Tags", "Added", "Actions"].map((h) => (
+                  {["Name", "Phone", ...(consentRequired ? ["Can we message?"] : []), "Group", "Tags", "Added", "Actions"].map((h) => (
                     <th key={h} className="text-left text-xs font-medium text-muted-foreground px-4 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {contactList.map((contact) => (
+                {visibleContacts.map((contact) => (
                   <tr
                     key={contact.id}
                     className={`border-b border-border/30 last:border-0 hover:bg-muted/20 transition-colors ${selected.includes(contact.id) ? "bg-primary/5" : ""}`}
@@ -222,6 +278,17 @@ export default function ContactsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-sm">{contact.phone}</td>
+                    {consentRequired && (
+                      <td className="px-4 py-3.5">
+                        <ConsentCell
+                          contactId={contact.id}
+                          contactName={contact.name}
+                          given={Boolean(contact.consentGiven)}
+                          at={contact.consentAt}
+                          onChanged={(given) => applyConsent(contact.id, given)}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3.5">
                       <span className="text-xs bg-muted/50 px-2 py-1 rounded-lg">{contact.group || "—"}</span>
                     </td>
@@ -243,9 +310,9 @@ export default function ContactsPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(contact.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-destructive-soft transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </button>
                       </div>
                     </td>
@@ -269,7 +336,7 @@ export default function ContactsPage() {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${page === p ? "bg-primary text-white" : "hover:bg-accent"}`}
+                  className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${page === p ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
                 >
                   {p}
                 </button>

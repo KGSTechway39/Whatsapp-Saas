@@ -21,8 +21,9 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
-        // Distinctive editorial display face for headings (Bricolage Grotesque)
-        display: ["var(--font-display)", "var(--font-geist-sans)", "system-ui", "sans-serif"],
+        // Headings share the body face (Manrope) per the v3 design — they are
+        // separated by weight (800) and tight tracking, not by a second family.
+        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -42,20 +43,59 @@ const config: Config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          soft: "hsl(var(--destructive-soft))",
         },
         // Semantic status tokens — single source for badges/states everywhere
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          soft: "hsl(var(--success-soft))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          soft: "hsl(var(--warning-soft))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },
+        // Industry vertical surfaces — a scoped "workbench" palette, separate
+        // from the teal app chrome (see docs/verticals/PHASE-4-DESIGN-PLAN.md).
+        v: {
+          paper: "hsl(var(--v-paper))",
+          surface: "hsl(var(--v-surface))",
+          surface2: "hsl(var(--v-surface-2))",
+          line: "hsl(var(--v-line))",
+          ink: "hsl(var(--v-ink))",
+          muted: "hsl(var(--v-ink-muted))",
+          faint: "hsl(var(--v-ink-faint))",
+          accent: "hsl(var(--v-accent))",
+          accentSoft: "hsl(var(--v-accent-soft))",
+        },
+        // Platform super-admin console — an indigo/paper palette, deliberately
+        // separate from the teal client-facing chrome. Scoped to /admin via
+        // .admin-console, so the rest of the product is untouched.
+        adm: {
+          bg: "hsl(var(--a-bg))",
+          card: "hsl(var(--a-card))",
+          line: "hsl(var(--a-line))",
+          ink: "hsl(var(--a-ink))",
+          muted: "hsl(var(--a-ink-muted))",
+          faint: "hsl(var(--a-ink-faint))",
+          primary: "hsl(var(--a-primary))",
+          primarySoft: "hsl(var(--a-primary-soft))",
+          green: "hsl(var(--a-green))",
+          greenSoft: "hsl(var(--a-green-soft))",
+          red: "hsl(var(--a-red))",
+          redSoft: "hsl(var(--a-red-soft))",
+          amber: "hsl(var(--a-amber))",
+          amberSoft: "hsl(var(--a-amber-soft))",
+          blue: "hsl(var(--a-blue))",
+          blueSoft: "hsl(var(--a-blue-soft))",
+        },
+        // Amber: a higher per-message cost is information, not an error.
+        cost: "hsl(var(--cost-note))",
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
@@ -68,19 +108,51 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Brand palette repointed to teal-blue (was WhatsApp green).
-        // Aliases kept so existing class usages (bg-wa-green, etc.) inherit the new brand.
+        // Brand palette repointed to the v3 terracotta (was teal-blue, before
+        // that WhatsApp green). Aliases kept — and now token-driven — so every
+        // existing bg-wa-green / text-wa-teal usage inherits the new brand and
+        // follows the theme instead of pinning a light-mode hex.
         wa: {
-          green: "#0B7285",
-          teal: "#0B7285",
-          dark: "#095C6B",
-          light: "#E0F2F1",
+          green: "hsl(var(--primary))",
+          teal: "hsl(var(--primary))",
+          dark: "hsl(var(--primary-hover))",
+          light: "hsl(var(--accent))",
+        },
+
+        // ---- v3 chrome ----
+        // The sidebar is a constant navy in BOTH themes, so it carries its own
+        // scale rather than riding on card/foreground (which flip).
+        rail: {
+          DEFAULT: "hsl(var(--rail))",
+          foreground: "hsl(var(--rail-foreground))",
+          muted: "hsl(var(--rail-muted))",
+          faint: "hsl(var(--rail-faint))",
+          danger: "hsl(var(--rail-danger))",
+        },
+        // Conversation surfaces — inbound/outbound bubbles and the pane behind.
+        chat: {
+          ground: "hsl(var(--chat-ground))",
+          in: "hsl(var(--chat-in))",
+          inBorder: "hsl(var(--chat-in-border))",
+          out: "hsl(var(--chat-out))",
+          outForeground: "hsl(var(--chat-out-foreground))",
+        },
+        // Inner rules inside a card — lighter than the card's own --border.
+        hairline: "hsl(var(--hairline))",
+        rowHover: "hsl(var(--row-hover))",
+        avatar: "hsl(var(--avatar))",
+        // Number quality meters.
+        quality: {
+          high: "hsl(var(--quality-high))",
+          med: "hsl(var(--quality-med))",
         },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // The design's card radius (16px) and its bubble radius.
+        "2xl": "calc(var(--radius) + 0.2rem)",
       },
       keyframes: {
         "accordion-down": {

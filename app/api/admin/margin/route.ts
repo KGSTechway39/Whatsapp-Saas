@@ -8,10 +8,10 @@
  *
  *   GET ?userId=<id>  → { margin: { ... } }   (403 for non-admins)
  *
- * Gated by requireAdmin() (ADMIN_EMAILS allowlist).
+ * SUPER ADMIN ONLY (requireSuperAdmin) — per-client revenue and margin.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/roles";
 import { createServiceClient } from "@/lib/supabase/server";
 
 interface DebitRow {
@@ -20,7 +20,7 @@ interface DebitRow {
 }
 
 export async function GET(request: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const userId = request.nextUrl.searchParams.get("userId")?.trim();

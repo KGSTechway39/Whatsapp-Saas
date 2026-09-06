@@ -2,7 +2,8 @@
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { templates as templatesApi, contacts as contactsApi, numbers as numbersApi } from "@/lib/api";
-import { Check, ArrowRight, ArrowLeft, Send, Loader2, CheckCircle2, Search } from "lucide-react";
+import { Check, ArrowRight, ArrowLeft, Send, Loader2, CheckCircle2, Search, Smartphone, MessageSquare } from "lucide-react";
+import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Template, Contact, WhatsAppNumber } from "@/types";
@@ -21,12 +22,24 @@ export default function SendMessagePage() {
   const [approvedTemplates, setApprovedTemplates] = useState<Template[]>([]);
   const [allContacts, setAllContacts] = useState<Contact[]>([]);
   const [numberList, setNumberList] = useState<WhatsAppNumber[]>([]);
+  // Kept separately so the empty state can tell the two cases apart:
+  // "you have no number" vs "you have one but it isn't active". They need
+  // different advice, and collapsing them into one blank panel is what made
+  // this step look broken.
+  const [totalNumbers, setTotalNumbers] = useState(0);
+  // Templates that exist locally vs. templates WhatsApp will actually accept.
+  // The gap between them is the whole story on this screen.
+  const [totalTemplates, setTotalTemplates] = useState(0);
 
   useEffect(() => {
     Promise.all([templatesApi.list(), contactsApi.list({ limit: 100 }), numbersApi.list()])
       .then(([t, c, n]) => {
-        setApprovedTemplates(t.templates.filter((tmpl) => tmpl.status === "APPROVED"));
+        // Sendable, not merely APPROVED — a template Meta never received would
+        // fail at send time with a misleading "does not exist" error.
+        setTotalTemplates(t.templates.length);
+        setApprovedTemplates(t.templates.filter((tmpl) => tmpl.sendable !== false && tmpl.status === "APPROVED"));
         setAllContacts(c.contacts);
+        setTotalNumbers(n.numbers.length);
         setNumberList(n.numbers.filter((num) => num.status === "active"));
       })
       .catch(console.error);
@@ -48,12 +61,68 @@ export default function SendMessagePage() {
     return body;
   };
 
+  /**
+   * Actually send.
+   *
+   * This previously did `await sleep(1500); setSent(true)` — it called no API
+   * at all and reported success unconditionally, so the wizard claimed every
+   * message was delivered while nothing was ever sent. Now it posts one real
+   * send per recipient and reports what actually happened, including partial
+   * failures. A send screen that cannot fail is not a send screen.
+   */
   const handleSend = async () => {
+    if (!selectedTemplate || !selectedNumber) return;
     setSending(true);
+
+    const chosen = allContacts.filter((c) => selectedContacts.includes(c.id));
+    const failures: { name: string; error: string }[] = [];
+    let ok = 0;
+
     try {
-      await new Promise((r) => setTimeout(r, 1500));
-      setSent(true);
-      toast.success(`Message sent to ${selectedContacts.length} contact(s)!`);
+      for (const contact of chosen) {
+        // Positional template parameters, in the order Meta expects.
+        const components = selectedTemplate.variables.length
+          ? [{
+              type: "body",
+              parameters: selectedTemplate.variables.map((_, i) => ({
+                type: "text",
+                text: variables[`var_${i}`] || contact.name,
+              })),
+            }]
+          : [];
+
+        try {
+          const res = await fetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              numberId: selectedNumber,
+              to: contact.phone,
+              type: "template",
+              templateName: selectedTemplate.name,
+              languageCode: selectedTemplate.language || "en_US",
+              components,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `Send failed (${res.status})`);
+          ok++;
+        } catch (err) {
+          failures.push({ name: contact.name, error: (err as Error).message });
+        }
+      }
+
+      if (ok > 0 && failures.length === 0) {
+        setSent(true);
+        toast.success(`Sent to ${ok} contact${ok === 1 ? "" : "s"}`);
+      } else if (ok > 0) {
+        // Partial success is reported as such — the ones that went, went.
+        setSent(true);
+        toast.warning(`Sent to ${ok}, failed for ${failures.length}. ${failures[0].error}`);
+      } else {
+        // Nothing sent → do NOT show the success screen.
+        toast.error(failures[0]?.error || "Couldn't send. Please try again.");
+      }
     } finally {
       setSending(false);
     }
@@ -104,7 +173,7 @@ export default function SendMessagePage() {
               <div className="flex items-center gap-2">
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    isCompleted ? "bg-primary text-white" : isCurrent ? "bg-primary/20 border-2 border-primary text-primary" : "bg-muted text-muted-foreground"
+                    isCompleted ? "bg-primary text-primary-foreground" : isCurrent ? "bg-primary/20 border-2 border-primary text-primary" : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {isCompleted ? <Check className="w-3.5 h-3.5" /> : num}
@@ -123,6 +192,35 @@ export default function SendMessagePage() {
             <div className="space-y-4">
               <h3 className="font-semibold">Select a Template</h3>
               <div className="space-y-2">
+                {approvedTemplates.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                    <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground" />
+                    {totalTemplates === 0 ? (
+                      <>
+                        <p className="mt-3 font-medium">No templates yet</p>
+                        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                          You need an approved template before you can message someone who
+                          hasn&apos;t written to you first.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-3 font-medium">None of your templates are on WhatsApp yet</p>
+                        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                          You have {totalTemplates} template{totalTemplates === 1 ? "" : "s"} saved
+                          here, but WhatsApp hasn&apos;t approved any of them — so they can&apos;t be
+                          sent. Add one from the Meta Library, then sync.
+                        </p>
+                      </>
+                    )}
+                    <Link
+                      href="/templates"
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl wa-gradient px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                    >
+                      Go to Templates
+                    </Link>
+                  </div>
+                )}
                 {approvedTemplates.map((t) => (
                   <button
                     key={t.id}
@@ -141,7 +239,7 @@ export default function SendMessagePage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{t.body}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full">{t.category}</span>
+                      <span className="text-xs bg-accent text-primary px-2 py-0.5 rounded-full">{t.category}</span>
                       <span className="text-xs text-muted-foreground">{t.language}</span>
                     </div>
                   </button>
@@ -150,7 +248,7 @@ export default function SendMessagePage() {
               <button
                 onClick={() => selectedTemplate && setStep(2)}
                 disabled={!selectedTemplate}
-                className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next <ArrowRight className="w-4 h-4" />
               </button>
@@ -205,7 +303,7 @@ export default function SendMessagePage() {
                 <button
                   onClick={() => selectedContacts.length > 0 && setStep(3)}
                   disabled={selectedContacts.length === 0}
-                  className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+                  className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
                 >
                   Next <ArrowRight className="w-4 h-4" />
                 </button>
@@ -236,7 +334,7 @@ export default function SendMessagePage() {
                 <button onClick={() => setStep(2)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border hover:bg-accent text-sm font-medium transition-colors">
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
-                <button onClick={() => setStep(4)} className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all">
+                <button onClick={() => setStep(4)} className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all">
                   Next <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -247,6 +345,42 @@ export default function SendMessagePage() {
             <div className="space-y-4">
               <h3 className="font-semibold">Select Sending Number</h3>
               <div className="space-y-2">
+                {numberList.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                    <Smartphone className="mx-auto h-8 w-8 text-muted-foreground" />
+                    {totalNumbers === 0 ? (
+                      <>
+                        <p className="mt-3 font-medium">No WhatsApp number connected</p>
+                        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                          You need a connected number before you can send. It takes a few minutes.
+                        </p>
+                        <Link
+                          href="/numbers/connect"
+                          className="mt-4 inline-flex items-center gap-2 rounded-xl wa-gradient px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                        >
+                          Connect a number
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-3 font-medium">
+                          Your number isn&apos;t active yet
+                        </p>
+                        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                          {totalNumbers === 1 ? "The number you connected is" : "Your numbers are"} still
+                          being set up, so {totalNumbers === 1 ? "it" : "they"} can&apos;t send messages
+                          right now. Check its status on the numbers page.
+                        </p>
+                        <Link
+                          href="/numbers"
+                          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-accent"
+                        >
+                          View my numbers
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                )}
                 {numberList.map((n) => (
                   <button
                     key={n.id}
@@ -274,7 +408,7 @@ export default function SendMessagePage() {
                 <button
                   onClick={() => selectedNumber && setStep(5)}
                   disabled={!selectedNumber}
-                  className="flex items-center gap-2 wa-gradient text-white font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
+                  className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-40"
                 >
                   Review & Send <ArrowRight className="w-4 h-4" />
                 </button>
@@ -305,7 +439,7 @@ export default function SendMessagePage() {
                 <button
                   onClick={handleSend}
                   disabled={sending}
-                  className="flex items-center gap-2 wa-gradient text-white font-semibold px-6 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/25"
+                  className="flex items-center gap-2 wa-gradient text-primary-foreground font-semibold px-6 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-primary/25"
                 >
                   {sending ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
@@ -321,20 +455,20 @@ export default function SendMessagePage() {
         <div className="lg:col-span-2">
           <div className="bg-card rounded-2xl border border-border/50 p-5 sticky top-24">
             <p className="text-sm font-medium mb-4 text-muted-foreground">Live Preview</p>
-            <div className="bg-[#0a1628] rounded-2xl p-4 min-h-48">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
+            <div className="bg-rail rounded-2xl p-4 min-h-48">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-white">W</div>
                 <div>
-                  <p className="text-xs font-medium text-white">WASend Business</p>
-                  <p className="text-[10px] text-green-400">Online</p>
+                  <p className="text-xs font-medium text-white">SendAnjal Business</p>
+                  <p className="text-[10px] text-success">Online</p>
                 </div>
               </div>
               {selectedTemplate ? (
-                <div className="bg-[#1a2c1e] rounded-2xl rounded-tl-none p-3.5 max-w-[85%] mt-2">
-                  <p className="text-sm text-[#dcf8c6] leading-relaxed whitespace-pre-wrap">
+                <div className="bg-chat-out rounded-2xl rounded-tl-none p-3.5 max-w-[85%] mt-2">
+                  <p className="text-sm text-chat-outForeground leading-relaxed whitespace-pre-wrap">
                     {previewBody(selectedTemplate)}
                   </p>
-                  <p className="text-[10px] text-[#8fbc93] text-right mt-2">12:30 ✓✓</p>
+                  <p className="text-[10px] text-muted-foreground text-right mt-2">12:30 ✓✓</p>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground text-center mt-8">

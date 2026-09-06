@@ -25,6 +25,7 @@ import { getSessionUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getUserTier, loadModelConfig } from "@/lib/ai/config";
 import { runTask } from "@/lib/ai/service";
+import { buildVerticalPromptContext, withVerticalContext } from "@/lib/verticals/prompt-context";
 import { sanitizeFlowGraph, type CanvasGraph } from "@/lib/automation/flow-schema";
 import {
   flowBuilderSystemPrompt,
@@ -70,13 +71,16 @@ export async function POST(req: NextRequest) {
   }
 
   const tier = await getUserTier(user.id);
+  // Industry context only; the node-type contract stays in the SYSTEM prompt,
+  // which is never touched (sanitizeFlowGraph depends on it).
+  const verticalContext = await buildVerticalPromptContext(user.id);
 
   const result = await runTask<CanvasGraph>({
     userId: user.id,
     tier,
     taskType: "automation_flow_builder",
     system: flowBuilderSystemPrompt(language),
-    prompt: flowBuilderUserPrompt(description, businessName),
+    prompt: withVerticalContext(flowBuilderUserPrompt(description, businessName), verticalContext),
     maxTokens: 2000,
     idempotencyKey: draftId, // regens reuse it → charged once
     refId: draftId,

@@ -14,11 +14,11 @@ interface Endpoint {
 }
 
 const METHOD_COLORS: Record<string, string> = {
-  GET:    "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  POST:   "bg-blue-500/10 text-blue-400 border-blue-500/30",
-  PUT:    "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  PATCH:  "bg-violet-500/10 text-violet-400 border-violet-500/30",
-  DELETE: "bg-red-500/10 text-red-400 border-red-500/30",
+  GET:    "bg-success-soft text-success border-success/25",
+  POST:   "bg-accent text-primary border-primary/25",
+  PUT:    "bg-warning-soft text-warning border-warning/25",
+  PATCH:  "bg-accent text-primary border-primary/25",
+  DELETE: "bg-destructive-soft text-destructive border-destructive/25",
 };
 
 const SECTIONS = [
@@ -98,7 +98,7 @@ const SECTIONS = [
     id: "webhooks",
     label: "Webhooks",
     icon: Webhook,
-    desc: "WASend posts events to your endpoint when messages are delivered, read, or replied to.",
+    desc: "SendAnjal posts events to your endpoint when messages are delivered, read, or replied to.",
     endpoints: [
       {
         method: "POST" as const,
@@ -117,9 +117,9 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+      className="p-1.5 rounded-lg bg-secondary hover:bg-secondary transition-colors"
     >
-      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+      {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
     </button>
   );
 }
@@ -143,7 +143,7 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
         <div className="border-t border-border/50 p-4 space-y-4 bg-muted/5">
           <p className="text-sm text-muted-foreground">{ep.desc}</p>
           {ep.auth && (
-            <div className="text-xs text-amber-400 flex items-center gap-1.5">
+            <div className="text-xs text-warning flex items-center gap-1.5">
               <Zap className="w-3 h-3" /> Requires Authorization: Bearer wsk_live_…
             </div>
           )}
@@ -153,7 +153,7 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Request Body</p>
                 <CopyButton text={ep.body} />
               </div>
-              <pre className="bg-[#0d1117] rounded-xl p-4 text-xs text-blue-300 overflow-x-auto">{ep.body}</pre>
+              <pre className="bg-rail rounded-xl p-4 text-xs text-primary overflow-x-auto">{ep.body}</pre>
             </div>
           )}
           <div>
@@ -161,7 +161,7 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Response</p>
               <CopyButton text={ep.response} />
             </div>
-            <pre className="bg-[#0d1117] rounded-xl p-4 text-xs text-emerald-300 overflow-x-auto">{ep.response}</pre>
+            <pre className="bg-rail rounded-xl p-4 text-xs text-success overflow-x-auto">{ep.response}</pre>
           </div>
         </div>
       )}
@@ -173,7 +173,7 @@ export default function ApiDocsPage() {
   const [activeSection, setActiveSection] = useState("messages");
 
   return (
-    <div className="min-h-screen bg-[#0b141a]">
+    <div className="min-h-screen bg-chat-ground">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="p-8 pb-0">
@@ -182,16 +182,16 @@ export default function ApiDocsPage() {
               <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">WASend API</h1>
+              <h1 className="text-2xl font-bold">SendAnjal API</h1>
               <p className="text-sm text-muted-foreground">v1 · REST · JSON</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-4 max-w-2xl">
             Programmatic access to WhatsApp messaging, contacts, and campaigns.
-            Base URL: <code className="bg-white/5 px-1.5 py-0.5 rounded text-primary">https://wasend.app</code>
+            Base URL: <code className="bg-secondary px-1.5 py-0.5 rounded text-primary">https://sendanjal.com</code>
           </p>
           <div className="flex gap-2 mt-4">
-            <Link href="/settings/api-keys" className="text-xs wa-gradient text-white px-3 py-1.5 rounded-lg font-medium hover:opacity-90">
+            <Link href="/settings/api-keys" className="text-xs wa-gradient text-primary-foreground px-3 py-1.5 rounded-lg font-medium hover:opacity-90">
               Get API Key →
             </Link>
             <a href="#" className="text-xs border border-border px-3 py-1.5 rounded-lg font-medium hover:bg-accent text-muted-foreground hover:text-foreground">
@@ -229,12 +229,12 @@ export default function ApiDocsPage() {
                   All API requests must include your API key as a Bearer token in the Authorization header.
                 </p>
                 <div className="relative">
-                  <pre className="bg-[#0d1117] border border-border/50 rounded-2xl p-5 text-sm text-green-400 overflow-x-auto">
-{`curl https://wasend.app/api/v1/contacts \\
+                  <pre className="bg-rail border border-border/50 rounded-2xl p-5 text-sm text-success overflow-x-auto">
+{`curl https://sendanjal.com/api/v1/contacts \\
   -H "Authorization: Bearer wsk_live_YOUR_API_KEY"`}
                   </pre>
                   <div className="absolute top-3 right-3">
-                    <CopyButton text={`curl https://wasend.app/api/v1/contacts \\\n  -H "Authorization: Bearer wsk_live_YOUR_API_KEY"`} />
+                    <CopyButton text={`curl https://sendanjal.com/api/v1/contacts \\\n  -H "Authorization: Bearer wsk_live_YOUR_API_KEY"`} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
