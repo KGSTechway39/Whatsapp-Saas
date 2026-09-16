@@ -96,7 +96,7 @@ function LoginContent() {
 
         <div className="glass-card rounded-2xl p-8 shadow-2xl">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-white">Welcome back</h2>
+            <h2 className="text-xl font-semibold text-foreground">Welcome back</h2>
             <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
           </div>
 
@@ -126,7 +126,7 @@ function LoginContent() {
                   aria-selected={method === id}
                   onClick={() => setMethod(id)}
                   className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                    method === id ? "bg-card text-white shadow" : "text-muted-foreground hover:text-white"
+                    method === id ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -152,7 +152,7 @@ function LoginContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                  className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
                     errors.email ? "border-destructive/25" : "border-border"
                   }`}
                 />
@@ -172,7 +172,7 @@ function LoginContent() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className={`w-full bg-secondary border rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                  className={`w-full bg-secondary border rounded-xl pl-10 pr-10 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
                     errors.password ? "border-destructive/25" : "border-border"
                   }`}
                 />

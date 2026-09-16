@@ -63,12 +63,12 @@ export default function ForgotPasswordPage() {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 Check your inbox
               </h3>
               <p className="text-sm text-muted-foreground mb-6">
                 We&apos;ve sent a password reset link to{" "}
-                <span className="text-white font-medium">{email}</span>
+                <span className="text-foreground font-medium">{email}</span>
               </p>
               <Link
                 href="/login"
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <>
               <div className="mb-6">
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-foreground">
                   Forgot your password?
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -104,7 +104,7 @@ export default function ForgotPasswordPage() {
                         setError("");
                       }}
                       placeholder="you@company.com"
-                      className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                      className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
                         error ? "border-destructive/25" : "border-border"
                       }`}
                     />
@@ -133,7 +133,7 @@ export default function ForgotPasswordPage() {
               <div className="text-center mt-6">
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   Back to login

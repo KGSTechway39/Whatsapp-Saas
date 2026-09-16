@@ -138,7 +138,7 @@ export default function RegisterPage() {
                     value={form[key as keyof typeof form]}
                     onChange={(e) => update(key, e.target.value)}
                     placeholder={placeholder}
-                    className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                    className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
                       errors[key] ? "border-destructive/25" : "border-border"
                     }`}
                   />
@@ -164,7 +164,7 @@ export default function RegisterPage() {
                     value={form[key as keyof typeof form]}
                     onChange={(e) => update(key, e.target.value)}
                     placeholder="••••••••"
-                    className={`w-full bg-secondary border rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
+                    className={`w-full bg-secondary border rounded-xl pl-10 pr-10 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all ${
                       errors[key] ? "border-destructive/25" : "border-border"
                     }`}
                   />
