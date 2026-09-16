@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { logout } from "@/components/auth/logout";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -41,7 +42,6 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 
 interface NavItem {
   label: string;
@@ -168,7 +168,6 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [openMenus, setOpenMenus] = useState<string[]>([
     "WhatsApp Numbers", "Contacts", "Templates", "Campaigns",
     "Automation", "Appointments", "Catalog", "Billing", "Settings",
@@ -208,11 +207,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onCollapsedChange }: Sideb
     );
   };
 
-  const handleLogout = async () => {
-    try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
-    toast.success("Logged out successfully");
-    router.push("/login");
-  };
+  const handleLogout = () => logout();
 
   /**
    * A link is active on its own page and on pages beneath it — EXCEPT where a
