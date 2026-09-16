@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
 
   // Constant-time: always run bcrypt even if user not found
   const dummyHash = "$2b$12$invalidhashfortimingprotection000000000000000000000";
-  const valid = user
+  // Google-only accounts have no password hash — treat as a failed login, not a crash.
+  const valid = user?.password_hash
     ? await bcrypt.compare(password, user.password_hash)
     : await bcrypt.compare(password, dummyHash).then(() => false);
 

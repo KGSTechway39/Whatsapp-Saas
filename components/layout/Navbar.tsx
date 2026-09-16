@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { logout } from "@/components/auth/logout";
 import { cn } from "@/lib/utils";
 import {
   Bell,
@@ -16,7 +17,6 @@ import {
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -45,9 +45,25 @@ interface NavbarProps {
 export function Navbar({ onMenuClick }: NavbarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.id) setUser({ name: data.name || data.email, email: data.email });
+      })
+      .catch(() => {});
+  }, []);
+
+  const initials = (user?.name || "")
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   /**
    * next-themes cannot know the theme during SSR, so rendering Sun-vs-Moon
    * straight from `theme` made the server and client markup disagree and threw
@@ -59,11 +75,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
   const title = pageTitles[pathname] || "Dashboard";
 
-  const handleLogout = () => {
-    localStorage.removeItem("wa_auth");
-    toast.success("Logged out successfully");
-    router.push("/login");
-  };
+  const handleLogout = () => logout();
 
   return (
     <header className="h-16 border-b border-border bg-background sticky top-0 z-20 flex items-center px-4 gap-4">
@@ -179,7 +191,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full hover:bg-secondary transition-colors"
           >
             <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
-              VM
+              {initials || <User className="w-3.5 h-3.5" />}
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:block" />
           </button>
@@ -192,9 +204,9 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               />
               <div className="absolute right-0 top-12 w-48 bg-card border border-border rounded-2xl shadow-xl z-20 overflow-hidden">
                 <div className="p-3 border-b border-border">
-                  <p className="text-sm font-medium">Vikram Malhotra</p>
-                  <p className="text-xs text-muted-foreground">
-                    admin@sendanjal.com
+                  <p className="text-sm font-medium truncate">{user?.name || "Account"}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email || ""}
                   </p>
                 </div>
                 <div className="p-1">

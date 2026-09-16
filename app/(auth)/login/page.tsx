@@ -70,7 +70,7 @@ function LoginContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
       toast.success(`Welcome back, ${data.user.name}!`);
-      router.push("/dashboard");
+      router.push(fromPath);
       router.refresh();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Invalid credentials");

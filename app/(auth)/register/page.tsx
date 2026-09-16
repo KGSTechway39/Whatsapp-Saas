@@ -90,7 +90,7 @@ export default function RegisterPage() {
 
   const fields = [
     { key: "company", label: "Company name", icon: Building2, type: "text", placeholder: "Acme Corp" },
-    { key: "name", label: "Full name", icon: User, type: "text", placeholder: "Vikram Malhotra" },
+    { key: "name", label: "Full name", icon: User, type: "text", placeholder: "Sivaprakasam" },
     { key: "email", label: "Email address", icon: Mail, type: "email", placeholder: "you@company.com" },
     { key: "phone", label: "WhatsApp number (optional — lets you sign in with a WhatsApp code)", icon: Phone, type: "tel", placeholder: "+91 98765 43210" },
   ];
