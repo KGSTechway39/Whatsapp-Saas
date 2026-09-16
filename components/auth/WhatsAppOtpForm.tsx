@@ -11,7 +11,7 @@ import { KeyRound, Loader2, Phone } from "lucide-react";
 const RESEND_SECONDS = 60;
 
 const inputClass =
-  "w-full bg-secondary border border-border rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all";
+  "w-full bg-secondary border border-border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all";
 
 const submitClass =
   "w-full wa-gradient text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary/25";
@@ -143,7 +143,7 @@ export function WhatsAppOtpForm({ onSuccess }: { onSuccess: () => void }) {
         <button
           type="button"
           onClick={() => { setStep("phone"); setError(""); }}
-          className="text-muted-foreground hover:text-white transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           Change number
         </button>
