@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, password, fullName, companyName } = parsed.data;
+  const { email, password, fullName, companyName, phone } = parsed.data;
   const supabase = createClient();
 
   const { data: existing } = await supabase
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   const { data: user, error } = await supabase
     .from("users")
-    .insert({ email, password_hash, full_name: fullName, company_name: companyName })
+    .insert({ email, password_hash, full_name: fullName, company_name: companyName, phone: phone || null })
     .select("id, email, full_name, company_name")
     .single();
 

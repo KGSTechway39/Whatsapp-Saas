@@ -5,16 +5,14 @@
  * (CSRF protection — verified on callback) and redirects to Google.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { buildAuthUrl, makeState } from "@/lib/google-oauth";
+import { buildAuthUrl, isGoogleConfigured, makeState } from "@/lib/google-oauth";
 
 const STATE_COOKIE = "wa_google_state";
 
 export async function GET(req: NextRequest) {
-  if (!process.env.GOOGLE_CLIENT_ID) {
-    return NextResponse.json(
-      { error: "Google login is not configured. Set GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET." },
-      { status: 503 },
-    );
+  // Send people back to the login page with a readable message, not raw JSON.
+  if (!isGoogleConfigured()) {
+    return NextResponse.redirect(new URL("/login?error=google_not_configured", req.url));
   }
 
   const from = req.nextUrl.searchParams.get("from");

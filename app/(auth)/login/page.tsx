@@ -6,18 +6,26 @@ import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Eye, EyeOff, MessageCircle, Loader2, Lock, Mail } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { WhatsAppOtpForm } from "@/components/auth/WhatsAppOtpForm";
+import { useAuthProviders } from "@/components/auth/useAuthProviders";
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   state_mismatch:      "Login session expired. Please try again.",
   missing_code:        "Google didn't return an authorization code. Please retry.",
   email_not_verified:  "Your Google email isn't verified. Verify it with Google and retry.",
   signup_failed:       "Could not create your account. Please try email signup instead.",
+  google_not_configured: "Google sign-in isn't available right now. Please use another method.",
 };
+
+/** Only allow same-site relative redirects. */
+function safeFrom(from: string | null): string {
+  return from && from.startsWith("/") && !from.startsWith("//") ? from : "/dashboard";
+}
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromPath = searchParams.get("from") || "/dashboard";
+  const fromPath = safeFrom(searchParams.get("from"));
   const oauthError = searchParams.get("error");
 
   const [email, setEmail] = useState("");
@@ -25,6 +33,9 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const providers = useAuthProviders();
+  const [method, setMethod] = useState<"email" | "whatsapp">("email");
+  const showWhatsApp = !!providers?.whatsapp && method === "whatsapp";
 
   useEffect(() => {
     if (oauthError) {
@@ -89,15 +100,45 @@ function LoginContent() {
             <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
           </div>
 
-          {/* Google sign-in */}
-          <GoogleSignInButton from={fromPath} />
+          {/* Google sign-in — only when configured on this deployment */}
+          {providers?.google && (
+            <>
+              <GoogleSignInButton from={fromPath} />
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-secondary" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">or sign in with email</span>
-            <div className="flex-1 h-px bg-secondary" />
-          </div>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-secondary" />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-secondary" />
+              </div>
+            </>
+          )}
 
+          {providers?.whatsapp && (
+            <div role="tablist" className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-xl bg-secondary">
+              {([
+                { id: "email",    label: "Email",         Icon: Mail },
+                { id: "whatsapp", label: "WhatsApp code", Icon: MessageCircle },
+              ] as const).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={method === id}
+                  onClick={() => setMethod(id)}
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                    method === id ? "bg-card text-white shadow" : "text-muted-foreground hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showWhatsApp ? (
+            <WhatsAppOtpForm onSuccess={() => { router.push(fromPath); router.refresh(); }} />
+          ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground block mb-1.5">
@@ -167,6 +208,7 @@ function LoginContent() {
               )}
             </button>
           </form>
+          )}
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             Don&apos;t have an account?{" "}
