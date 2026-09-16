@@ -38,6 +38,7 @@ export const registerSchema = z.object({
   password:    passwordSchema,
   fullName:    z.string().min(2).max(100).trim(),
   companyName: z.string().min(1).max(100).trim(),
+  phone:       phoneSchema.optional().or(z.literal("")),
 });
 
 export const passwordChangeSchema = z.object({

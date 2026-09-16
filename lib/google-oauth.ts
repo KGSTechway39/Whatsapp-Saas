@@ -26,6 +26,10 @@ export interface GoogleProfile {
   locale?: string;
 }
 
+export function isGoogleConfigured(): boolean {
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
 /** Build the URL to redirect the browser to for consent. */
 export function buildAuthUrl(state: string): string {
   const url = new URL(AUTH_URL);
@@ -64,7 +68,7 @@ export function parseState(state: string): { from: string } {
 
 /** Exchange the authorization code for tokens and the parsed user profile. */
 export async function exchangeCode(code: string): Promise<GoogleProfile> {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  if (!isGoogleConfigured()) {
     throw new Error("Google OAuth not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)");
   }
 

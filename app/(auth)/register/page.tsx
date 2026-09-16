@@ -13,11 +13,14 @@ import {
   User,
   Mail,
   Lock,
+  Phone,
 } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { useAuthProviders } from "@/components/auth/useAuthProviders";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const providers = useAuthProviders();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -26,6 +29,7 @@ export default function RegisterPage() {
     company: "",
     name: "",
     email: "",
+    phone: "",
     password: "",
     confirm: "",
   });
@@ -43,6 +47,8 @@ export default function RegisterPage() {
     if (!form.email) errs.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = "Invalid email";
+    if (form.phone && !/^\+?[\d\s\-().]{7,20}$/.test(form.phone))
+      errs.phone = "Invalid phone number";
     if (!form.password) errs.password = "Password is required";
     else if (form.password.length < 8)
       errs.password = "Minimum 8 characters";
@@ -68,6 +74,7 @@ export default function RegisterPage() {
           password: form.password,
           fullName: form.name,
           companyName: form.company,
+          phone: form.phone,
         }),
       });
       const data = await res.json();
@@ -85,6 +92,7 @@ export default function RegisterPage() {
     { key: "company", label: "Company name", icon: Building2, type: "text", placeholder: "Acme Corp" },
     { key: "name", label: "Full name", icon: User, type: "text", placeholder: "Vikram Malhotra" },
     { key: "email", label: "Email address", icon: Mail, type: "email", placeholder: "you@company.com" },
+    { key: "phone", label: "WhatsApp number (optional — lets you sign in with a WhatsApp code)", icon: Phone, type: "tel", placeholder: "+91 98765 43210" },
   ];
 
   return (
@@ -105,13 +113,17 @@ export default function RegisterPage() {
         </div>
 
         <div className="glass-card rounded-2xl p-8 shadow-2xl">
-          <GoogleSignInButton label="Sign up with Google" />
+          {providers?.google && (
+            <>
+              <GoogleSignInButton label="Sign up with Google" />
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-secondary" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">or use email</span>
-            <div className="flex-1 h-px bg-secondary" />
-          </div>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-secondary" />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">or use email</span>
+                <div className="flex-1 h-px bg-secondary" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {fields.map(({ key, label, icon: Icon, type, placeholder }) => (
